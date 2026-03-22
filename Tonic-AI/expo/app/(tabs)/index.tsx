@@ -21,14 +21,12 @@ import {
   ChevronRight,
   AlertCircle,
   RotateCcw,
-  HelpCircle,
 } from "lucide-react-native";
 import { useRouter } from "expo-router";
 
 import { Colors } from "@/constants/colors";
 import { useAppState } from "@/providers/AppStateProvider";
 import { useTasks } from "@/providers/TasksProvider";
-import { AppTour, checkTourSeen, markTourSeen } from "@/components/AppTour";
 import type { Task, AIInsight } from "@/types/tasks";
 
 const { width: _width } = Dimensions.get("window");
@@ -253,7 +251,6 @@ export default function DashboardScreen() {
     weeklyCompletion: [0, 0, 0, 0, 0, 0, 0],
   });
   const [refreshing, setRefreshing] = React.useState(false);
-  const [showTour, setShowTour] = React.useState(false);
 
   const todayTasks = getTodayTasks();
   const focusInsight = insights.find((i: AIInsight) => i.type === "focus");
@@ -286,19 +283,6 @@ export default function DashboardScreen() {
     await loadStats();
     setRefreshing(false);
   }, [loadStats]);
-
-  useEffect(() => {
-    let cancelled = false;
-    checkTourSeen().then((seen) => {
-      if (!cancelled && !seen && user) setShowTour(true);
-    });
-    return () => { cancelled = true; };
-  }, [user]);
-
-  const handleTourDone = useCallback(async () => {
-    await markTourSeen();
-    setShowTour(false);
-  }, []);
 
   const handleReset = () => {
     Alert.alert("Reset App", "Clear all data and return to onboarding?", [
@@ -358,13 +342,6 @@ export default function DashboardScreen() {
             <Text style={styles.userName}>{user.name}</Text>
           </View>
           <View style={styles.headerButtons}>
-            <TouchableOpacity
-              style={styles.resetButton}
-              activeOpacity={0.8}
-              onPress={() => setShowTour(true)}
-            >
-              <HelpCircle size={17} color={Colors.textSecondary} />
-            </TouchableOpacity>
             <TouchableOpacity
               style={styles.resetButton}
               activeOpacity={0.8}
@@ -459,7 +436,6 @@ export default function DashboardScreen() {
         )}
       </ScrollView>
 
-      {showTour && <AppTour onDone={handleTourDone} />}
     </SafeAreaView>
   );
 }

@@ -7,545 +7,283 @@ import {
   TouchableOpacity,
   Animated,
   Platform,
+  TextInput,
 } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { useRouter } from "expo-router";
+import { Plus, ChevronRight, X } from "lucide-react-native";
 import { Colors } from "@/constants/colors";
 
-const { width: W, height: H } = Dimensions.get("window");
-const TOUR_KEY = "@tonic_tour_v1_seen";
+const { width: W } = Dimensions.get("window");
+const TOUR_KEY = "@tonic_tour_v2_seen";
 
-interface Slide {
-  id: number;
+/* ── Step definitions ── */
+interface TourStep {
+  id: string;
+  tab: string | null;
   emoji: string;
-  accentColor: string;
+  accent: string;
   title: string;
   desc: string;
-  visual: React.ReactNode;
+  action?: "add_task" | "open_agent";
+  actionLabel?: string;
 }
 
-/* ─── viz StyleSheet MUST be defined before SLIDES ─── */
-const viz = StyleSheet.create({
-  welcomeWrap: {
-    alignItems: "center",
-    justifyContent: "center",
-    flex: 1,
-    gap: 24,
+const STEPS: TourStep[] = [
+  {
+    id: "dashboard",
+    tab: "/(tabs)/",
+    emoji: "🏠",
+    accent: Colors.blue,
+    title: "Your Dashboard",
+    desc: "See today's progress, streak, and AI highlights — all in one place.",
   },
-  welcomeGlow: {
-    width: 120,
-    height: 120,
-    borderRadius: 60,
-    backgroundColor: `${Colors.gold}15`,
-    justifyContent: "center",
-    alignItems: "center",
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.5,
-    shadowRadius: 30,
-    elevation: 10,
+  {
+    id: "add_task",
+    tab: "/(tabs)/",
+    emoji: "➕",
+    accent: Colors.gold,
+    title: "Add your first task",
+    desc: "Hit the + button at top-right — or tap below to create one now.",
+    action: "add_task",
+    actionLabel: "Create a task →",
   },
-  welcomeBigEmoji: {
-    fontSize: 60,
+  {
+    id: "tasks",
+    tab: "/(tabs)/tasks",
+    emoji: "✅",
+    accent: Colors.success,
+    title: "Task list",
+    desc: "All tasks sorted by priority. Swipe to complete, long-press for options.",
   },
-  welcomeDots: {
-    flexDirection: "row",
-    gap: 10,
+  {
+    id: "agent",
+    tab: "/(tabs)/tasks",
+    emoji: "🤖",
+    accent: Colors.purple,
+    title: "Tonic Agent",
+    desc: "Your AI assistant lives in the ⚡ button — bottom right, always there.",
+    action: "open_agent",
+    actionLabel: "Chat with AI →",
   },
-  welcomeDot: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    opacity: 0.7,
+  {
+    id: "insights",
+    tab: "/(tabs)/insights",
+    emoji: "📊",
+    accent: Colors.warning,
+    title: "Insights",
+    desc: "AI analyzes your habits and gives honest feedback on your productivity.",
   },
-  ringOuter: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-    borderWidth: 8,
-    justifyContent: "center",
-    alignItems: "center",
-    position: "relative",
+  {
+    id: "profile",
+    tab: "/(tabs)/profile",
+    emoji: "⛓️",
+    accent: Colors.gold,
+    title: "Earn & Claim",
+    desc: "Complete tasks → earn points → claim them on TON blockchain forever.",
   },
-  ringProgress: {
-    position: "absolute",
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-    borderWidth: 8,
-    transform: [{ rotate: "-40deg" }],
-  },
-  ringCenter: {
-    alignItems: "center",
-  },
-  ringNum: {
-    fontSize: 18,
-    fontWeight: "800",
-  },
-  taskList: {
-    width: "100%",
-    gap: 12,
-  },
-  taskRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: Colors.bgTertiary,
-    borderRadius: 12,
-    padding: 12,
-    gap: 10,
-  },
-  taskCheck: {
-    width: 22,
-    height: 22,
-    borderRadius: 11,
-    borderWidth: 2,
-    borderColor: Colors.border,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  taskCheckMark: {
-    color: Colors.bgPrimary,
-    fontSize: 12,
-    fontWeight: "bold",
-  },
-  taskLabel: {
-    flex: 1,
-    fontSize: 14,
-    fontWeight: "600",
-    color: Colors.textPrimary,
-  },
-  taskLabelDone: {
-    textDecorationLine: "line-through",
-    color: Colors.textMuted,
-  },
-  priorityDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-  },
-  chatWrap: {
-    width: "100%",
-    gap: 10,
-  },
-  chatBubbleUser: {
-    alignSelf: "flex-end",
-    borderRadius: 16,
-    borderBottomRightRadius: 4,
-    paddingHorizontal: 14,
-    paddingVertical: 9,
-    maxWidth: "75%",
-  },
-  chatBubbleBot: {
-    alignSelf: "flex-start",
-    borderRadius: 16,
-    borderBottomLeftRadius: 4,
-    paddingHorizontal: 14,
-    paddingVertical: 9,
-    backgroundColor: Colors.bgTertiary,
-    maxWidth: "75%",
-  },
-  chatTextUser: {
-    color: Colors.bgPrimary,
-    fontSize: 13,
-    fontWeight: "600",
-  },
-  chatTextBot: {
-    color: Colors.textPrimary,
-    fontSize: 13,
-  },
-  statsRow: {
-    flexDirection: "row",
-    gap: 10,
-  },
-  statBox: {
-    flex: 1,
-    backgroundColor: Colors.bgTertiary,
-    borderRadius: 14,
-    padding: 14,
-    alignItems: "center",
-    gap: 4,
-    borderWidth: 1,
-  },
-  statEmoji: {
-    fontSize: 22,
-  },
-  statVal: {
-    fontSize: 16,
-    fontWeight: "800",
-  },
-  statSub: {
-    fontSize: 11,
-    color: Colors.textMuted,
-    fontWeight: "500",
-  },
-  chainWrap: {
-    width: "100%",
-    alignItems: "center",
-    gap: 12,
-  },
-  chainCard: {
-    width: "70%",
-    borderRadius: 16,
-    borderWidth: 2,
-    padding: 18,
-    alignItems: "center",
-    gap: 4,
-  },
-  chainEmoji: {
-    fontSize: 28,
-  },
-  chainPts: {
-    fontSize: 28,
-    fontWeight: "800",
-  },
-  chainLabel: {
-    fontSize: 12,
-    color: Colors.textSecondary,
-  },
-  chainConnector: {
-    alignItems: "center",
-    gap: 2,
-  },
-  chainDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-  },
-  chainLine: {
-    width: 2,
-    height: 16,
-  },
-  chainBlock: {
-    borderRadius: 10,
-    borderWidth: 1,
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    alignItems: "center",
-    gap: 2,
-  },
-  chainBlockText: {
-    fontSize: 12,
-    fontWeight: "700",
-    color: Colors.textSecondary,
-  },
-  chainTx: {
-    fontSize: 11,
-    color: Colors.success,
-    fontFamily: Platform.OS === "ios" ? "Menlo" : "monospace",
-  },
-  slideVisual: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    padding: 24,
-    width: "100%",
-  },
-  miniStatsRow: {
-    flexDirection: "row",
-    gap: 8,
-    marginTop: 16,
-  },
-  miniChip: {
-    borderRadius: 20,
-    borderWidth: 1,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-  },
-  miniChipText: {
-    fontSize: 12,
-    fontWeight: "700",
-  },
-});
+];
 
-/* ─── Mini visual components ─── */
-
-function ProgressRingMini({ color }: { color: string }) {
-  return (
-    <View style={[viz.ringOuter, { borderColor: `${color}25` }]}>
-      <View style={[viz.ringProgress, { borderColor: color, borderRightColor: "transparent", borderBottomColor: "transparent" }]} />
-      <View style={viz.ringCenter}>
-        <Text style={[viz.ringNum, { color }]}>74%</Text>
-      </View>
-    </View>
-  );
-}
-
-function MiniTaskList({ color }: { color: string }) {
-  const items = [
-    { done: true, label: "Morning run", priority: Colors.success },
-    { done: false, label: "Team standup", priority: Colors.danger },
-    { done: false, label: "Review PRs", priority: Colors.warning },
-  ];
-  return (
-    <View style={viz.taskList}>
-      {items.map((item, i) => (
-        <View key={i} style={viz.taskRow}>
-          <View style={[viz.taskCheck, item.done && { backgroundColor: color, borderColor: color }]}>
-            {item.done && <Text style={viz.taskCheckMark}>✓</Text>}
-          </View>
-          <Text style={[viz.taskLabel, item.done && viz.taskLabelDone]}>{item.label}</Text>
-          <View style={[viz.priorityDot, { backgroundColor: item.priority }]} />
-        </View>
-      ))}
-    </View>
-  );
-}
-
-function MiniChat({ color }: { color: string }) {
-  return (
-    <View style={viz.chatWrap}>
-      <View style={[viz.chatBubbleUser, { backgroundColor: color }]}>
-        <Text style={viz.chatTextUser}>Plan my day 🗓</Text>
-      </View>
-      <View style={viz.chatBubbleBot}>
-        <Text style={viz.chatTextBot}>Here's your top 3 priorities…</Text>
-      </View>
-      <View style={[viz.chatBubbleUser, { backgroundColor: color, alignSelf: "flex-end", marginTop: 6 }]}>
-        <Text style={viz.chatTextUser}>Add a task for me ⚡</Text>
-      </View>
-    </View>
-  );
-}
-
-function MiniStats({ color }: { color: string }) {
-  const boxes = [
-    { emoji: "🔥", val: "7", sub: "streak" },
-    { emoji: "📊", val: "82%", sub: "rate" },
-    { emoji: "⭐", val: "1,240", sub: "score" },
-  ];
-  return (
-    <View style={viz.statsRow}>
-      {boxes.map((b, i) => (
-        <View key={i} style={[viz.statBox, { borderColor: `${color}40` }]}>
-          <Text style={viz.statEmoji}>{b.emoji}</Text>
-          <Text style={[viz.statVal, { color }]}>{b.val}</Text>
-          <Text style={viz.statSub}>{b.sub}</Text>
-        </View>
-      ))}
-    </View>
-  );
-}
-
-function MiniBlockchain({ color }: { color: string }) {
-  return (
-    <View style={viz.chainWrap}>
-      <View style={[viz.chainCard, { borderColor: `${color}60`, backgroundColor: `${color}08` }]}>
-        <Text style={viz.chainEmoji}>⚡</Text>
-        <Text style={[viz.chainPts, { color }]}>1,240</Text>
-        <Text style={viz.chainLabel}>pts claimable</Text>
-      </View>
-      <View style={viz.chainConnector}>
-        <View style={[viz.chainDot, { backgroundColor: color }]} />
-        <View style={[viz.chainLine, { backgroundColor: `${color}40` }]} />
-        <View style={[viz.chainDot, { backgroundColor: color }]} />
-      </View>
-      <View style={[viz.chainBlock, { borderColor: `${color}40` }]}>
-        <Text style={viz.chainBlockText}>TON Blockchain</Text>
-        <Text style={viz.chainTx}>0x7f3a...d91c ✓</Text>
-      </View>
-    </View>
-  );
-}
-
-/* ─── Slides (defined after viz + mini components) ─── */
-
-function makeSlides(): Slide[] {
-  return [
-    {
-      id: 1,
-      emoji: "⚡",
-      accentColor: Colors.gold,
-      title: "Welcome to Tonic",
-      desc: "AI-powered productivity on TON",
-      visual: (
-        <View style={viz.welcomeWrap}>
-          <View style={[viz.welcomeGlow, { shadowColor: Colors.gold }]}>
-            <Text style={viz.welcomeBigEmoji}>⚡</Text>
-          </View>
-          <View style={viz.welcomeDots}>
-            {[Colors.gold, Colors.blue, Colors.purple, Colors.success].map((c, i) => (
-              <View key={i} style={[viz.welcomeDot, { backgroundColor: c }]} />
-            ))}
-          </View>
-        </View>
-      ),
-    },
-    {
-      id: 2,
-      emoji: "🏠",
-      accentColor: Colors.blue,
-      title: "Dashboard",
-      desc: "Daily progress at a glance",
-      visual: (
-        <View style={viz.slideVisual}>
-          <ProgressRingMini color={Colors.blue} />
-          <View style={viz.miniStatsRow}>
-            {["✅ 12", "🔥 7d", "⚡ 840"].map((s, i) => (
-              <View key={i} style={[viz.miniChip, { borderColor: `${Colors.blue}40` }]}>
-                <Text style={[viz.miniChipText, { color: Colors.blue }]}>{s}</Text>
-              </View>
-            ))}
-          </View>
-        </View>
-      ),
-    },
-    {
-      id: 3,
-      emoji: "✅",
-      accentColor: Colors.success,
-      title: "Tasks",
-      desc: "AI-prioritized, always on time",
-      visual: (
-        <View style={viz.slideVisual}>
-          <MiniTaskList color={Colors.success} />
-        </View>
-      ),
-    },
-    {
-      id: 4,
-      emoji: "🤖",
-      accentColor: Colors.purple,
-      title: "Tonic Agent",
-      desc: "Chat · Plan · Get things done",
-      visual: (
-        <View style={viz.slideVisual}>
-          <MiniChat color={Colors.purple} />
-        </View>
-      ),
-    },
-    {
-      id: 5,
-      emoji: "📊",
-      accentColor: Colors.warning,
-      title: "Insights",
-      desc: "Deep patterns, honest feedback",
-      visual: (
-        <View style={viz.slideVisual}>
-          <MiniStats color={Colors.warning} />
-        </View>
-      ),
-    },
-    {
-      id: 6,
-      emoji: "⛓️",
-      accentColor: Colors.gold,
-      title: "Earn & Claim",
-      desc: "Your score lives on TON forever",
-      visual: (
-        <View style={viz.slideVisual}>
-          <MiniBlockchain color={Colors.gold} />
-        </View>
-      ),
-    },
-  ];
-}
-
-/* ─── Main AppTour component ─── */
-
-export function AppTour({ onDone }: { onDone: () => void }) {
-  const SLIDES = React.useMemo(() => makeSlides(), []);
-  const [idx, setIdx] = useState(0);
-  const slide = SLIDES[idx];
-  const isLast = idx === SLIDES.length - 1;
-
-  const slideAnim = useRef(new Animated.Value(0)).current;
-  const scaleAnim = useRef(new Animated.Value(0.92)).current;
-  const fadeAnim = useRef(new Animated.Value(0)).current;
-  const dotScales = useRef(SLIDES.map(() => new Animated.Value(1))).current;
+/* ── Welcome splash (step 0) ── */
+function WelcomeSplash({ onStart, onSkip }: { onStart: () => void; onSkip: () => void }) {
+  const fade = useRef(new Animated.Value(0)).current;
+  const scale = useRef(new Animated.Value(0.88)).current;
 
   useEffect(() => {
     Animated.parallel([
-      Animated.timing(fadeAnim, { toValue: 1, duration: 400, useNativeDriver: true }),
-      Animated.spring(scaleAnim, { toValue: 1, friction: 7, tension: 60, useNativeDriver: true }),
+      Animated.timing(fade, { toValue: 1, duration: 500, useNativeDriver: true }),
+      Animated.spring(scale, { toValue: 1, friction: 7, tension: 50, useNativeDriver: true }),
     ]).start();
-  }, [fadeAnim, scaleAnim]);
-
-  const goNext = useCallback(() => {
-    if (isLast) { onDone(); return; }
-
-    Animated.parallel([
-      Animated.timing(slideAnim, { toValue: -W, duration: 280, useNativeDriver: true }),
-      Animated.timing(fadeAnim, { toValue: 0, duration: 200, useNativeDriver: true }),
-    ]).start(() => {
-      slideAnim.setValue(W);
-      setIdx(prev => {
-        const next = prev + 1;
-        Animated.parallel([
-          Animated.timing(slideAnim, { toValue: 0, duration: 280, useNativeDriver: true }),
-          Animated.timing(fadeAnim, { toValue: 1, duration: 260, useNativeDriver: true }),
-          Animated.spring(scaleAnim, { toValue: 1, friction: 7, tension: 60, useNativeDriver: true }),
-        ]).start();
-        Animated.sequence([
-          Animated.timing(dotScales[next], { toValue: 1.4, duration: 180, useNativeDriver: true }),
-          Animated.timing(dotScales[next], { toValue: 1, duration: 180, useNativeDriver: true }),
-        ]).start();
-        return next;
-      });
-    });
-  }, [isLast, onDone, slideAnim, fadeAnim, scaleAnim, dotScales]);
+  }, [fade, scale]);
 
   return (
-    <Animated.View style={[styles.overlay, { opacity: fadeAnim }]}>
-      <View style={styles.container}>
-        <TouchableOpacity style={styles.skipBtn} onPress={onDone} activeOpacity={0.7}>
-          <Text style={styles.skipText}>Skip</Text>
+    <Animated.View style={[splash.overlay, { opacity: fade }]}>
+      <Animated.View style={[splash.card, { transform: [{ scale }] }]}>
+        <TouchableOpacity style={splash.skipBtn} onPress={onSkip} activeOpacity={0.7}>
+          <X size={16} color={Colors.textMuted} />
         </TouchableOpacity>
 
-        <Animated.View
-          style={[
-            styles.card,
-            {
-              transform: [{ translateX: slideAnim }, { scale: scaleAnim }],
-            },
-          ]}
-        >
-          <View style={[styles.visualArea, { backgroundColor: `${slide.accentColor}10` }]}>
-            <View style={[styles.accentLine, { backgroundColor: slide.accentColor }]} />
-            {slide.visual}
-          </View>
+        <Text style={splash.emoji}>⚡</Text>
+        <Text style={splash.title}>Welcome to Tonic</Text>
+        <Text style={splash.sub}>Take a 30-second tour to see how everything works.</Text>
 
-          <View style={styles.textArea}>
-            <View style={[styles.emojiWrap, { backgroundColor: `${slide.accentColor}18`, borderColor: `${slide.accentColor}40` }]}>
-              <Text style={styles.slideEmoji}>{slide.emoji}</Text>
+        <View style={splash.bullets}>
+          {["Dashboard & daily progress", "Add & organize tasks", "AI agent & insights", "TON blockchain rewards"].map((b, i) => (
+            <View key={i} style={splash.bullet}>
+              <View style={splash.bulletDot} />
+              <Text style={splash.bulletText}>{b}</Text>
             </View>
-            <Text style={styles.slideTitle}>{slide.title}</Text>
-            <Text style={styles.slideDesc}>{slide.desc}</Text>
-          </View>
-        </Animated.View>
-
-        <View style={styles.footer}>
-          <View style={styles.dots}>
-            {SLIDES.map((_, i) => (
-              <Animated.View
-                key={i}
-                style={[
-                  styles.dot,
-                  i === idx
-                    ? [styles.dotActive, { backgroundColor: slide.accentColor, width: 20 }]
-                    : styles.dotInactive,
-                  { transform: [{ scale: dotScales[i] }] },
-                ]}
-              />
-            ))}
-          </View>
-
-          <TouchableOpacity
-            style={[styles.nextBtn, { backgroundColor: slide.accentColor }]}
-            onPress={goNext}
-            activeOpacity={0.85}
-          >
-            <Text style={styles.nextText}>{isLast ? "Get Started 🚀" : "Next"}</Text>
-          </TouchableOpacity>
+          ))}
         </View>
-      </View>
+
+        <TouchableOpacity style={splash.startBtn} onPress={onStart} activeOpacity={0.85}>
+          <Text style={splash.startText}>Start Tour</Text>
+          <ChevronRight size={18} color={Colors.bgPrimary} />
+        </TouchableOpacity>
+      </Animated.View>
     </Animated.View>
   );
 }
 
-/* ─── Storage helpers ─── */
+/* ── Floating bottom coach card ── */
+function CoachCard({
+  step,
+  stepIdx,
+  total,
+  onNext,
+  onSkip,
+  onAction,
+}: {
+  step: TourStep;
+  stepIdx: number;
+  total: number;
+  onNext: () => void;
+  onSkip: () => void;
+  onAction: () => void;
+}) {
+  const slideUp = useRef(new Animated.Value(120)).current;
+  const fade = useRef(new Animated.Value(0)).current;
 
+  useEffect(() => {
+    slideUp.setValue(120);
+    fade.setValue(0);
+    Animated.parallel([
+      Animated.spring(slideUp, { toValue: 0, friction: 8, tension: 60, useNativeDriver: true }),
+      Animated.timing(fade, { toValue: 1, duration: 300, useNativeDriver: true }),
+    ]).start();
+  }, [stepIdx, slideUp, fade]);
+
+  const progress = (stepIdx + 1) / total;
+
+  return (
+    <>
+      {/* Dim overlay — NOT blocking tap-through in the top area */}
+      <Animated.View style={[coach.dimOverlay, { opacity: fade }]} pointerEvents="none" />
+
+      <Animated.View
+        style={[coach.card, { transform: [{ translateY: slideUp }], opacity: fade }]}
+      >
+        {/* Progress bar */}
+        <View style={coach.progressTrack}>
+          <View style={[coach.progressFill, { width: `${progress * 100}%` as any, backgroundColor: step.accent }]} />
+        </View>
+
+        {/* Header row */}
+        <View style={coach.header}>
+          <View style={[coach.emojiWrap, { backgroundColor: `${step.accent}18`, borderColor: `${step.accent}40` }]}>
+            <Text style={coach.emoji}>{step.emoji}</Text>
+          </View>
+          <View style={coach.headerText}>
+            <Text style={coach.title}>{step.title}</Text>
+            <Text style={coach.stepCount}>{stepIdx + 1} / {total}</Text>
+          </View>
+          <TouchableOpacity onPress={onSkip} style={coach.closeBtn} activeOpacity={0.7}>
+            <X size={15} color={Colors.textMuted} />
+          </TouchableOpacity>
+        </View>
+
+        <Text style={coach.desc}>{step.desc}</Text>
+
+        {/* Buttons */}
+        <View style={coach.buttons}>
+          {step.action && (
+            <TouchableOpacity
+              style={[coach.actionBtn, { backgroundColor: `${step.accent}18`, borderColor: `${step.accent}50` }]}
+              onPress={onAction}
+              activeOpacity={0.8}
+            >
+              <Text style={[coach.actionText, { color: step.accent }]}>{step.actionLabel}</Text>
+            </TouchableOpacity>
+          )}
+          <TouchableOpacity
+            style={[coach.nextBtn, { backgroundColor: step.accent }]}
+            onPress={onNext}
+            activeOpacity={0.85}
+          >
+            <Text style={coach.nextText}>{stepIdx === total - 1 ? "Done 🎉" : "Next"}</Text>
+            {stepIdx < total - 1 && <ChevronRight size={16} color={Colors.bgPrimary} />}
+          </TouchableOpacity>
+        </View>
+
+        {/* Dot indicators */}
+        <View style={coach.dots}>
+          {Array.from({ length: total }).map((_, i) => (
+            <View
+              key={i}
+              style={[
+                coach.dot,
+                i === stepIdx
+                  ? [coach.dotActive, { backgroundColor: step.accent, width: 18 }]
+                  : coach.dotInactive,
+              ]}
+            />
+          ))}
+        </View>
+      </Animated.View>
+    </>
+  );
+}
+
+/* ── Main exported component ── */
+export function AppTour({ onDone }: { onDone: () => void }) {
+  const router = useRouter();
+  const [phase, setPhase] = useState<"welcome" | "tour" | "done">("welcome");
+  const [stepIdx, setStepIdx] = useState(0);
+
+  const startTour = useCallback(() => {
+    setPhase("tour");
+    const firstStep = STEPS[0];
+    if (firstStep.tab) {
+      try { router.replace(firstStep.tab as any); } catch {}
+    }
+  }, [router]);
+
+  const handleNext = useCallback(() => {
+    const nextIdx = stepIdx + 1;
+    if (nextIdx >= STEPS.length) {
+      onDone();
+      return;
+    }
+    const nextStep = STEPS[nextIdx];
+    if (nextStep.tab && nextStep.tab !== STEPS[stepIdx].tab) {
+      try { router.replace(nextStep.tab as any); } catch {}
+    }
+    setStepIdx(nextIdx);
+  }, [stepIdx, router, onDone]);
+
+  const handleAction = useCallback(() => {
+    const step = STEPS[stepIdx];
+    if (step.action === "add_task") {
+      try { router.push("/modal" as any); } catch {}
+    } else if (step.action === "open_agent") {
+      try { router.replace("/(tabs)/agent" as any); } catch {}
+    }
+  }, [stepIdx, router]);
+
+  if (phase === "welcome") {
+    return <WelcomeSplash onStart={startTour} onSkip={onDone} />;
+  }
+
+  if (phase === "tour") {
+    return (
+      <CoachCard
+        step={STEPS[stepIdx]}
+        stepIdx={stepIdx}
+        total={STEPS.length}
+        onNext={handleNext}
+        onSkip={onDone}
+        onAction={handleAction}
+      />
+    );
+  }
+
+  return null;
+}
+
+/* ── Storage helpers ── */
 export async function checkTourSeen(): Promise<boolean> {
   try {
-    const val = await AsyncStorage.getItem(TOUR_KEY);
-    return val === "true";
+    return (await AsyncStorage.getItem(TOUR_KEY)) === "true";
   } catch {
     return false;
   }
@@ -557,125 +295,223 @@ export async function markTourSeen(): Promise<void> {
   } catch {}
 }
 
-/* ─── Main styles (defined after components that reference them via hoisting) ─── */
-
-const styles = StyleSheet.create({
+/* ── Styles ── */
+const splash = StyleSheet.create({
   overlay: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(0,0,0,0.88)",
-    zIndex: 999,
+    backgroundColor: "rgba(0,0,0,0.90)",
+    zIndex: 9999,
     justifyContent: "center",
     alignItems: "center",
-  },
-  container: {
-    width: W - 32,
-    alignItems: "center",
-    gap: 20,
-  },
-  skipBtn: {
-    alignSelf: "flex-end",
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    backgroundColor: `${Colors.textMuted}25`,
-    borderRadius: 20,
-  },
-  skipText: {
-    color: Colors.textSecondary,
-    fontSize: 14,
-    fontWeight: "600",
+    paddingHorizontal: 20,
   },
   card: {
     width: "100%",
     backgroundColor: Colors.bgSecondary,
     borderRadius: 28,
-    overflow: "hidden",
+    padding: 28,
     borderWidth: 1,
     borderColor: Colors.border,
+    gap: 4,
     ...Platform.select({
-      ios: {
-        shadowColor: "#000",
-        shadowOffset: { width: 0, height: 8 },
-        shadowOpacity: 0.4,
-        shadowRadius: 20,
-      },
-      android: { elevation: 12 },
+      ios: { shadowColor: "#000", shadowOffset: { width: 0, height: 12 }, shadowOpacity: 0.5, shadowRadius: 24 },
+      android: { elevation: 16 },
     }),
   },
-  accentLine: {
-    height: 3,
-    width: "100%",
+  skipBtn: {
     position: "absolute",
-    top: 0,
-  },
-  visualArea: {
-    height: H * 0.30,
-    width: "100%",
+    top: 16,
+    right: 16,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: Colors.bgTertiary,
     justifyContent: "center",
     alignItems: "center",
   },
-  textArea: {
-    padding: 24,
-    paddingTop: 20,
+  emoji: {
+    fontSize: 52,
+    marginBottom: 8,
+  },
+  title: {
+    fontSize: 26,
+    fontWeight: "800",
+    color: Colors.textPrimary,
+    letterSpacing: -0.5,
+    marginBottom: 6,
+  },
+  sub: {
+    fontSize: 15,
+    color: Colors.textSecondary,
+    marginBottom: 20,
+    lineHeight: 22,
+  },
+  bullets: {
+    gap: 12,
+    marginBottom: 28,
+  },
+  bullet: {
+    flexDirection: "row",
     alignItems: "center",
-    gap: 8,
+    gap: 10,
+  },
+  bulletDot: {
+    width: 7,
+    height: 7,
+    borderRadius: 4,
+    backgroundColor: Colors.gold,
+  },
+  bulletText: {
+    fontSize: 14,
+    color: Colors.textPrimary,
+    fontWeight: "500",
+  },
+  startBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: Colors.gold,
+    borderRadius: 18,
+    paddingVertical: 16,
+    gap: 6,
+    shadowColor: Colors.gold,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.35,
+    shadowRadius: 10,
+    elevation: 6,
+  },
+  startText: {
+    fontSize: 17,
+    fontWeight: "800",
+    color: Colors.bgPrimary,
+  },
+});
+
+const coach = StyleSheet.create({
+  dimOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "rgba(0,0,0,0.45)",
+    zIndex: 990,
+    bottom: 200,
+  },
+  card: {
+    position: "absolute",
+    bottom: 92,
+    left: 16,
+    right: 16,
+    backgroundColor: Colors.bgSecondary,
+    borderRadius: 22,
+    paddingHorizontal: 20,
+    paddingBottom: 18,
+    paddingTop: 0,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    zIndex: 999,
+    overflow: "hidden",
+    ...Platform.select({
+      ios: { shadowColor: "#000", shadowOffset: { width: 0, height: -4 }, shadowOpacity: 0.3, shadowRadius: 16 },
+      android: { elevation: 14 },
+    }),
+  },
+  progressTrack: {
+    height: 3,
+    backgroundColor: Colors.bgTertiary,
+    marginHorizontal: -20,
+    marginBottom: 16,
+  },
+  progressFill: {
+    height: "100%",
+    borderRadius: 2,
+  },
+  header: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    marginBottom: 10,
   },
   emojiWrap: {
-    width: 52,
-    height: 52,
-    borderRadius: 16,
+    width: 44,
+    height: 44,
+    borderRadius: 14,
     borderWidth: 1,
     justifyContent: "center",
     alignItems: "center",
-    marginBottom: 4,
   },
-  slideEmoji: {
-    fontSize: 24,
-  },
-  slideTitle: {
+  emoji: {
     fontSize: 22,
+  },
+  headerText: {
+    flex: 1,
+  },
+  title: {
+    fontSize: 16,
     fontWeight: "800",
     color: Colors.textPrimary,
-    textAlign: "center",
-    letterSpacing: -0.3,
   },
-  slideDesc: {
-    fontSize: 15,
-    color: Colors.textSecondary,
-    textAlign: "center",
-    fontWeight: "500",
+  stepCount: {
+    fontSize: 11,
+    color: Colors.textMuted,
+    marginTop: 1,
+    fontWeight: "600",
   },
-  footer: {
-    width: "100%",
+  closeBtn: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: Colors.bgTertiary,
+    justifyContent: "center",
     alignItems: "center",
-    gap: 16,
+  },
+  desc: {
+    fontSize: 14,
+    color: Colors.textSecondary,
+    lineHeight: 20,
+    marginBottom: 14,
+  },
+  buttons: {
+    flexDirection: "row",
+    gap: 10,
+    marginBottom: 14,
+  },
+  actionBtn: {
+    flex: 1,
+    borderWidth: 1,
+    borderRadius: 14,
+    paddingVertical: 12,
+    alignItems: "center",
+  },
+  actionText: {
+    fontSize: 13,
+    fontWeight: "700",
+  },
+  nextBtn: {
+    flex: 1,
+    borderRadius: 14,
+    paddingVertical: 12,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 4,
+  },
+  nextText: {
+    fontSize: 14,
+    fontWeight: "800",
+    color: Colors.bgPrimary,
   },
   dots: {
     flexDirection: "row",
-    gap: 6,
-    alignItems: "center",
+    gap: 5,
+    justifyContent: "center",
   },
   dot: {
-    height: 7,
-    borderRadius: 4,
+    height: 6,
+    borderRadius: 3,
   },
   dotActive: {
     opacity: 1,
   },
   dotInactive: {
-    width: 7,
+    width: 6,
     backgroundColor: Colors.border,
-    opacity: 0.6,
-  },
-  nextBtn: {
-    width: "100%",
-    paddingVertical: 16,
-    borderRadius: 18,
-    alignItems: "center",
-  },
-  nextText: {
-    color: Colors.bgPrimary,
-    fontSize: 17,
-    fontWeight: "800",
-    letterSpacing: 0.2,
   },
 });
