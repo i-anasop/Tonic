@@ -21,12 +21,14 @@ import {
   ChevronRight,
   AlertCircle,
   RotateCcw,
+  HelpCircle,
 } from "lucide-react-native";
 import { useRouter } from "expo-router";
 
 import { Colors } from "@/constants/colors";
 import { useAppState } from "@/providers/AppStateProvider";
 import { useTasks } from "@/providers/TasksProvider";
+import { AppTour, checkTourSeen, markTourSeen } from "@/components/AppTour";
 import type { Task, AIInsight } from "@/types/tasks";
 
 const { width: _width } = Dimensions.get("window");
@@ -233,7 +235,7 @@ function InsightCard({ insight }: { insight: AIInsight }) {
       </View>
       <View style={styles.insightContent}>
         <Text style={[styles.insightTitle, { color }]}>{insight.title}</Text>
-        <Text style={styles.insightDescription}>{insight.description}</Text>
+        <Text style={styles.insightDescription} numberOfLines={2}>{insight.description}</Text>
       </View>
     </View>
   );
@@ -251,6 +253,7 @@ export default function DashboardScreen() {
     weeklyCompletion: [0, 0, 0, 0, 0, 0, 0],
   });
   const [refreshing, setRefreshing] = React.useState(false);
+  const [showTour, setShowTour] = React.useState(false);
 
   const todayTasks = getTodayTasks();
   const focusInsight = insights.find((i: AIInsight) => i.type === "focus");
@@ -283,6 +286,19 @@ export default function DashboardScreen() {
     await loadStats();
     setRefreshing(false);
   }, [loadStats]);
+
+  useEffect(() => {
+    let cancelled = false;
+    checkTourSeen().then((seen) => {
+      if (!cancelled && !seen && user) setShowTour(true);
+    });
+    return () => { cancelled = true; };
+  }, [user]);
+
+  const handleTourDone = useCallback(async () => {
+    await markTourSeen();
+    setShowTour(false);
+  }, []);
 
   const handleReset = () => {
     Alert.alert("Reset App", "Clear all data and return to onboarding?", [
@@ -345,6 +361,13 @@ export default function DashboardScreen() {
             <TouchableOpacity
               style={styles.resetButton}
               activeOpacity={0.8}
+              onPress={() => setShowTour(true)}
+            >
+              <HelpCircle size={17} color={Colors.textSecondary} />
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.resetButton}
+              activeOpacity={0.8}
               onPress={handleReset}
             >
               <RotateCcw size={16} color={Colors.textSecondary} />
@@ -359,16 +382,14 @@ export default function DashboardScreen() {
 
         <View style={styles.progressSection}>
           <View style={styles.progressLeft}>
-            <Text style={styles.sectionTitle}>Today&apos;s Progress</Text>
+            <Text style={styles.sectionTitle}>Today</Text>
             <Text style={styles.progressSubtitle}>
-              {todayCompleted} of {todayTasks.length} tasks completed
+              {todayCompleted} / {todayTasks.length} done
             </Text>
             <View style={styles.progressStats}>
               <View style={styles.progressStat}>
-                <Flame size={16} color={Colors.warning} />
-                <Text style={styles.progressStatText}>
-                  {stats.currentStreak} day streak
-                </Text>
+                <Flame size={14} color={Colors.warning} />
+                <Text style={styles.progressStatText}>{stats.currentStreak}d streak</Text>
               </View>
             </View>
           </View>
@@ -416,13 +437,12 @@ export default function DashboardScreen() {
             </TouchableOpacity>
           </View>
           {todayTasks.length === 0 ? (
-            <View style={styles.emptyTasksCard}>
-              <Text style={styles.emptyTasksText}>No tasks for today yet</Text>
-              <TouchableOpacity style={styles.emptyTasksButton} onPress={handleAddTask}>
-                <Plus size={16} color={Colors.gold} />
-                <Text style={styles.emptyTasksButtonText}>Add your first task</Text>
-              </TouchableOpacity>
-            </View>
+            <TouchableOpacity style={styles.emptyTasksCard} onPress={handleAddTask} activeOpacity={0.8}>
+              <View style={styles.emptyTasksIcon}>
+                <Plus size={22} color={Colors.gold} />
+              </View>
+              <Text style={styles.emptyTasksText}>Add today's first task</Text>
+            </TouchableOpacity>
           ) : (
             <View style={styles.tasksList}>
               {todayTasks.slice(0, 5).map((task: Task) => (
@@ -438,6 +458,8 @@ export default function DashboardScreen() {
           </View>
         )}
       </ScrollView>
+
+      {showTour && <AppTour onDone={handleTourDone} />}
     </SafeAreaView>
   );
 }
@@ -694,15 +716,27 @@ const styles = StyleSheet.create({
   emptyTasksCard: {
     backgroundColor: Colors.bgSecondary,
     borderRadius: 16,
-    padding: 32,
+    padding: 28,
     alignItems: "center",
-    borderWidth: 1,
-    borderColor: Colors.border,
-    gap: 16,
+    borderWidth: 1.5,
+    borderColor: `${Colors.gold}30`,
+    borderStyle: "dashed",
+    gap: 12,
+    flexDirection: "row",
+    justifyContent: "center",
+  },
+  emptyTasksIcon: {
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    backgroundColor: `${Colors.gold}18`,
+    justifyContent: "center",
+    alignItems: "center",
   },
   emptyTasksText: {
     fontSize: 15,
     color: Colors.textSecondary,
+    fontWeight: "600",
   },
   emptyTasksButton: {
     flexDirection: "row",
