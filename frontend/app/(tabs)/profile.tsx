@@ -116,7 +116,7 @@ export default function ProfileScreen() {
   const { tasks, getStats, getCompletedTasks } = useTasks();
   const { stats: achievementStats } = useAchievements();
   const { isConnected: isTonConnected, recordAchievementOnChain, isSendingTx } = useTonConnect();
-  const { isDark, toggleTheme } = useTheme();
+  const { isDark, toggleTheme, colors } = useTheme();
   const [isRecordingOnChain, setIsRecordingOnChain] = useState(false);
   const [lastTxHash, setLastTxHash] = useState<string | null>(null);
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
@@ -283,7 +283,7 @@ export default function ProfileScreen() {
 
     Alert.alert(
       "Claim Points On-Chain",
-      `Claim your ${claimablePoints} pts (Level ${level} · ${levelName}) onto the TON blockchain.\n\nThis creates a permanent, verifiable record of your productivity score.\n\nOnly a tiny gas fee applies — no extra value is spent.`,
+      `Claim ${claimablePoints} pts (Lv ${level} · ${levelName}) onto TON blockchain.\n\n🔥 2× Boost: Claiming on-chain unlocks the Chain Pioneer achievement and doubles your recorded score — a permanent, verifiable proof of productivity.\n\nOnly gas fee applies — no extra cost.`,
       [
         { text: "Cancel", style: "cancel" },
         {
@@ -345,9 +345,9 @@ export default function ProfileScreen() {
 
   return (
     <>
-      <SafeAreaView style={styles.container} edges={["top"]}>
+      <SafeAreaView style={[styles.container, { backgroundColor: colors.bgPrimary }]} edges={["top"]}>
         <ScrollView
-          style={styles.scrollView}
+          style={[styles.scrollView, { backgroundColor: colors.bgPrimary }]}
           showsVerticalScrollIndicator={false}
           contentContainerStyle={styles.scrollContent}
         >
@@ -469,48 +469,31 @@ export default function ProfileScreen() {
               />
             </View>
           </TouchableOpacity>
-          
+
+          {/* Claim on TON — 2× bonus points */}
+          <TouchableOpacity
+            style={[styles.claimChainRow, isRecordingOnChain && { opacity: 0.6 }]}
+            onPress={handleClaimPoints}
+            activeOpacity={0.82}
+            disabled={isRecordingOnChain || isSendingTx}
+          >
+            <Text style={styles.claimChainEmoji}>⛓️</Text>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.claimChainTitle}>
+                {isRecordingOnChain ? "Claiming on TON..." : "Claim points on TON blockchain"}
+              </Text>
+              <Text style={styles.claimChainSub}>
+                {achievementStats.totalPoints} pts available · Unlock Chain Pioneer achievement
+              </Text>
+            </View>
+            <View style={styles.claimChainBadge}>
+              <Text style={styles.claimChainBadgeText}>2×</Text>
+            </View>
+          </TouchableOpacity>
+
           {/* TON Blockchain Section */}
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>TON Blockchain</Text>
-
-            {/* Claim Points Card */}
-            <TouchableOpacity
-              style={[styles.claimCard, achievementStats.totalPoints > 0 && isTonConnected && styles.claimCardActive]}
-              onPress={handleClaimPoints}
-              activeOpacity={0.85}
-              disabled={isRecordingOnChain || isSendingTx}
-            >
-              <View style={styles.claimCardTop}>
-                <View style={styles.claimLeft}>
-                  <Text style={styles.claimEmoji}>⚡</Text>
-                  <View>
-                    <Text style={styles.claimTitle}>
-                      {isRecordingOnChain ? "Claiming..." : "Claim Points On-Chain"}
-                    </Text>
-                    <Text style={styles.claimSub}>Only gas fee · No extra value</Text>
-                  </View>
-                </View>
-                <View style={[styles.claimBadge, !isTonConnected && styles.tonBadgeInactive]}>
-                  <Text style={[styles.claimBadgeText, !isTonConnected && styles.tonBadgeTextInactive]}>
-                    {isTonConnected ? "CLAIM" : "OFF"}
-                  </Text>
-                </View>
-              </View>
-              <View style={styles.claimPointsRow}>
-                <Text style={styles.claimPointsNumber}>{achievementStats.totalPoints}</Text>
-                <Text style={styles.claimPointsLabel}> pts claimable · Lv {achievementStats.currentLevel.level} {achievementStats.currentLevel.name}</Text>
-              </View>
-              {lastTxHash && (
-                <View style={styles.txHashRow}>
-                  <Zap size={12} color={Colors.success} />
-                  <Text style={styles.txHashText} numberOfLines={1}>
-                    Claimed · TX: {lastTxHash.slice(0, 20)}...
-                  </Text>
-                </View>
-              )}
-            </TouchableOpacity>
-
             <View style={styles.menuCard}>
               <TouchableOpacity
                 style={styles.tonRecordButton}
@@ -566,12 +549,13 @@ export default function ProfileScreen() {
               color={Colors.purple}
               onPress={handleDarkModeToggle}
               rightElement={
-                <Switch
-                  value={isDark}
-                  onValueChange={handleDarkModeToggle}
-                  trackColor={{ false: Colors.bgTertiary, true: `${Colors.gold}50` }}
-                  thumbColor={isDark ? Colors.gold : Colors.textMuted}
-                />
+                <View pointerEvents="none">
+                  <Switch
+                    value={isDark}
+                    trackColor={{ false: Colors.bgTertiary, true: `${Colors.gold}50` }}
+                    thumbColor={isDark ? Colors.gold : Colors.textMuted}
+                  />
+                </View>
               }
             />
           </View>
@@ -1186,5 +1170,43 @@ const styles = StyleSheet.create({
     paddingTop: 10,
     borderTopWidth: 1,
     borderTopColor: Colors.border,
+  },
+  claimChainRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    marginTop: 10,
+    marginBottom: 4,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    backgroundColor: `${Colors.gold}08`,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: `${Colors.gold}30`,
+  },
+  claimChainEmoji: {
+    fontSize: 22,
+  },
+  claimChainTitle: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: Colors.textPrimary,
+    marginBottom: 2,
+  },
+  claimChainSub: {
+    fontSize: 12,
+    color: Colors.textSecondary,
+  },
+  claimChainBadge: {
+    backgroundColor: Colors.gold,
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+  },
+  claimChainBadgeText: {
+    fontSize: 13,
+    fontWeight: "900",
+    color: Colors.bgPrimary,
+    letterSpacing: 0.5,
   },
 });

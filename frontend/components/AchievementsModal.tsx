@@ -25,6 +25,7 @@ const ICON_MAP: Record<string, string> = {
   Award: "🏅", BookOpen: "📚", TrendingUp: "📈", Crown: "👑", Star: "⭐",
   CheckCircle: "✅", Play: "▶️", Trophy: "🏆", Heart: "❤️", Sparkles: "✨",
   Sunrise: "🌅", Moon: "🌙", RotateCcw: "🔄", Clock: "⏰",
+  Shield: "🔗", Link: "⛓️",
 };
 
 const DIFFICULTY_CONFIG: Record<string, { label: string; color: string; bg: string }> = {

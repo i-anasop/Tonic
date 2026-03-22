@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from "react";
-import { Tabs, useRouter } from "expo-router";
+import { Tabs, useRouter, usePathname } from "expo-router";
 import { LayoutDashboard, ListTodo, Sparkles, User, Bot } from "lucide-react-native";
 import { View, StyleSheet, TouchableOpacity, Animated } from "react-native";
 
@@ -58,6 +58,8 @@ function AgentFAB({ visible }: { visible: boolean }) {
 export default function TabLayout() {
   const [showTour, setShowTour] = useState(false);
   const [tourChecked, setTourChecked] = useState(false);
+  const pathname = usePathname();
+  const isAgentScreen = pathname?.includes("agent") ?? false;
 
   useEffect(() => {
     checkTourSeen().then((seen) => {
@@ -119,8 +121,8 @@ export default function TabLayout() {
         />
       </Tabs>
 
-      {/* Floating AI Agent button — always visible except during tour */}
-      <AgentFAB visible={tourChecked && !showTour} />
+      {/* Floating AI Agent button — hidden on agent screen and during tour */}
+      <AgentFAB visible={tourChecked && !showTour && !isAgentScreen} />
 
       {/* Tour overlay */}
       {showTour && <AppTour onDone={handleTourDone} />}

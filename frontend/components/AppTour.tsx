@@ -15,7 +15,7 @@ import { ChevronRight, X } from "lucide-react-native";
 import { Colors } from "@/constants/colors";
 
 const { width: W, height: H } = Dimensions.get("window");
-const TOUR_KEY = "@tonic_tour_v3_seen";
+const TOUR_KEY = "@tonic_tour_v4_seen";
 
 interface Spotlight {
   x: number;
@@ -29,6 +29,7 @@ interface Spotlight {
 interface TourStep {
   id: string;
   tab: string | null;
+  isModal?: boolean;
   emoji: string;
   accent: string;
   title: string;
@@ -59,7 +60,7 @@ const STEPS: TourStep[] = [
     emoji: "➕",
     accent: Colors.gold,
     title: "Add a task",
-    tip: "Tap + to create and track a new task",
+    tip: "Tap + to create your first task — let's try it now!",
     getSpot: (W, _H, top) => ({
       x: W - 64,
       y: top + 8,
@@ -67,6 +68,23 @@ const STEPS: TourStep[] = [
       h: 50,
       round: 14,
       tipBelow: true,
+    }),
+  },
+  {
+    id: "task_form",
+    tab: "/modal",
+    isModal: true,
+    emoji: "📝",
+    accent: Colors.gold,
+    title: "Create a task",
+    tip: "Give it a title, priority & due date — takes 5 seconds",
+    getSpot: (W, H, top) => ({
+      x: 16,
+      y: top + 20,
+      w: W - 32,
+      h: H * 0.62,
+      round: 20,
+      tipBelow: false,
     }),
   },
   {
@@ -340,9 +358,21 @@ export function AppTour({ onDone }: { onDone: () => void }) {
       }).start(() => onDone());
       return;
     }
+    const currentStep = STEPS[stepIdx];
     const nextStep = STEPS[nextIdx];
-    if (nextStep.tab && nextStep.tab !== STEPS[stepIdx].tab) {
-      try { router.replace(nextStep.tab as any); } catch {}
+    if (nextStep.tab && nextStep.tab !== currentStep.tab) {
+      try {
+        if (nextStep.isModal) {
+          router.push(nextStep.tab as any);
+        } else if (currentStep.isModal) {
+          router.back();
+          setTimeout(() => {
+            try { router.replace(nextStep.tab as any); } catch {}
+          }, 150);
+        } else {
+          router.replace(nextStep.tab as any);
+        }
+      } catch {}
     }
     setStepIdx(nextIdx);
   }, [stepIdx, router, onDone]);

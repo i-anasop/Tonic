@@ -420,7 +420,7 @@ export default function AgentScreen() {
           </TouchableOpacity>
 
           <TextInput
-            style={styles.input}
+            style={[styles.input, { scrollbarWidth: "none", outlineWidth: 0, overflowY: "hidden" } as any]}
             placeholder={isListening ? "Listening..." : "Message Tonic..."}
             placeholderTextColor={Colors.textMuted}
             value={input}

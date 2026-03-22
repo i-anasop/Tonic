@@ -150,7 +150,14 @@ ${pendingTasks.slice(0, 15).map((t, i) => `${i + 1}. [${t.id}] "${t.title}" | ${
 User stats: ${stats.tasksCompleted || 0} tasks completed, ${stats.currentStreak || 0}-day streak, ${stats.productivityScore || 0} productivity score.
 Current date/time: ${new Date().toLocaleString()}
 
-You can create tasks, complete them, schedule the user's day, or give advice. Be concise and action-oriented.`;
+You can create tasks, complete them, schedule the user's day, or give advice.
+
+RESPONSE RULES — follow every time, no exceptions:
+- Max 60 words total. No exceptions.
+- NEVER use markdown headers (##, ###).
+- Use at most 3 bullet points if listing; prefer plain sentences.
+- Be direct, warm, and punchy — like a smart friend, not a corporate bot.
+- After creating or completing a task, confirm it in ONE sentence then stop.`;
 
     const tools = [
       {

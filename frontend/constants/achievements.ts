@@ -115,6 +115,11 @@ export const ACHIEVEMENTS: Achievement[] = [
   a("speed_demon","Speed Demon",       "Complete 10 tasks before their due date",                    "timeless","medium","Zap",       8,  "custom",          10),
   a("comeback",   "Comeback King",     "Restart a 7+ day streak after breaking it",                  "timeless","hard",  "RotateCcw", 20, "custom",          1),
   a("all_nighter","All Nighter",       "Stay productive for 12+ hours in a session",                 "timeless","medium","Clock",     8,  "usage_time",      12),
+
+  // ══════════ BLOCKCHAIN ══════════
+  a("chain_pioneer",  "Chain Pioneer",    "Claim your achievement points on TON blockchain for the first time",  "timeless","medium","Link",      50, "custom",          1),
+  a("chain_verified", "Chain Verified",   "Claim 500+ achievement points on-chain — blockchain native",          "timeless","hard",  "Shield",   100, "custom",          500),
+  a("ton_champion",   "TON Champion",     "Claim 2,000+ points on TON — you're a blockchain productivity titan", "timeless","expert","Crown",    250, "custom",          2000),
 ];
 
 // ═══════════════════════════════════════════════════════════
