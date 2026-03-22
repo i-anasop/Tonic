@@ -2,6 +2,12 @@ import express from "express";
 import cors from "cors";
 import pg from "pg";
 import OpenAI from "openai";
+import { createRequire } from "module";
+import { fileURLToPath } from "url";
+import path from "path";
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const WEB_DIST = path.join(__dirname, "../Tonic-AI/expo/dist");
 
 const app = express();
 app.use(cors());
@@ -253,6 +259,19 @@ app.get("/api/users/:userId/records", async (req, res) => {
     res.status(500).json({ error: "Failed to fetch records" });
   }
 });
+
+import { existsSync } from "fs";
+
+if (existsSync(WEB_DIST)) {
+  app.use(express.static(WEB_DIST));
+  app.get("/{*splat}", (req, res, next) => {
+    if (req.path.startsWith("/api/") || req.path === "/tonconnect-manifest.json" || req.path === "/health") {
+      return next();
+    }
+    res.sendFile(path.join(WEB_DIST, "index.html"));
+  });
+  console.log("Serving Expo web build from:", WEB_DIST);
+}
 
 initDB()
   .then(() => {
