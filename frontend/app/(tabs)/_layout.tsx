@@ -1,0 +1,171 @@
+import { useState, useEffect, useCallback, useRef } from "react";
+import { Tabs, useRouter } from "expo-router";
+import { LayoutDashboard, ListTodo, Sparkles, User, Bot } from "lucide-react-native";
+import { View, StyleSheet, TouchableOpacity, Animated } from "react-native";
+
+import { Colors } from "@/constants/colors";
+import { AppTour, checkTourSeen, markTourSeen } from "@/components/AppTour";
+
+function AgentFAB({ visible }: { visible: boolean }) {
+  const router = useRouter();
+  const scale = useRef(new Animated.Value(0)).current;
+  const glow = useRef(new Animated.Value(0.6)).current;
+
+  useEffect(() => {
+    Animated.spring(scale, {
+      toValue: visible ? 1 : 0,
+      friction: 6,
+      tension: 60,
+      useNativeDriver: true,
+    }).start();
+  }, [visible, scale]);
+
+  useEffect(() => {
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(glow, { toValue: 1, duration: 1400, useNativeDriver: true }),
+        Animated.timing(glow, { toValue: 0.6, duration: 1400, useNativeDriver: true }),
+      ])
+    ).start();
+  }, [glow]);
+
+  const shadowOpacity = glow.interpolate({ inputRange: [0.6, 1], outputRange: [0.3, 0.65] });
+
+  return (
+    <Animated.View
+      style={[
+        fab.wrap,
+        {
+          transform: [{ scale }],
+          shadowOpacity,
+        },
+      ]}
+      pointerEvents={visible ? "auto" : "none"}
+    >
+      <TouchableOpacity
+        style={fab.btn}
+        activeOpacity={0.85}
+        onPress={() => {
+          try { router.push("/(tabs)/agent" as any); } catch {}
+        }}
+      >
+        <Bot size={24} color={Colors.bgPrimary} />
+      </TouchableOpacity>
+    </Animated.View>
+  );
+}
+
+export default function TabLayout() {
+  const [showTour, setShowTour] = useState(false);
+  const [tourChecked, setTourChecked] = useState(false);
+
+  useEffect(() => {
+    checkTourSeen().then((seen) => {
+      if (!seen) setShowTour(true);
+      setTourChecked(true);
+    });
+  }, []);
+
+  const handleTourDone = useCallback(async () => {
+    await markTourSeen();
+    setShowTour(false);
+  }, []);
+
+  return (
+    <View style={{ flex: 1 }}>
+      <Tabs
+        screenOptions={{
+          tabBarActiveTintColor: Colors.gold,
+          tabBarInactiveTintColor: Colors.textMuted,
+          headerShown: false,
+          tabBarStyle: styles.tabBar,
+          tabBarBackground: () => <View style={styles.tabBarBackground} />,
+          tabBarLabelStyle: styles.tabLabel,
+        }}
+      >
+        <Tabs.Screen
+          name="index"
+          options={{
+            title: "Dashboard",
+            tabBarIcon: ({ color }: { color: string }) => <LayoutDashboard size={22} color={color} />,
+          }}
+        />
+        <Tabs.Screen
+          name="tasks"
+          options={{
+            title: "Tasks",
+            tabBarIcon: ({ color }: { color: string }) => <ListTodo size={22} color={color} />,
+          }}
+        />
+        <Tabs.Screen
+          name="insights"
+          options={{
+            title: "Insights",
+            tabBarIcon: ({ color }: { color: string }) => <Sparkles size={22} color={color} />,
+          }}
+        />
+        <Tabs.Screen
+          name="profile"
+          options={{
+            title: "Profile",
+            tabBarIcon: ({ color }: { color: string }) => <User size={22} color={color} />,
+          }}
+        />
+        <Tabs.Screen
+          name="agent"
+          options={{
+            href: null,
+          }}
+        />
+      </Tabs>
+
+      {/* Floating AI Agent button — always visible except during tour */}
+      <AgentFAB visible={tourChecked && !showTour} />
+
+      {/* Tour overlay */}
+      {showTour && <AppTour onDone={handleTourDone} />}
+    </View>
+  );
+}
+
+const fab = StyleSheet.create({
+  wrap: {
+    position: "absolute",
+    bottom: 94,
+    right: 20,
+    shadowColor: Colors.gold,
+    shadowOffset: { width: 0, height: 0 },
+    shadowRadius: 16,
+    elevation: 10,
+    zIndex: 500,
+  },
+  btn: {
+    width: 54,
+    height: 54,
+    borderRadius: 27,
+    backgroundColor: Colors.gold,
+    justifyContent: "center",
+    alignItems: "center",
+    borderWidth: 2,
+    borderColor: `${Colors.gold}80`,
+  },
+});
+
+const styles = StyleSheet.create({
+  tabBar: {
+    backgroundColor: Colors.bgSecondary,
+    borderTopWidth: 1,
+    borderTopColor: Colors.border,
+    height: 80,
+    paddingBottom: 24,
+    paddingTop: 8,
+  },
+  tabBarBackground: {
+    flex: 1,
+    backgroundColor: Colors.bgSecondary,
+  },
+  tabLabel: {
+    fontSize: 10,
+    fontWeight: "600",
+  },
+});

@@ -23,7 +23,7 @@ outputType = "console"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "node /home/runner/workspace/server/index.mjs"
+args = "node /home/runner/workspace/backend/index.mjs"
 waitForPort = 3000
 
 [[ports]]

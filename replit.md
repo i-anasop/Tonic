@@ -1,64 +1,98 @@
 # Tonic AI — TON AI Hackathon Project
 
 ## Overview
-Tonic AI is a TON blockchain-integrated, AI-powered task management mobile app built with Expo/React Native. Built for the TON AI Hackathon ($20,000 prize, deadline March 25, 2026) targeting the "User-Facing AI Agents" track.
+Tonic AI is a TON blockchain-integrated, AI-powered task management app built with Expo/React Native. Built for the TON AI Hackathon ($20,000 prize, deadline March 25, 2026) targeting the "User-Facing AI Agents" track.
 
-## Architecture
+## Project Structure
 
-### Mobile App (`Tonic-AI/expo/`)
-- **Framework**: Expo / React Native
-- **Package manager**: bun
-- **Navigation**: Expo Router (tab-based)
-- **Screens**: Dashboard, Tasks, AI Insights, Profile + Onboarding
-- **State**: React Context providers (TasksProvider, AppStateProvider, AchievementsProvider)
-- **Local Storage**: AsyncStorage for offline-first caching
+```
+workspace/
+├── backend/              ← Express API server (Node.js / ESM)
+│   ├── index.mjs         ← Main server entry point
+│   └── telegram.mjs      ← Telegram bot integration
+└── frontend/             ← Expo / React Native mobile + web app
+    ├── app/              ← Expo Router screens
+    │   ├── (tabs)/       ← Tab screens: Dashboard, Tasks, Insights, Profile, Agent
+    │   ├── onboarding/   ← Onboarding flow
+    │   ├── modal.tsx     ← Add/edit task modal
+    │   └── reset.tsx     ← App reset screen
+    ├── components/       ← Shared UI components (AchievementsModal, AppTour)
+    ├── constants/        ← Colors, API URL, achievements config
+    ├── hooks/            ← useTonConnect (TON wallet hook)
+    ├── providers/        ← React context providers
+    │   ├── AppStateProvider.tsx
+    │   ├── TasksProvider.tsx
+    │   ├── AchievementsProvider.tsx
+    │   ├── ThemeProvider.tsx
+    │   └── TonConnectProvider.tsx
+    ├── types/            ← TypeScript types (tasks, achievements)
+    ├── assets/           ← Images, icons
+    └── public/           ← Static assets (tonconnect-manifest.json)
+```
 
-### Backend Server (`server/`)
+## Backend (`backend/`)
 - **Framework**: Express 5 (Node.js, ESM)
-- **Database**: PostgreSQL (via `pg` pool, DATABASE_URL env var)
-- **AI**: OpenAI GPT-5.2 via Replit AI Integrations proxy (no user API key needed)
-- **Port**: 3000 (configured via PORT env var)
+- **Database**: PostgreSQL (via `pg` pool, `DATABASE_URL` env var)
+- **AI**: OpenAI GPT-5.2 via Replit AI Integrations proxy
+- **Port**: 3000
 - **Domain**: `92c86d49-9cf4-41d6-8464-6cb2972e01f7-00-3btckq8mc5vwe.picard.replit.dev`
 
-## Backend API Endpoints
-- `GET /health` — health check
-- `GET /tonconnect-manifest.json` — TonConnect wallet manifest
-- `POST /api/insights` — Real AI-generated productivity insights (GPT-5.2)
-- `POST /api/users` — Create/upsert user (wallet or guest)
-- `GET /api/users/:userId/tasks` — Fetch user's tasks from DB
-- `POST /api/tasks` — Create/update single task
-- `DELETE /api/tasks/:taskId` — Delete task
-- `POST /api/tasks/sync` — Bulk sync tasks to DB
-- `POST /api/records` — Save on-chain achievement record
-- `GET /api/users/:userId/records` — Fetch on-chain records
+### API Endpoints
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | `/health` | Health check |
+| GET | `/tonconnect-manifest.json` | TonConnect wallet manifest |
+| POST | `/api/insights` | AI-generated productivity insights (GPT-5.2) |
+| POST | `/api/users` | Create/upsert user (wallet or guest) |
+| GET | `/api/users/:userId/tasks` | Fetch user tasks |
+| POST | `/api/tasks` | Create/update task |
+| DELETE | `/api/tasks/:taskId` | Delete task |
+| POST | `/api/tasks/sync` | Bulk sync tasks |
+| POST | `/api/records` | Save on-chain achievement record |
+| GET | `/api/users/:userId/records` | Fetch on-chain records |
+| POST | `/api/claim-points` | Claim achievement points on TON blockchain |
+| POST | `/api/agent` | AI agent chat (function calling) |
 
-## Database Schema
+### Database Schema
 - `users` — id, name, wallet_address, is_guest, timestamps
-- `tasks` — id, user_id, title, description, category, priority, status, due_date, created_at, completed_at
+- `tasks` — id, user_id, title, description, category, priority, status, due_date, timestamps
 - `on_chain_records` — id, user_id, record_type, title, description, ton_tx_hash, recorded_at
 
-## Key Features Implemented
-1. **Real AI Insights** — GPT-5.2 generates personalized, data-driven insights based on actual task data. Falls back to local rule-based if API unavailable.
-2. **Real TON Integration** — `sendTransaction` and `recordAchievementOnChain` in `useTonConnect.ts`. Profile screen has "Record Achievement On-Chain" button that sends a real TON transaction with an on-chain productivity proof.
-3. **Backend Persistence** — PostgreSQL stores users and tasks. AppStateProvider syncs users on creation. TasksProvider can bulk-sync tasks. Data survives reinstalls.
-4. **Name Consistency** — "Tonic AI" everywhere. Zero "Pulse" references remaining.
+## Frontend (`frontend/`)
+- **Framework**: Expo / React Native
+- **Package manager**: bun
+- **Navigation**: Expo Router (tab-based, 4 tabs + floating AI FAB)
+- **State**: React Context providers (TasksProvider, AppStateProvider, AchievementsProvider)
+- **Storage**: AsyncStorage (offline-first)
 
-## TON Integration Details
-- `useTonConnect.ts` hook wraps TonConnect UI with `sendTransaction` + `recordAchievementOnChain`
-- Achievement recording sends 0.05 TON to achievement contract with comment: `Tonic AI | [title] | Tasks: N | Streak: Nd`
-- TonConnect manifest served from backend (`/tonconnect-manifest.json`)
-- Manifest URL updated from hardcoded local IP to Replit production domain
+### Key Features
+1. **AI Agent** — GPT-5.2 chat with function calling (create tasks, analyze stats, plan day). Accessible via floating gold bot button (bottom-right FAB on all screens).
+2. **AI Insights** — Personalized productivity insights generated by GPT-5.2 based on actual task data.
+3. **TON Blockchain** — "Claim Points On-Chain" sends a gas-only TON transaction recording achievement points permanently. "Proof of Productivity" signs a score on-chain.
+4. **Achievements** — 40+ achievements across daily/weekly/monthly/all-time categories with a 10-level competitive ladder (Rookie → Mythic).
+5. **Dark Mode** — System-aware with manual toggle, persisted via AsyncStorage.
+6. **Onboarding Tour** — Animated step-by-step tour showing each real screen. Floating coach card navigates between tabs automatically.
+7. **Telegram Bot** — AI-powered bot (requires `TELEGRAM_BOT_TOKEN` secret).
 
-## Environment Variables Required
-- `DATABASE_URL` — PostgreSQL connection string (auto-provisioned)
-- `AI_INTEGRATIONS_OPENAI_BASE_URL` — Replit AI proxy URL (auto-provisioned)
-- `AI_INTEGRATIONS_OPENAI_API_KEY` — Replit AI proxy key (auto-provisioned)
-- `REPLIT_DEV_DOMAIN` — Used in TonConnect manifest generation
+### Point & Level System
+- Easy: 3 pts × 1 = 3 | Medium: 8 pts × 2 = 16 | Hard: 20 pts × 3 = 60 | Expert: 60 pts × 5 = 300
+- Levels: Rookie(0) → Apprentice(150) → Grinder(450) → Strategist(1k) → Pro(2.5k) → Elite(5.5k) → Master(11k) → Champion(22k) → Legend(45k) → Mythic(100k)
 
 ## Running the App
-- **Backend**: `node server/index.mjs` (workflow: "Start application")
-- **Mobile**: Run in Expo Go or build with `bun run start` from `Tonic-AI/expo/`
+- **Backend**: `node backend/index.mjs` (workflow: "Start application", port 3000)
+- **Frontend (web build)**: `cd frontend && bun run expo export --platform web`
+- **Frontend (dev)**: `cd frontend && bun run start`
 
-## Mobile App Constants
-- `Tonic-AI/expo/constants/api.ts` — API base URL and TON constants
-- `Tonic-AI/expo/constants/colors.ts` — Design system colors (gold-on-dark theme)
+## Environment Variables
+| Variable | Source | Purpose |
+|----------|--------|---------|
+| `DATABASE_URL` | Auto-provisioned | PostgreSQL connection |
+| `AI_INTEGRATIONS_OPENAI_BASE_URL` | Auto-provisioned | Replit AI proxy |
+| `AI_INTEGRATIONS_OPENAI_API_KEY` | Auto-provisioned | Replit AI proxy key |
+| `TELEGRAM_BOT_TOKEN` | Set manually in Secrets | Telegram bot (optional) |
+| `REPLIT_DEV_DOMAIN` | Auto-provisioned | TonConnect manifest URL |
+
+## Constants
+- `frontend/constants/api.ts` — API base URL and TON config
+- `frontend/constants/colors.ts` — Design system (gold-on-dark theme)
+- `frontend/constants/achievements.ts` — All 40+ achievement definitions

@@ -1,0 +1,16 @@
+{
+  "name": "tonic-ai-server",
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "start": "node index.mjs",
+    "dev": "node --watch index.mjs"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^5.0.0",
+    "node-telegram-bot-api": "^0.67.0",
+    "openai": "^4.77.0",
+    "pg": "^8.12.0"
+  }
+}
