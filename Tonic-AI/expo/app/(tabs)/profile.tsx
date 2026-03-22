@@ -263,55 +263,63 @@ export default function ProfileScreen() {
     );
   }, [isTonConnected, stats, recordAchievementOnChain, user]);
 
-  const handleRecordOnChain = useCallback(async () => {
+  const handleClaimPoints = useCallback(async () => {
+    const claimablePoints = achievementStats.totalPoints;
+    const { level, name: levelName } = achievementStats.currentLevel;
+
     if (!isTonConnected) {
       Alert.alert(
         "Wallet Required",
-        "Connect your TON wallet first to record achievements on the blockchain.",
+        `Connect your TON wallet to claim your ${claimablePoints} points on-chain. You only pay the tiny gas fee — no other cost.`,
         [{ text: "OK" }]
       );
       return;
     }
 
+    if (claimablePoints === 0) {
+      Alert.alert("No Points Yet", "Complete tasks and unlock achievements to earn points you can claim on-chain.");
+      return;
+    }
+
     Alert.alert(
-      "Record Achievement on TON",
-      `This will record your current achievement (${stats.tasksCompleted} tasks, ${stats.currentStreak}-day streak) permanently on the TON blockchain.\n\nThis requires a small gas fee (~0.05 TON).`,
+      "Claim Points On-Chain",
+      `Claim your ${claimablePoints} pts (Level ${level} · ${levelName}) onto the TON blockchain.\n\nThis creates a permanent, verifiable record of your productivity score.\n\nOnly a tiny gas fee applies — no extra value is spent.`,
       [
         { text: "Cancel", style: "cancel" },
         {
-          text: "Record On-Chain",
+          text: "Claim Now",
           onPress: async () => {
             setIsRecordingOnChain(true);
             try {
               const result = await recordAchievementOnChain({
-                title: `Productivity Milestone`,
+                title: `Points Claim: ${claimablePoints} pts`,
                 tasksCompleted: stats.tasksCompleted,
                 streak: stats.currentStreak,
               });
               if (result) {
                 setLastTxHash(result.boc);
                 if (user?.id) {
-                  await fetch(`${API_BASE_URL}/api/records`, {
+                  await fetch(`${API_BASE_URL}/api/claim-points`, {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({
-                      id: `${user.id}_${Date.now()}`,
                       userId: user.id,
-                      recordType: "achievement",
-                      title: `Productivity Milestone`,
-                      description: `${stats.tasksCompleted} tasks completed, ${stats.currentStreak}-day streak`,
+                      walletAddress: user.walletAddress,
+                      points: claimablePoints,
+                      level,
+                      levelName,
                       tonTxHash: result.boc,
                     }),
-                  });
+                  }).catch(() => {});
                 }
                 Alert.alert(
-                  "On-Chain!",
-                  "Your achievement has been permanently recorded on the TON blockchain.",
-                  [{ text: "Awesome!" }]
+                  "Points Claimed!",
+                  `${claimablePoints} achievement points are now recorded on the TON blockchain under your wallet. Verifiable forever on tonscan.org.`,
+                  [{ text: "Let's Go!" }]
                 );
               }
-            } catch (err) {
-              Alert.alert("Transaction Failed", "Could not send the transaction. Please try again.");
+            } catch {
+              Alert.alert("Transaction Failed", "Could not claim on-chain. Please try again.");
             } finally {
               setIsRecordingOnChain(false);
             }
@@ -319,7 +327,7 @@ export default function ProfileScreen() {
         },
       ]
     );
-  }, [isTonConnected, stats, recordAchievementOnChain, user]);
+  }, [isTonConnected, achievementStats, stats, recordAchievementOnChain, user]);
 
   const completedTasks = getCompletedTasks();
   const completionRate = tasks.length > 0
@@ -465,46 +473,45 @@ export default function ProfileScreen() {
           {/* TON Blockchain Section */}
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>TON Blockchain</Text>
-            <View style={styles.menuCard}>
-              <TouchableOpacity
-                style={styles.tonRecordButton}
-                onPress={handleRecordOnChain}
-                activeOpacity={0.8}
-                disabled={isRecordingOnChain || isSendingTx}
-              >
-                <View style={styles.tonRecordLeft}>
-                  <View style={[styles.menuIconContainer, { backgroundColor: `${Colors.gold}15` }]}>
-                    <Award size={20} color={Colors.gold} />
-                  </View>
-                  <View style={styles.menuContent}>
-                    <Text style={styles.menuTitle}>
-                      {isRecordingOnChain ? "Recording..." : "Record Achievement On-Chain"}
+
+            {/* Claim Points Card */}
+            <TouchableOpacity
+              style={[styles.claimCard, achievementStats.totalPoints > 0 && isTonConnected && styles.claimCardActive]}
+              onPress={handleClaimPoints}
+              activeOpacity={0.85}
+              disabled={isRecordingOnChain || isSendingTx}
+            >
+              <View style={styles.claimCardTop}>
+                <View style={styles.claimLeft}>
+                  <Text style={styles.claimEmoji}>⚡</Text>
+                  <View>
+                    <Text style={styles.claimTitle}>
+                      {isRecordingOnChain ? "Claiming..." : "Claim Points On-Chain"}
                     </Text>
-                    <Text style={styles.menuSubtitle}>
-                      {isTonConnected
-                        ? `Permanently store your ${stats.tasksCompleted} tasks on TON`
-                        : "Connect wallet to record achievements"}
-                    </Text>
+                    <Text style={styles.claimSub}>Only gas fee · No extra value</Text>
                   </View>
                 </View>
-                <View style={[styles.tonBadge, !isTonConnected && styles.tonBadgeInactive]}>
-                  <Text style={[styles.tonBadgeText, !isTonConnected && styles.tonBadgeTextInactive]}>
-                    {isTonConnected ? "LIVE" : "OFF"}
+                <View style={[styles.claimBadge, !isTonConnected && styles.tonBadgeInactive]}>
+                  <Text style={[styles.claimBadgeText, !isTonConnected && styles.tonBadgeTextInactive]}>
+                    {isTonConnected ? "CLAIM" : "OFF"}
                   </Text>
                 </View>
-              </TouchableOpacity>
+              </View>
+              <View style={styles.claimPointsRow}>
+                <Text style={styles.claimPointsNumber}>{achievementStats.totalPoints}</Text>
+                <Text style={styles.claimPointsLabel}> pts claimable · Lv {achievementStats.currentLevel.level} {achievementStats.currentLevel.name}</Text>
+              </View>
               {lastTxHash && (
-                <>
-                  <View style={styles.menuDivider} />
-                  <View style={styles.txHashContainer}>
-                    <Zap size={14} color={Colors.success} />
-                    <Text style={styles.txHashText} numberOfLines={1}>
-                      Last TX: {lastTxHash.slice(0, 24)}...
-                    </Text>
-                  </View>
-                </>
+                <View style={styles.txHashRow}>
+                  <Zap size={12} color={Colors.success} />
+                  <Text style={styles.txHashText} numberOfLines={1}>
+                    Claimed · TX: {lastTxHash.slice(0, 20)}...
+                  </Text>
+                </View>
               )}
-              <View style={styles.menuDivider} />
+            </TouchableOpacity>
+
+            <View style={styles.menuCard}>
               <TouchableOpacity
                 style={styles.tonRecordButton}
                 onPress={handleProofOfProductivity}
@@ -1101,5 +1108,83 @@ const styles = StyleSheet.create({
     color: Colors.textSecondary,
     fontFamily: "monospace",
     flex: 1,
+  },
+  claimCard: {
+    backgroundColor: Colors.bgSecondary,
+    borderRadius: 18,
+    borderWidth: 2,
+    borderColor: Colors.border,
+    padding: 18,
+    marginBottom: 12,
+  },
+  claimCardActive: {
+    borderColor: `${Colors.gold}60`,
+    backgroundColor: `${Colors.gold}06`,
+    shadowColor: Colors.gold,
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.2,
+    shadowRadius: 10,
+    elevation: 6,
+  },
+  claimCardTop: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 14,
+  },
+  claimLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+  },
+  claimEmoji: {
+    fontSize: 30,
+  },
+  claimTitle: {
+    fontSize: 16,
+    fontWeight: "700",
+    color: Colors.textPrimary,
+  },
+  claimSub: {
+    fontSize: 12,
+    color: Colors.textSecondary,
+    marginTop: 2,
+  },
+  claimBadge: {
+    backgroundColor: `${Colors.gold}20`,
+    borderWidth: 1,
+    borderColor: `${Colors.gold}60`,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 10,
+  },
+  claimBadgeText: {
+    fontSize: 12,
+    fontWeight: "800",
+    color: Colors.gold,
+    letterSpacing: 0.5,
+  },
+  claimPointsRow: {
+    flexDirection: "row",
+    alignItems: "baseline",
+  },
+  claimPointsNumber: {
+    fontSize: 36,
+    fontWeight: "800",
+    color: Colors.gold,
+  },
+  claimPointsLabel: {
+    fontSize: 13,
+    color: Colors.textSecondary,
+    fontWeight: "500",
+  },
+  txHashRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    marginTop: 10,
+    paddingTop: 10,
+    borderTopWidth: 1,
+    borderTopColor: Colors.border,
   },
 });

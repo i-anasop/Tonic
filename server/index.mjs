@@ -480,6 +480,31 @@ app.post("/api/records", async (req, res) => {
   }
 });
 
+app.post("/api/claim-points", async (req, res) => {
+  try {
+    const { userId, walletAddress, points, level, levelName, tonTxHash } = req.body;
+    if (!userId || !points) return res.status(400).json({ error: "userId and points required" });
+
+    const claimId = `claim_${userId}_${Date.now()}`;
+    const result = await db.query(
+      `INSERT INTO on_chain_records (id, user_id, record_type, title, description, ton_tx_hash)
+       VALUES ($1, $2, 'points_claim', $3, $4, $5)
+       RETURNING *`,
+      [
+        claimId,
+        userId,
+        `Points Claim: ${points} pts`,
+        `Tonic AI | Level ${level} ${levelName} | ${points} achievement points claimed on TON | Wallet: ${walletAddress || "unknown"}`,
+        tonTxHash || null,
+      ]
+    );
+    res.json({ success: true, record: result.rows[0], claimId });
+  } catch (error) {
+    console.error("Claim points error:", error.message);
+    res.status(500).json({ error: "Failed to save claim" });
+  }
+});
+
 app.get("/api/users/:userId/records", async (req, res) => {
   try {
     const result = await db.query(
