@@ -1,4 +1,4 @@
-import React, { ReactNode } from "react";
+import React, { ReactNode, useMemo } from "react";
 import { TonConnectUIProvider } from "@tonconnect/ui-react";
 import { API_BASE_URL } from "@/constants/api";
 
@@ -9,7 +9,10 @@ interface TonConnectProviderProps {
 export const TonConnectProvider: React.FC<TonConnectProviderProps> = ({
   children,
 }) => {
-  const manifestUrl = `${API_BASE_URL}/tonconnect-manifest.json`;
+  const manifestUrl = useMemo(
+    () => `${API_BASE_URL}/tonconnect-manifest.json`,
+    []
+  );
 
   return (
     <TonConnectUIProvider
@@ -17,13 +20,16 @@ export const TonConnectProvider: React.FC<TonConnectProviderProps> = ({
       actionsConfiguration={{
         twaReturnUrl: "https://t.me/tonic_ton_bot",
         returnStrategy: "back",
+        skipRedirectToWallet: "never",
       }}
       walletsListConfiguration={{
         includeAppWallet: true,
       }}
       uiPreferences={{
         colorsSet: "dark",
+        borderRadius: "m",
       }}
+      language="en"
     >
       {children}
     </TonConnectUIProvider>

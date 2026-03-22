@@ -39,14 +39,13 @@ const SLIDES = [
     id: 1,
     title: "Welcome to\nTonic AI",
     subtitle: "AI-Powered Productivity",
-    description:
-      "The future of task management — intelligent, on-chain secured, and built for peak performance.",
+    description: "Intelligent task management, on-chain achievements, and a personal AI agent — all in one.",
     icon: Sparkles,
     accent: Colors.gold,
     bg: "rgba(255,215,0,0.07)",
     features: [
       { icon: Bot, label: "AI Agent" },
-      { icon: Shield, label: "TON Blockchain" },
+      { icon: Shield, label: "TON Chain" },
       { icon: Target, label: "Smart Goals" },
     ],
   },
@@ -54,13 +53,12 @@ const SLIDES = [
     id: 2,
     title: "Smart Task\nManagement",
     subtitle: "Organize with Intelligence",
-    description:
-      "AI auto-categorizes, prioritizes, and suggests optimal focus times based on your real patterns.",
+    description: "AI prioritizes your tasks and suggests optimal focus times based on your patterns.",
     icon: Zap,
     accent: Colors.blue,
     bg: "rgba(59,130,246,0.07)",
     features: [
-      { icon: Target, label: "Auto-prioritize" },
+      { icon: Target, label: "Auto-priority" },
       { icon: Star, label: "Difficulty XP" },
       { icon: CheckCircle, label: "4 Categories" },
     ],
@@ -69,14 +67,13 @@ const SLIDES = [
     id: 3,
     title: "AI Insights\n& Analytics",
     subtitle: "Know Your Patterns",
-    description:
-      "Personalized productivity insights, workload warnings, and behavioural analysis by GPT-5.",
+    description: "GPT-5 analyzes your productivity and delivers personalised insights every day.",
     icon: Brain,
     accent: Colors.purple,
     bg: "rgba(139,92,246,0.07)",
     features: [
       { icon: TrendingUp, label: "Progress charts" },
-      { icon: Brain, label: "GPT-5 powered" },
+      { icon: Brain, label: "GPT-5" },
       { icon: Trophy, label: "10 Rank levels" },
     ],
   },
@@ -84,8 +81,7 @@ const SLIDES = [
     id: 4,
     title: "Ready to\nLaunch?",
     subtitle: "Join the TON Ecosystem",
-    description:
-      "Connect your TON wallet to claim achievements on-chain, earn points, and climb the leaderboard.",
+    description: "Connect your TON wallet to earn points, claim achievements on-chain, and rank up.",
     icon: Wallet,
     accent: Colors.success,
     bg: "rgba(34,197,94,0.07)",
@@ -567,7 +563,7 @@ export default function OnboardingScreen() {
         >
           <View style={styles.badge}>
             <Sparkles size={11} color={Colors.gold} />
-            <Text style={styles.badgeText}>Built on TON · AI Hackathon</Text>
+            <Text style={styles.badgeText}>Built on TON</Text>
           </View>
 
           {!isLast && (
