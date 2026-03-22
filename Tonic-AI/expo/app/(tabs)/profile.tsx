@@ -205,6 +205,65 @@ export default function ProfileScreen() {
     }
   }, [user, setUser]);
 
+  const handleProofOfProductivity = useCallback(async () => {
+    if (!isTonConnected) {
+      Alert.alert("Wallet Required", "Connect your TON wallet to sign your productivity score on-chain.", [{ text: "OK" }]);
+      return;
+    }
+
+    Alert.alert(
+      "Proof of Productivity",
+      `This will sign your productivity score (${stats.productivityScore} points, ${stats.tasksCompleted} tasks) onto the TON blockchain using your wallet signature.\n\nYour score becomes a verifiable on-chain identity.`,
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Sign On-Chain",
+          onPress: async () => {
+            setIsRecordingOnChain(true);
+            try {
+              const comment = `Tonic AI | Proof of Productivity | Score: ${stats.productivityScore} | Tasks: ${stats.tasksCompleted} | Streak: ${stats.currentStreak}d`;
+              const result = await recordAchievementOnChain({
+                title: `Productivity Score: ${stats.productivityScore}`,
+                tasksCompleted: stats.tasksCompleted,
+                streak: stats.currentStreak,
+              });
+              if (result && user?.id) {
+                await fetch(`${API_BASE_URL}/api/ton-proof`, {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({
+                    userId: user.id,
+                    walletAddress: user.walletAddress,
+                    proof: { boc: result.boc, comment },
+                    score: stats.productivityScore,
+                  }),
+                }).catch(() => {});
+                await fetch(`${API_BASE_URL}/api/records`, {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({
+                    id: `proof_${user.id}_${Date.now()}`,
+                    userId: user.id,
+                    recordType: "proof_of_productivity",
+                    title: `Proof of Productivity: ${stats.productivityScore}pts`,
+                    description: comment,
+                    tonTxHash: result.boc,
+                  }),
+                }).catch(() => {});
+                setLastTxHash(result.boc);
+                Alert.alert("Identity Verified!", `Your productivity score of ${stats.productivityScore} points is now permanently recorded on the TON blockchain. Verifiable by anyone.`, [{ text: "Awesome!" }]);
+              }
+            } catch {
+              Alert.alert("Failed", "Could not sign on-chain. Please try again.");
+            } finally {
+              setIsRecordingOnChain(false);
+            }
+          },
+        },
+      ]
+    );
+  }, [isTonConnected, stats, recordAchievementOnChain, user]);
+
   const handleRecordOnChain = useCallback(async () => {
     if (!isTonConnected) {
       Alert.alert(
@@ -446,6 +505,32 @@ export default function ProfileScreen() {
                   </View>
                 </>
               )}
+              <View style={styles.menuDivider} />
+              <TouchableOpacity
+                style={styles.tonRecordButton}
+                onPress={handleProofOfProductivity}
+                activeOpacity={0.8}
+                disabled={isRecordingOnChain || isSendingTx}
+              >
+                <View style={styles.tonRecordLeft}>
+                  <View style={[styles.menuIconContainer, { backgroundColor: `${Colors.blue}15` }]}>
+                    <Shield size={20} color={Colors.blue} />
+                  </View>
+                  <View style={styles.menuContent}>
+                    <Text style={styles.menuTitle}>Proof of Productivity</Text>
+                    <Text style={styles.menuSubtitle}>
+                      {isTonConnected
+                        ? `Sign your score (${stats.productivityScore}pts) on TON blockchain`
+                        : "Connect wallet to verify identity on-chain"}
+                    </Text>
+                  </View>
+                </View>
+                <View style={[styles.tonBadge, { backgroundColor: `${Colors.blue}15`, borderColor: `${Colors.blue}40` }, !isTonConnected && styles.tonBadgeInactive]}>
+                  <Text style={[styles.tonBadgeText, { color: Colors.blue }, !isTonConnected && styles.tonBadgeTextInactive]}>
+                    {isTonConnected ? "SIGN" : "OFF"}
+                  </Text>
+                </View>
+              </TouchableOpacity>
             </View>
           </View>
 

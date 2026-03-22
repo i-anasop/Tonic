@@ -13,6 +13,8 @@ export interface Task {
   createdAt: Date;
   completedAt?: Date;
   aiSuggested?: boolean;
+  stakeAmount?: number;
+  stakeTxHash?: string;
 }
 
 export interface AIInsight {
@@ -32,4 +34,19 @@ export interface UserStats {
   longestStreak: number;
   productivityScore: number;
   weeklyCompletion: number[];
+}
+
+export interface AgentMessage {
+  id: string;
+  role: "user" | "assistant";
+  content: string;
+  timestamp: Date;
+  action?: AgentAction;
+  isLoading?: boolean;
+}
+
+export interface AgentAction {
+  type: "create_task" | "complete_task" | "show_stats" | "schedule";
+  data?: Record<string, unknown>;
+  success?: boolean;
 }
