@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import {
   ScrollView,
   StyleSheet,
@@ -25,6 +25,7 @@ import {
 } from "lucide-react-native";
 
 import { Colors } from "@/constants/colors";
+import { useTheme } from "@/providers/ThemeProvider";
 import { useTasks } from "@/providers/TasksProvider";
 import type { AIInsight } from "@/types/tasks";
 
@@ -45,6 +46,8 @@ interface DisplayInsight {
 
 function InsightCard({ insight, index }: { insight: DisplayInsight; index: number }) {
   const [expanded, setExpanded] = useState(false);
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const scaleAnim = useRef(new Animated.Value(0.95)).current;
   const opacityAnim = useRef(new Animated.Value(0)).current;
   const Icon = insight.icon;
@@ -156,6 +159,8 @@ function StatCard({
   color: string;
   subtext?: string;
 }) {
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   return (
     <View style={styles.statCard}>
       <View style={[styles.statIconContainer, { backgroundColor: `${color}15` }]}>
@@ -180,6 +185,8 @@ function CategoryBar({
   color: string;
 }) {
   const barWidth = useRef(new Animated.Value(0)).current;
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const percentage = total > 0 ? (count / total) * 100 : 0;
 
   useEffect(() => {
@@ -219,6 +226,8 @@ function CategoryBar({
 export default function InsightsScreen() {
   const [activeTab, setActiveTab] = useState<"insights" | "analytics">("insights");
   const { insights, tasks, getStats, isGeneratingInsights, generateInsights } = useTasks();
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const [stats, setStats] = useState({
     tasksCompleted: 0,
     tasksCreated: 0,
@@ -339,7 +348,7 @@ export default function InsightsScreen() {
           >
             <Lightbulb
               size={16}
-              color={activeTab === "insights" ? Colors.bgPrimary : Colors.textSecondary}
+              color={activeTab === "insights" ? colors.bgPrimary : colors.textSecondary}
             />
             <Text
               style={[
@@ -356,7 +365,7 @@ export default function InsightsScreen() {
           >
             <BarChart3
               size={16}
-              color={activeTab === "analytics" ? Colors.bgPrimary : Colors.textSecondary}
+              color={activeTab === "analytics" ? colors.bgPrimary : colors.textSecondary}
             />
             <Text
               style={[
@@ -407,7 +416,7 @@ export default function InsightsScreen() {
                   </>
                 ) : (
                   <>
-                    <Brain size={32} color={Colors.textMuted} style={{ marginBottom: 16 }} />
+                    <Brain size={32} color={colors.textMuted} style={{ marginBottom: 16 }} />
                     <Text style={styles.emptyInsightsText}>
                       Add and complete tasks to get personalized AI insights
                     </Text>
@@ -416,7 +425,7 @@ export default function InsightsScreen() {
                       onPress={() => void generateInsights()}
                       activeOpacity={0.8}
                     >
-                      <Sparkles size={16} color={Colors.bgPrimary} />
+                      <Sparkles size={16} color={colors.bgPrimary} />
                       <Text style={styles.generateButtonText}>Generate Insights</Text>
                     </TouchableOpacity>
                   </>
@@ -496,10 +505,10 @@ export default function InsightsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: typeof Colors) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.bgPrimary,
+    backgroundColor: colors.bgPrimary,
   },
   scrollView: {
     flex: 1,
@@ -551,7 +560,7 @@ const styles = StyleSheet.create({
   generateButtonText: {
     fontSize: 14,
     fontWeight: "600",
-    color: Colors.bgPrimary,
+    color: colors.bgPrimary,
   },
   headerTitleRow: {
     flexDirection: "row",
@@ -561,11 +570,11 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 28,
     fontWeight: "bold",
-    color: Colors.textPrimary,
+    color: colors.textPrimary,
   },
   headerSubtitle: {
     fontSize: 14,
-    color: Colors.textSecondary,
+    color: colors.textSecondary,
     marginTop: 4,
   },
   scoreBadge: {
@@ -586,12 +595,12 @@ const styles = StyleSheet.create({
   },
   tabSwitcher: {
     flexDirection: "row",
-    backgroundColor: Colors.bgSecondary,
+    backgroundColor: colors.bgSecondary,
     borderRadius: 14,
     padding: 4,
     marginBottom: 20,
     borderWidth: 1,
-    borderColor: Colors.border,
+    borderColor: colors.border,
   },
   tab: {
     flex: 1,
@@ -608,10 +617,10 @@ const styles = StyleSheet.create({
   tabText: {
     fontSize: 14,
     fontWeight: "600",
-    color: Colors.textSecondary,
+    color: colors.textSecondary,
   },
   tabTextActive: {
-    color: Colors.bgPrimary,
+    color: colors.bgPrimary,
   },
   quickStats: {
     flexDirection: "row",
@@ -620,12 +629,12 @@ const styles = StyleSheet.create({
   },
   statCard: {
     flex: 1,
-    backgroundColor: Colors.bgSecondary,
+    backgroundColor: colors.bgSecondary,
     borderRadius: 16,
     padding: 16,
     alignItems: "center",
     borderWidth: 1,
-    borderColor: Colors.border,
+    borderColor: colors.border,
   },
   statIconContainer: {
     width: 40,
@@ -638,45 +647,45 @@ const styles = StyleSheet.create({
   statValue: {
     fontSize: 20,
     fontWeight: "bold",
-    color: Colors.textPrimary,
+    color: colors.textPrimary,
     marginBottom: 2,
   },
   statLabel: {
     fontSize: 12,
-    color: Colors.textSecondary,
+    color: colors.textSecondary,
     marginBottom: 2,
   },
   statSubtext: {
     fontSize: 11,
-    color: Colors.textMuted,
+    color: colors.textMuted,
   },
   sectionTitle: {
     fontSize: 17,
     fontWeight: "700",
-    color: Colors.textPrimary,
+    color: colors.textPrimary,
     marginBottom: 16,
   },
   emptyInsights: {
-    backgroundColor: Colors.bgSecondary,
+    backgroundColor: colors.bgSecondary,
     borderRadius: 16,
     padding: 32,
     alignItems: "center",
     borderWidth: 1,
-    borderColor: Colors.border,
+    borderColor: colors.border,
   },
   emptyInsightsText: {
     fontSize: 15,
-    color: Colors.textSecondary,
+    color: colors.textSecondary,
     textAlign: "center",
   },
   insightsList: {
     gap: 12,
   },
   insightCard: {
-    backgroundColor: Colors.bgSecondary,
+    backgroundColor: colors.bgSecondary,
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: Colors.border,
+    borderColor: colors.border,
     overflow: "hidden",
   },
   insightContent: {
@@ -696,7 +705,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   insightTypeBadge: {
-    backgroundColor: Colors.bgTertiary,
+    backgroundColor: colors.bgTertiary,
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 12,
@@ -709,12 +718,12 @@ const styles = StyleSheet.create({
   insightTitle: {
     fontSize: 16,
     fontWeight: "700",
-    color: Colors.textPrimary,
+    color: colors.textPrimary,
     marginBottom: 6,
   },
   insightDescription: {
     fontSize: 14,
-    color: Colors.textSecondary,
+    color: colors.textSecondary,
     lineHeight: 20,
     marginBottom: 12,
   },
@@ -724,7 +733,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingTop: 12,
     borderTopWidth: 1,
-    borderTopColor: Colors.border,
+    borderTopColor: colors.border,
   },
   metricContainer: {
     flexDirection: "row",
@@ -740,12 +749,12 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   overviewCard: {
-    backgroundColor: Colors.bgSecondary,
+    backgroundColor: colors.bgSecondary,
     borderRadius: 20,
     padding: 20,
     marginBottom: 16,
     borderWidth: 1,
-    borderColor: Colors.border,
+    borderColor: colors.border,
   },
   overviewHeader: {
     flexDirection: "row",
@@ -756,7 +765,7 @@ const styles = StyleSheet.create({
   overviewTitle: {
     fontSize: 17,
     fontWeight: "700",
-    color: Colors.textPrimary,
+    color: colors.textPrimary,
   },
   overviewStats: {
     flexDirection: "row",
@@ -770,35 +779,35 @@ const styles = StyleSheet.create({
   overviewStatValue: {
     fontSize: 24,
     fontWeight: "bold",
-    color: Colors.textPrimary,
+    color: colors.textPrimary,
     marginBottom: 4,
   },
   overviewStatLabel: {
     fontSize: 12,
-    color: Colors.textSecondary,
+    color: colors.textSecondary,
   },
   overviewDivider: {
     width: 1,
     height: 40,
-    backgroundColor: Colors.border,
+    backgroundColor: colors.border,
   },
   breakdownCard: {
-    backgroundColor: Colors.bgSecondary,
+    backgroundColor: colors.bgSecondary,
     borderRadius: 20,
     padding: 20,
     marginBottom: 16,
     borderWidth: 1,
-    borderColor: Colors.border,
+    borderColor: colors.border,
   },
   breakdownTitle: {
     fontSize: 17,
     fontWeight: "700",
-    color: Colors.textPrimary,
+    color: colors.textPrimary,
     marginBottom: 4,
   },
   breakdownSubtitle: {
     fontSize: 13,
-    color: Colors.textSecondary,
+    color: colors.textSecondary,
     marginBottom: 20,
   },
   categoryBars: {
@@ -815,16 +824,16 @@ const styles = StyleSheet.create({
   categoryBarName: {
     fontSize: 14,
     fontWeight: "600",
-    color: Colors.textPrimary,
+    color: colors.textPrimary,
   },
   categoryBarPercent: {
     fontSize: 13,
     fontWeight: "700",
-    color: Colors.textSecondary,
+    color: colors.textSecondary,
   },
   categoryBarTrack: {
     height: 8,
-    backgroundColor: Colors.bgTertiary,
+    backgroundColor: colors.bgTertiary,
     borderRadius: 4,
     overflow: "hidden",
   },
@@ -834,11 +843,11 @@ const styles = StyleSheet.create({
   },
   scoreCard: {
     flexDirection: "row",
-    backgroundColor: Colors.bgSecondary,
+    backgroundColor: colors.bgSecondary,
     borderRadius: 20,
     padding: 20,
     borderWidth: 1,
-    borderColor: Colors.border,
+    borderColor: colors.border,
     alignItems: "center",
   },
   scoreCardLeft: {
@@ -847,12 +856,12 @@ const styles = StyleSheet.create({
   scoreCardTitle: {
     fontSize: 17,
     fontWeight: "700",
-    color: Colors.textPrimary,
+    color: colors.textPrimary,
     marginBottom: 4,
   },
   scoreCardDescription: {
     fontSize: 13,
-    color: Colors.textSecondary,
+    color: colors.textSecondary,
     marginBottom: 12,
     lineHeight: 18,
   },
@@ -883,7 +892,7 @@ const styles = StyleSheet.create({
   },
   scoreCircleLabel: {
     fontSize: 11,
-    color: Colors.textMuted,
+    color: colors.textMuted,
     fontWeight: "500",
   },
 });

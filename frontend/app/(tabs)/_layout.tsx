@@ -4,6 +4,7 @@ import { LayoutDashboard, ListTodo, Sparkles, User, Bot } from "lucide-react-nat
 import { View, StyleSheet, TouchableOpacity, Animated } from "react-native";
 
 import { Colors } from "@/constants/colors";
+import { useTheme } from "@/providers/ThemeProvider";
 import { AppTour, checkTourSeen, markTourSeen } from "@/components/AppTour";
 
 function AgentFAB({ visible }: { visible: boolean }) {
@@ -49,7 +50,7 @@ function AgentFAB({ visible }: { visible: boolean }) {
           try { router.push("/(tabs)/agent" as any); } catch {}
         }}
       >
-        <Bot size={24} color={Colors.bgPrimary} />
+        <Bot size={24} color="#0D1117" />
       </TouchableOpacity>
     </Animated.View>
   );
@@ -60,6 +61,7 @@ export default function TabLayout() {
   const [tourChecked, setTourChecked] = useState(false);
   const pathname = usePathname();
   const isAgentScreen = pathname?.includes("agent") ?? false;
+  const { colors } = useTheme();
 
   useEffect(() => {
     checkTourSeen().then((seen) => {
@@ -74,14 +76,23 @@ export default function TabLayout() {
   }, []);
 
   return (
-    <View style={{ flex: 1 }}>
+    <View style={{ flex: 1, backgroundColor: colors.bgPrimary }}>
       <Tabs
         screenOptions={{
           tabBarActiveTintColor: Colors.gold,
-          tabBarInactiveTintColor: Colors.textMuted,
+          tabBarInactiveTintColor: colors.textMuted,
           headerShown: false,
-          tabBarStyle: styles.tabBar,
-          tabBarBackground: () => <View style={styles.tabBarBackground} />,
+          tabBarStyle: {
+            backgroundColor: colors.bgSecondary,
+            borderTopWidth: 1,
+            borderTopColor: colors.border,
+            height: 80,
+            paddingBottom: 24,
+            paddingTop: 8,
+          },
+          tabBarBackground: () => (
+            <View style={{ flex: 1, backgroundColor: colors.bgSecondary }} />
+          ),
           tabBarLabelStyle: styles.tabLabel,
         }}
       >
@@ -121,10 +132,8 @@ export default function TabLayout() {
         />
       </Tabs>
 
-      {/* Floating AI Agent button — hidden on agent screen and during tour */}
       <AgentFAB visible={tourChecked && !showTour && !isAgentScreen} />
 
-      {/* Tour overlay */}
       {showTour && <AppTour onDone={handleTourDone} />}
     </View>
   );
@@ -154,18 +163,6 @@ const fab = StyleSheet.create({
 });
 
 const styles = StyleSheet.create({
-  tabBar: {
-    backgroundColor: Colors.bgSecondary,
-    borderTopWidth: 1,
-    borderTopColor: Colors.border,
-    height: 80,
-    paddingBottom: 24,
-    paddingTop: 8,
-  },
-  tabBarBackground: {
-    flex: 1,
-    backgroundColor: Colors.bgSecondary,
-  },
   tabLabel: {
     fontSize: 10,
     fontWeight: "600",

@@ -1,4 +1,4 @@
-import React, { useState, useRef, useCallback, useEffect } from "react";
+import React, { useState, useRef, useCallback, useEffect, useMemo } from "react";
 import {
   View,
   Text,
@@ -16,6 +16,7 @@ import { Bot, Send, Mic, MicOff, Plus, BarChart2, Calendar, Zap, CheckCircle } f
 import { v4 as uuidv4 } from "uuid";
 
 import { Colors } from "@/constants/colors";
+import { useTheme } from "@/providers/ThemeProvider";
 import { API_BASE_URL } from "@/constants/api";
 import { useTasks } from "@/providers/TasksProvider";
 import { useAppState } from "@/providers/AppStateProvider";
@@ -30,6 +31,8 @@ const QUICK_ACTIONS = [
 
 function TypingIndicator() {
   const dot1 = useRef(new Animated.Value(0)).current;
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const dot2 = useRef(new Animated.Value(0)).current;
   const dot3 = useRef(new Animated.Value(0)).current;
 
@@ -68,6 +71,8 @@ function TypingIndicator() {
 }
 
 function ActionBubble({ action }: { action: AgentAction }) {
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   if (action.type === "create_task" && action.data) {
     const task = action.data as any;
     return (
@@ -109,6 +114,8 @@ function ActionBubble({ action }: { action: AgentAction }) {
 }
 
 function MarkdownText({ text, style }: { text: string; style?: object }) {
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const lines = text.split("\n");
   return (
     <View style={{ gap: 2 }}>
@@ -151,6 +158,8 @@ function renderInline(text: string): React.ReactNode[] {
 }
 
 function MessageBubble({ message }: { message: AgentMessage }) {
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const isUser = message.role === "user";
 
   if (message.isLoading) {
@@ -158,7 +167,7 @@ function MessageBubble({ message }: { message: AgentMessage }) {
       <View style={[styles.messageBubble, styles.aiBubble]}>
         <View style={styles.aiBubbleHeader}>
           <View style={styles.aiAvatarSmall}>
-            <Bot size={12} color={Colors.bgPrimary} />
+            <Bot size={12} color={colors.bgPrimary} />
           </View>
           <Text style={styles.aiName}>Tonic</Text>
         </View>
@@ -172,7 +181,7 @@ function MessageBubble({ message }: { message: AgentMessage }) {
       {!isUser && (
         <View style={styles.aiBubbleHeader}>
           <View style={styles.aiAvatarSmall}>
-            <Bot size={12} color={Colors.bgPrimary} />
+            <Bot size={12} color={colors.bgPrimary} />
           </View>
           <Text style={styles.aiName}>Tonic</Text>
         </View>
@@ -197,6 +206,8 @@ let speechRecognition: any = null;
 export default function AgentScreen() {
   const { tasks, addTask, toggleTaskStatus, getStats } = useTasks();
   const { user } = useAppState();
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const [messages, setMessages] = useState<AgentMessage[]>([
     {
       id: "welcome",
@@ -355,7 +366,7 @@ export default function AgentScreen() {
       <View style={styles.header}>
         <View style={styles.headerLeft}>
           <View style={styles.aiAvatar}>
-            <Bot size={20} color={Colors.bgPrimary} />
+            <Bot size={20} color={colors.bgPrimary} />
           </View>
           <View>
             <Text style={styles.headerTitle}>Tonic Agent</Text>
@@ -415,14 +426,14 @@ export default function AgentScreen() {
             {isListening ? (
               <MicOff size={20} color={Colors.danger} />
             ) : (
-              <Mic size={20} color={Colors.textSecondary} />
+              <Mic size={20} color={colors.textSecondary} />
             )}
           </TouchableOpacity>
 
           <TextInput
             style={[styles.input, { scrollbarWidth: "none", outlineWidth: 0, overflowY: "hidden" } as any]}
             placeholder={isListening ? "Listening..." : "Message Tonic..."}
-            placeholderTextColor={Colors.textMuted}
+            placeholderTextColor={colors.textMuted}
             value={input}
             onChangeText={setInput}
             multiline
@@ -439,9 +450,9 @@ export default function AgentScreen() {
             activeOpacity={0.8}
           >
             {isLoading ? (
-              <ActivityIndicator size="small" color={Colors.bgPrimary} />
+              <ActivityIndicator size="small" color={colors.bgPrimary} />
             ) : (
-              <Send size={18} color={input.trim() ? Colors.bgPrimary : Colors.textMuted} />
+              <Send size={18} color={input.trim() ? colors.bgPrimary : colors.textMuted} />
             )}
           </TouchableOpacity>
         </View>
@@ -450,10 +461,10 @@ export default function AgentScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: typeof Colors) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.bgPrimary,
+    backgroundColor: colors.bgPrimary,
   },
   header: {
     flexDirection: "row",
@@ -462,8 +473,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 14,
     borderBottomWidth: 1,
-    borderBottomColor: Colors.border,
-    backgroundColor: Colors.bgSecondary,
+    borderBottomColor: colors.border,
+    backgroundColor: colors.bgSecondary,
   },
   headerLeft: {
     flexDirection: "row",
@@ -486,7 +497,7 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 16,
     fontWeight: "700",
-    color: Colors.textPrimary,
+    color: colors.textPrimary,
   },
   statusRow: {
     flexDirection: "row",
@@ -502,7 +513,7 @@ const styles = StyleSheet.create({
   },
   statusText: {
     fontSize: 11,
-    color: Colors.textSecondary,
+    color: colors.textSecondary,
   },
   tonBadge: {
     paddingHorizontal: 12,
@@ -567,9 +578,9 @@ const styles = StyleSheet.create({
     borderBottomRightRadius: 4,
   },
   aiBubble: {
-    backgroundColor: Colors.bgSecondary,
+    backgroundColor: colors.bgSecondary,
     borderWidth: 1,
-    borderColor: Colors.border,
+    borderColor: colors.border,
     borderBottomLeftRadius: 4,
   },
   messageText: {
@@ -577,15 +588,15 @@ const styles = StyleSheet.create({
     lineHeight: 22,
   },
   userText: {
-    color: Colors.bgPrimary,
+    color: colors.bgPrimary,
     fontWeight: "500",
   },
   aiText: {
-    color: Colors.textPrimary,
+    color: colors.textPrimary,
   },
   messageTime: {
     fontSize: 11,
-    color: Colors.textMuted,
+    color: colors.textMuted,
     marginTop: 2,
   },
   messageTimeRight: {
@@ -605,7 +616,7 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.gold,
   },
   actionBubble: {
-    backgroundColor: Colors.bgTertiary,
+    backgroundColor: colors.bgTertiary,
     borderRadius: 12,
     padding: 12,
     borderWidth: 1,
@@ -627,7 +638,7 @@ const styles = StyleSheet.create({
   actionBubbleTitle: {
     fontSize: 14,
     fontWeight: "600",
-    color: Colors.textPrimary,
+    color: colors.textPrimary,
   },
   actionBubbleMeta: {
     flexDirection: "row",
@@ -647,16 +658,16 @@ const styles = StyleSheet.create({
   },
   actionBubbleCategory: {
     fontSize: 12,
-    color: Colors.textSecondary,
+    color: colors.textSecondary,
     textTransform: "capitalize",
   },
   actionBubbleDue: {
     fontSize: 12,
-    color: Colors.textSecondary,
+    color: colors.textSecondary,
   },
   quickActionsContainer: {
     borderTopWidth: 1,
-    borderTopColor: Colors.border,
+    borderTopColor: colors.border,
     paddingVertical: 8,
   },
   quickActions: {
@@ -670,14 +681,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 8,
     borderRadius: 20,
-    backgroundColor: Colors.bgSecondary,
+    backgroundColor: colors.bgSecondary,
     borderWidth: 1,
     borderColor: `${Colors.gold}30`,
   },
   quickActionText: {
     fontSize: 13,
     fontWeight: "500",
-    color: Colors.textSecondary,
+    color: colors.textSecondary,
   },
   inputContainer: {
     flexDirection: "row",
@@ -687,18 +698,18 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     paddingBottom: Platform.OS === "ios" ? 12 : 16,
     borderTopWidth: 1,
-    borderTopColor: Colors.border,
-    backgroundColor: Colors.bgSecondary,
+    borderTopColor: colors.border,
+    backgroundColor: colors.bgSecondary,
   },
   micButton: {
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: Colors.bgTertiary,
+    backgroundColor: colors.bgTertiary,
     justifyContent: "center",
     alignItems: "center",
     borderWidth: 1,
-    borderColor: Colors.border,
+    borderColor: colors.border,
   },
   micButtonActive: {
     backgroundColor: `${Colors.danger}20`,
@@ -708,14 +719,14 @@ const styles = StyleSheet.create({
     flex: 1,
     minHeight: 44,
     maxHeight: 120,
-    backgroundColor: Colors.bgTertiary,
+    backgroundColor: colors.bgTertiary,
     borderRadius: 22,
     paddingHorizontal: 16,
     paddingVertical: 12,
-    color: Colors.textPrimary,
+    color: colors.textPrimary,
     fontSize: 15,
     borderWidth: 1,
-    borderColor: Colors.border,
+    borderColor: colors.border,
   },
   sendButton: {
     width: 44,
@@ -731,7 +742,7 @@ const styles = StyleSheet.create({
     elevation: 4,
   },
   sendButtonDisabled: {
-    backgroundColor: Colors.bgTertiary,
+    backgroundColor: colors.bgTertiary,
     shadowOpacity: 0,
     elevation: 0,
   },

@@ -26,6 +26,7 @@ import {
 import { useRouter } from "expo-router";
 
 import { Colors } from "@/constants/colors";
+import { useTheme } from "@/providers/ThemeProvider";
 import { useTasks } from "@/providers/TasksProvider";
 import type { Task, TaskCategory } from "@/types/tasks";
 
@@ -58,6 +59,8 @@ function TaskCard({
   onEdit: (id: string) => void;
 }) {
   const [showActions, setShowActions] = useState(false);
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const slideAnim = useRef(new Animated.Value(0)).current;
   const category = categoryConfig[task.category];
   const CategoryIcon = category.icon;
@@ -163,7 +166,7 @@ function TaskCard({
               styles.dueBadge,
               isOverdue && styles.dueBadgeOverdue
             ]}>
-              <Clock size={12} color={isOverdue ? Colors.danger : Colors.textMuted} />
+              <Clock size={12} color={isOverdue ? Colors.danger : colors.textMuted} />
               <Text style={[
                 styles.dueText,
                 isOverdue && styles.dueTextOverdue
@@ -185,7 +188,7 @@ function TaskCard({
                 onEdit(task.id);
               }}
             >
-              <Edit3 size={18} color={Colors.textPrimary} />
+              <Edit3 size={18} color={colors.textPrimary} />
             </TouchableOpacity>
             <TouchableOpacity
               style={[styles.actionButton, styles.actionDelete]}
@@ -269,6 +272,8 @@ function CategoryFilterChip({
 export default function TasksScreen() {
   const router = useRouter();
   const { tasks, toggleTaskStatus, deleteTask } = useTasks();
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const [activeFilter, setActiveFilter] = useState<FilterTab>("all");
   const [selectedCategory, setSelectedCategory] = useState<TaskCategory | "all">("all");
   const [searchQuery, setSearchQuery] = useState("");
@@ -360,17 +365,17 @@ export default function TasksScreen() {
             onPress={() => setShowSearch(!showSearch)}
             activeOpacity={0.8}
           >
-            <Search size={20} color={Colors.textSecondary} />
+            <Search size={20} color={colors.textSecondary} />
           </TouchableOpacity>
           <TouchableOpacity style={styles.addButton} activeOpacity={0.8} onPress={handleAddTask}>
-            <Plus size={20} color={Colors.bgPrimary} />
+            <Plus size={20} color={colors.bgPrimary} />
           </TouchableOpacity>
         </View>
       </View>
 
       {showSearch && (
         <View style={styles.searchContainer}>
-          <Search size={18} color={Colors.textMuted} />
+          <Search size={18} color={colors.textMuted} />
           <input
             type="text"
             placeholder="Search tasks..."
@@ -382,7 +387,7 @@ export default function TasksScreen() {
               backgroundColor: "transparent",
               border: "none",
               outline: "none",
-              color: Colors.textPrimary,
+              color: colors.textPrimary,
               fontSize: 15,
               fontFamily: Platform.select({
                 ios: "-apple-system",
@@ -516,10 +521,10 @@ export default function TasksScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: typeof Colors) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.bgPrimary,
+    backgroundColor: colors.bgPrimary,
   },
   header: {
     flexDirection: "row",
@@ -532,11 +537,11 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 28,
     fontWeight: "bold",
-    color: Colors.textPrimary,
+    color: colors.textPrimary,
   },
   headerSubtitle: {
     fontSize: 14,
-    color: Colors.textSecondary,
+    color: colors.textSecondary,
     marginTop: 4,
   },
   headerActions: {
@@ -548,11 +553,11 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 14,
-    backgroundColor: Colors.bgSecondary,
+    backgroundColor: colors.bgSecondary,
     justifyContent: "center",
     alignItems: "center",
     borderWidth: 1,
-    borderColor: Colors.border,
+    borderColor: colors.border,
   },
   addButton: {
     width: 44,
@@ -570,26 +575,26 @@ const styles = StyleSheet.create({
   searchContainer: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: Colors.bgSecondary,
+    backgroundColor: colors.bgSecondary,
     marginHorizontal: 20,
     marginBottom: 12,
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 14,
     borderWidth: 1,
-    borderColor: Colors.border,
+    borderColor: colors.border,
     gap: 10,
   },
   clearButton: {
     width: 20,
     height: 20,
     borderRadius: 10,
-    backgroundColor: Colors.bgTertiary,
+    backgroundColor: colors.bgTertiary,
     justifyContent: "center",
     alignItems: "center",
   },
   clearText: {
-    color: Colors.textMuted,
+    color: colors.textMuted,
     fontSize: 14,
     fontWeight: "600",
     lineHeight: 16,
@@ -608,9 +613,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 8,
     borderRadius: 20,
-    backgroundColor: Colors.bgSecondary,
+    backgroundColor: colors.bgSecondary,
     borderWidth: 1,
-    borderColor: Colors.border,
+    borderColor: colors.border,
   },
   filterTabActive: {
     backgroundColor: Colors.gold,
@@ -619,29 +624,29 @@ const styles = StyleSheet.create({
   filterTabText: {
     fontSize: 14,
     fontWeight: "600",
-    color: Colors.textSecondary,
+    color: colors.textSecondary,
   },
   filterTabTextActive: {
-    color: Colors.bgPrimary,
+    color: colors.bgPrimary,
   },
   filterCount: {
     width: 22,
     height: 22,
     borderRadius: 11,
-    backgroundColor: Colors.bgTertiary,
+    backgroundColor: colors.bgTertiary,
     justifyContent: "center",
     alignItems: "center",
   },
   filterCountActive: {
-    backgroundColor: `${Colors.bgPrimary}30`,
+    backgroundColor: `${colors.bgPrimary}30`,
   },
   filterCountText: {
     fontSize: 11,
     fontWeight: "700",
-    color: Colors.textSecondary,
+    color: colors.textSecondary,
   },
   filterCountTextActive: {
-    color: Colors.bgPrimary,
+    color: colors.bgPrimary,
   },
   categoryFilterContainer: {
     marginTop: 8,
@@ -654,16 +659,16 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 8,
     borderRadius: 20,
-    backgroundColor: Colors.bgSecondary,
+    backgroundColor: colors.bgSecondary,
     borderWidth: 1,
-    borderColor: Colors.border,
+    borderColor: colors.border,
   },
   categoryChipText: {
     fontSize: 13,
     fontWeight: "600",
   },
   categoryChipTextActive: {
-    color: Colors.bgPrimary,
+    color: colors.bgPrimary,
   },
   taskList: {
     flex: 1,
@@ -676,7 +681,7 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 13,
     fontWeight: "600",
-    color: Colors.textMuted,
+    color: colors.textMuted,
     marginBottom: 12,
     textTransform: "uppercase",
     letterSpacing: 0.5,
@@ -684,18 +689,18 @@ const styles = StyleSheet.create({
   taskCard: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: Colors.bgSecondary,
+    backgroundColor: colors.bgSecondary,
     borderRadius: 16,
     padding: 16,
     marginBottom: 10,
     borderWidth: 1,
-    borderColor: Colors.border,
+    borderColor: colors.border,
     position: "relative",
     overflow: "hidden",
   },
   taskCardCompleted: {
     opacity: 0.7,
-    backgroundColor: Colors.bgTertiary,
+    backgroundColor: colors.bgTertiary,
   },
   taskCardActive: {
     borderColor: Colors.gold,
@@ -730,12 +735,12 @@ const styles = StyleSheet.create({
   taskTitle: {
     fontSize: 15,
     fontWeight: "600",
-    color: Colors.textPrimary,
+    color: colors.textPrimary,
     flex: 1,
   },
   taskTitleCompleted: {
     textDecorationLine: "line-through",
-    color: Colors.textMuted,
+    color: colors.textMuted,
   },
   aiBadge: {
     width: 22,
@@ -747,7 +752,7 @@ const styles = StyleSheet.create({
   },
   taskDescription: {
     fontSize: 13,
-    color: Colors.textSecondary,
+    color: colors.textSecondary,
     marginBottom: 8,
   },
   taskMeta: {
@@ -780,7 +785,7 @@ const styles = StyleSheet.create({
   },
   dueText: {
     fontSize: 11,
-    color: Colors.textMuted,
+    color: colors.textMuted,
     fontWeight: "500",
   },
   dueTextOverdue: {
@@ -803,7 +808,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
-    backgroundColor: Colors.bgSecondary,
+    backgroundColor: colors.bgSecondary,
     paddingLeft: 12,
   },
   actionButton: {
@@ -814,7 +819,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   actionEdit: {
-    backgroundColor: Colors.bgTertiary,
+    backgroundColor: colors.bgTertiary,
   },
   actionDelete: {
     backgroundColor: `${Colors.danger}15`,
@@ -828,22 +833,22 @@ const styles = StyleSheet.create({
     width: 80,
     height: 80,
     borderRadius: 24,
-    backgroundColor: Colors.bgSecondary,
+    backgroundColor: colors.bgSecondary,
     justifyContent: "center",
     alignItems: "center",
     marginBottom: 16,
     borderWidth: 1,
-    borderColor: Colors.border,
+    borderColor: colors.border,
   },
   emptyTitle: {
     fontSize: 18,
     fontWeight: "600",
-    color: Colors.textPrimary,
+    color: colors.textPrimary,
     marginBottom: 4,
   },
   emptySubtitle: {
     fontSize: 14,
-    color: Colors.textSecondary,
+    color: colors.textSecondary,
     marginBottom: 16,
   },
   emptyButton: {

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import React from "react";
 import {
   ScrollView,
@@ -96,16 +96,16 @@ function MenuItem({
       <View
         style={[
           styles.menuIconContainer,
-          { backgroundColor: danger ? `${Colors.danger}15` : `${color || Colors.textSecondary}15` },
+          { backgroundColor: danger ? `${Colors.danger}15` : `${color || colors.textSecondary}15` },
         ]}
       >
-        <Icon size={20} color={danger ? Colors.danger : color || Colors.textSecondary} />
+        <Icon size={20} color={danger ? Colors.danger : color || colors.textSecondary} />
       </View>
       <View style={styles.menuContent}>
         <Text style={[styles.menuTitle, danger && styles.menuTitleDanger]}>{title}</Text>
         {subtitle && <Text style={styles.menuSubtitle}>{subtitle}</Text>}
       </View>
-      {rightElement || <ChevronRight size={20} color={Colors.textMuted} />}
+      {rightElement || <ChevronRight size={20} color={colors.textMuted} />}
     </TouchableOpacity>
   );
 }
@@ -117,6 +117,7 @@ export default function ProfileScreen() {
   const { stats: achievementStats } = useAchievements();
   const { isConnected: isTonConnected, recordAchievementOnChain, isSendingTx } = useTonConnect();
   const { isDark, toggleTheme, colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const [isRecordingOnChain, setIsRecordingOnChain] = useState(false);
   const [lastTxHash, setLastTxHash] = useState<string | null>(null);
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
@@ -372,7 +373,7 @@ export default function ProfileScreen() {
                   )}
                   {/* Camera icon overlay */}
                   <View style={styles.cameraIconOverlay}>
-                    <Camera size={16} color={Colors.bgPrimary} />
+                    <Camera size={16} color={colors.bgPrimary} />
                   </View>
                 </View>
                 {/* Level Badge */}
@@ -398,13 +399,13 @@ export default function ProfileScreen() {
                   </View>
                 ) : (
                   <View style={styles.guestChip}>
-                    <User size={14} color={Colors.textMuted} />
+                    <User size={14} color={colors.textMuted} />
                     <Text style={styles.guestText}>Guest User</Text>
                   </View>
                 )}
               </View>
               <TouchableOpacity style={styles.editButton} activeOpacity={0.8}>
-                <Edit3 size={18} color={Colors.textSecondary} />
+                <Edit3 size={18} color={colors.textSecondary} />
               </TouchableOpacity>
             </View>
 
@@ -536,8 +537,8 @@ export default function ProfileScreen() {
                 <Switch
                   value={notificationsEnabled}
                   onValueChange={setNotificationsEnabled}
-                  trackColor={{ false: Colors.bgTertiary, true: `${Colors.gold}50` }}
-                  thumbColor={notificationsEnabled ? Colors.gold : Colors.textMuted}
+                  trackColor={{ false: colors.bgTertiary, true: `${Colors.gold}50` }}
+                  thumbColor={notificationsEnabled ? Colors.gold : colors.textMuted}
                 />
               }
             />
@@ -552,8 +553,8 @@ export default function ProfileScreen() {
                 <View pointerEvents="none">
                   <Switch
                     value={isDark}
-                    trackColor={{ false: Colors.bgTertiary, true: `${Colors.gold}50` }}
-                    thumbColor={isDark ? Colors.gold : Colors.textMuted}
+                    trackColor={{ false: colors.bgTertiary, true: `${Colors.gold}50` }}
+                    thumbColor={isDark ? Colors.gold : colors.textMuted}
                   />
                 </View>
               }
@@ -661,10 +662,10 @@ export default function ProfileScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: typeof Colors) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.bgPrimary,
+    backgroundColor: colors.bgPrimary,
   },
   scrollView: {
     flex: 1,
@@ -675,12 +676,12 @@ const styles = StyleSheet.create({
     paddingBottom: 40,
   },
   profileCard: {
-    backgroundColor: Colors.bgSecondary,
+    backgroundColor: colors.bgSecondary,
     borderRadius: 20,
     padding: 20,
     marginBottom: 20,
     borderWidth: 1,
-    borderColor: Colors.border,
+    borderColor: colors.border,
   },
   profileHeader: {
     flexDirection: "row",
@@ -722,7 +723,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     borderWidth: 2,
-    borderColor: Colors.bgPrimary,
+    borderColor: colors.bgPrimary,
   },
   levelBadgeAvatar: {
     position: "absolute",
@@ -735,12 +736,12 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     borderWidth: 2,
-    borderColor: Colors.bgSecondary,
+    borderColor: colors.bgSecondary,
   },
   levelBadgeAvatarText: {
     fontSize: 14,
     fontWeight: "700",
-    color: Colors.bgPrimary,
+    color: colors.bgPrimary,
   },
   walletBadge: {
     position: "absolute",
@@ -749,7 +750,7 @@ const styles = StyleSheet.create({
     width: 24,
     height: 24,
     borderRadius: 12,
-    backgroundColor: Colors.bgPrimary,
+    backgroundColor: colors.bgPrimary,
     justifyContent: "center",
     alignItems: "center",
     borderWidth: 2,
@@ -762,7 +763,7 @@ const styles = StyleSheet.create({
   profileName: {
     fontSize: 22,
     fontWeight: "bold",
-    color: Colors.textPrimary,
+    color: colors.textPrimary,
     marginBottom: 6,
   },
   walletChip: {
@@ -784,7 +785,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 6,
-    backgroundColor: Colors.bgTertiary,
+    backgroundColor: colors.bgTertiary,
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 12,
@@ -793,13 +794,13 @@ const styles = StyleSheet.create({
   guestText: {
     fontSize: 12,
     fontWeight: "500",
-    color: Colors.textMuted,
+    color: colors.textMuted,
   },
   editButton: {
     width: 40,
     height: 40,
     borderRadius: 12,
-    backgroundColor: Colors.bgTertiary,
+    backgroundColor: colors.bgTertiary,
     justifyContent: "center",
     alignItems: "center",
   },
@@ -823,20 +824,20 @@ const styles = StyleSheet.create({
   statValue: {
     fontSize: 20,
     fontWeight: "bold",
-    color: Colors.textPrimary,
+    color: colors.textPrimary,
     marginBottom: 2,
   },
   statLabel: {
     fontSize: 12,
-    color: Colors.textSecondary,
+    color: colors.textSecondary,
   },
   statDivider: {
     width: 1,
     height: 40,
-    backgroundColor: Colors.border,
+    backgroundColor: colors.border,
   },
   achievementsButton: {
-    backgroundColor: Colors.bgSecondary,
+    backgroundColor: colors.bgSecondary,
     borderRadius: 16,
     padding: 16,
     marginBottom: 20,
@@ -864,12 +865,12 @@ const styles = StyleSheet.create({
   achievementsButtonTitle: {
     fontSize: 15,
     fontWeight: "700",
-    color: Colors.textPrimary,
+    color: colors.textPrimary,
     marginBottom: 4,
   },
   achievementsButtonSubtitle: {
     fontSize: 13,
-    color: Colors.textSecondary,
+    color: colors.textSecondary,
   },
   levelBadge: {
     width: 44,
@@ -882,11 +883,11 @@ const styles = StyleSheet.create({
   levelBadgeText: {
     fontSize: 20,
     fontWeight: "700",
-    color: Colors.bgPrimary,
+    color: colors.bgPrimary,
   },
   progressIndicator: {
     height: 4,
-    backgroundColor: Colors.bgTertiary,
+    backgroundColor: colors.bgTertiary,
     borderRadius: 2,
     overflow: "hidden",
   },
@@ -901,24 +902,24 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 17,
     fontWeight: "700",
-    color: Colors.textPrimary,
+    color: colors.textPrimary,
     marginBottom: 12,
   },
   dangerTitle: {
     color: Colors.danger,
   },
   menuCard: {
-    backgroundColor: Colors.bgSecondary,
+    backgroundColor: colors.bgSecondary,
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: Colors.border,
+    borderColor: colors.border,
     overflow: "hidden",
   },
   menuItem: {
     flexDirection: "row",
     alignItems: "center",
     padding: 16,
-    backgroundColor: Colors.bgSecondary,
+    backgroundColor: colors.bgSecondary,
   },
   menuItemDanger: {
     backgroundColor: `${Colors.danger}05`,
@@ -937,7 +938,7 @@ const styles = StyleSheet.create({
   menuTitle: {
     fontSize: 15,
     fontWeight: "600",
-    color: Colors.textPrimary,
+    color: colors.textPrimary,
     marginBottom: 2,
   },
   menuTitleDanger: {
@@ -945,11 +946,11 @@ const styles = StyleSheet.create({
   },
   menuSubtitle: {
     fontSize: 13,
-    color: Colors.textSecondary,
+    color: colors.textSecondary,
   },
   menuDivider: {
     height: 1,
-    backgroundColor: Colors.border,
+    backgroundColor: colors.border,
     marginLeft: 70,
   },
   appInfo: {
@@ -960,12 +961,12 @@ const styles = StyleSheet.create({
   appVersion: {
     fontSize: 14,
     fontWeight: "600",
-    color: Colors.textSecondary,
+    color: colors.textSecondary,
     marginBottom: 4,
   },
   appBuild: {
     fontSize: 12,
-    color: Colors.textMuted,
+    color: colors.textMuted,
   },
   achievementsSectionHeader: {
     flexDirection: "row",
@@ -981,11 +982,11 @@ const styles = StyleSheet.create({
   },
   achievementCard: {
     width: "48%",
-    backgroundColor: Colors.bgSecondary,
+    backgroundColor: colors.bgSecondary,
     borderRadius: 16,
     padding: 16,
     borderWidth: 1,
-    borderColor: Colors.border,
+    borderColor: colors.border,
     alignItems: "center",
   },
   achievementUnlockedCard: {
@@ -996,7 +997,7 @@ const styles = StyleSheet.create({
     width: 56,
     height: 56,
     borderRadius: 14,
-    backgroundColor: Colors.bgTertiary,
+    backgroundColor: colors.bgTertiary,
     justifyContent: "center",
     alignItems: "center",
     marginBottom: 12,
@@ -1007,20 +1008,20 @@ const styles = StyleSheet.create({
   achievementCardTitle: {
     fontSize: 14,
     fontWeight: "700",
-    color: Colors.textPrimary,
+    color: colors.textPrimary,
     marginBottom: 4,
     textAlign: "center",
   },
   achievementCardDesc: {
     fontSize: 12,
-    color: Colors.textSecondary,
+    color: colors.textSecondary,
     marginBottom: 12,
     textAlign: "center",
   },
   progressBar: {
     width: "100%",
     height: 6,
-    backgroundColor: Colors.bgTertiary,
+    backgroundColor: colors.bgTertiary,
     borderRadius: 3,
     marginBottom: 8,
     overflow: "hidden",
@@ -1033,7 +1034,7 @@ const styles = StyleSheet.create({
   achievementProgress: {
     fontSize: 12,
     fontWeight: "700",
-    color: Colors.textMuted,
+    color: colors.textMuted,
   },
   connectedBadge: {
     width: 24,
@@ -1046,7 +1047,7 @@ const styles = StyleSheet.create({
   connectedBadgeText: {
     fontSize: 14,
     fontWeight: "bold",
-    color: Colors.bgPrimary,
+    color: colors.bgPrimary,
   },
   tonRecordButton: {
     flexDirection: "row",
@@ -1068,8 +1069,8 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   tonBadgeInactive: {
-    backgroundColor: `${Colors.textMuted}15`,
-    borderColor: `${Colors.textMuted}40`,
+    backgroundColor: `${colors.textMuted}15`,
+    borderColor: `${colors.textMuted}40`,
   },
   tonBadgeText: {
     fontSize: 11,
@@ -1078,7 +1079,7 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
   },
   tonBadgeTextInactive: {
-    color: Colors.textMuted,
+    color: colors.textMuted,
   },
   txHashContainer: {
     flexDirection: "row",
@@ -1089,15 +1090,15 @@ const styles = StyleSheet.create({
   },
   txHashText: {
     fontSize: 12,
-    color: Colors.textSecondary,
+    color: colors.textSecondary,
     fontFamily: "monospace",
     flex: 1,
   },
   claimCard: {
-    backgroundColor: Colors.bgSecondary,
+    backgroundColor: colors.bgSecondary,
     borderRadius: 18,
     borderWidth: 2,
-    borderColor: Colors.border,
+    borderColor: colors.border,
     padding: 18,
     marginBottom: 12,
   },
@@ -1127,11 +1128,11 @@ const styles = StyleSheet.create({
   claimTitle: {
     fontSize: 16,
     fontWeight: "700",
-    color: Colors.textPrimary,
+    color: colors.textPrimary,
   },
   claimSub: {
     fontSize: 12,
-    color: Colors.textSecondary,
+    color: colors.textSecondary,
     marginTop: 2,
   },
   claimBadge: {
@@ -1159,7 +1160,7 @@ const styles = StyleSheet.create({
   },
   claimPointsLabel: {
     fontSize: 13,
-    color: Colors.textSecondary,
+    color: colors.textSecondary,
     fontWeight: "500",
   },
   txHashRow: {
@@ -1169,7 +1170,7 @@ const styles = StyleSheet.create({
     marginTop: 10,
     paddingTop: 10,
     borderTopWidth: 1,
-    borderTopColor: Colors.border,
+    borderTopColor: colors.border,
   },
   claimChainRow: {
     flexDirection: "row",
@@ -1190,12 +1191,12 @@ const styles = StyleSheet.create({
   claimChainTitle: {
     fontSize: 14,
     fontWeight: "700",
-    color: Colors.textPrimary,
+    color: colors.textPrimary,
     marginBottom: 2,
   },
   claimChainSub: {
     fontSize: 12,
-    color: Colors.textSecondary,
+    color: colors.textSecondary,
   },
   claimChainBadge: {
     backgroundColor: Colors.gold,
@@ -1206,7 +1207,7 @@ const styles = StyleSheet.create({
   claimChainBadgeText: {
     fontSize: 13,
     fontWeight: "900",
-    color: Colors.bgPrimary,
+    color: colors.bgPrimary,
     letterSpacing: 0.5,
   },
 });

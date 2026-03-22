@@ -28,6 +28,7 @@ import {
 import { useRouter, useLocalSearchParams } from "expo-router";
 
 import { Colors } from "@/constants/colors";
+import { useTheme } from "@/providers/ThemeProvider";
 import { useTasks } from "@/providers/TasksProvider";
 import type { TaskCategory, TaskPriority } from "@/types/tasks";
 
@@ -48,6 +49,8 @@ export default function TaskModal() {
   const router = useRouter();
   const { editTaskId } = useLocalSearchParams<{ editTaskId?: string }>();
   const { tasks, addTask, updateTask } = useTasks();
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
 
   const existingTask = editTaskId ? tasks.find((t) => t.id === editTaskId) : null;
 
@@ -121,7 +124,7 @@ export default function TaskModal() {
       >
         <View style={styles.header}>
           <TouchableOpacity style={styles.closeButton} onPress={() => router.back()} activeOpacity={0.8}>
-            <X size={24} color={Colors.textPrimary} />
+            <X size={24} color={colors.textPrimary} />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>{existingTask ? "Edit Task" : "New Task"}</Text>
           <TouchableOpacity
@@ -131,9 +134,9 @@ export default function TaskModal() {
             disabled={!title.trim() || isSaving}
           >
             {isSaving ? (
-              <ActivityIndicator size="small" color={Colors.bgPrimary} />
+              <ActivityIndicator size="small" color={colors.bgPrimary} />
             ) : (
-              <Check size={20} color={Colors.bgPrimary} />
+              <Check size={20} color={colors.bgPrimary} />
             )}
           </TouchableOpacity>
         </View>
@@ -148,7 +151,7 @@ export default function TaskModal() {
             <View style={[styles.titleInputContainer, titleError && styles.inputError]}>
               <TextInput
                 placeholder="What needs to be done?"
-                placeholderTextColor={Colors.textSecondary}
+                placeholderTextColor={colors.textSecondary}
                 value={title}
                 onChangeText={(text) => { setTitle(text); setTitleError(false); }}
                 style={styles.titleInput}
@@ -169,7 +172,7 @@ export default function TaskModal() {
             <View style={styles.descriptionInputContainer}>
               <TextInput
                 placeholder="Add details..."
-                placeholderTextColor={Colors.textSecondary}
+                placeholderTextColor={colors.textSecondary}
                 value={description}
                 onChangeText={setDescription}
                 style={styles.descriptionInput}
@@ -192,7 +195,7 @@ export default function TaskModal() {
                     onPress={() => setCategory(cat.key)}
                     activeOpacity={0.8}
                   >
-                    <Icon size={20} color={isSelected ? Colors.bgPrimary : cat.color} />
+                    <Icon size={20} color={isSelected ? colors.bgPrimary : cat.color} />
                     <Text style={[styles.categoryLabel, isSelected && styles.categoryLabelSelected]}>{cat.label}</Text>
                   </TouchableOpacity>
                 );
@@ -212,8 +215,8 @@ export default function TaskModal() {
                     onPress={() => setPriority(prio.key)}
                     activeOpacity={0.8}
                   >
-                    <Flag size={16} color={isSelected ? Colors.bgPrimary : prio.color} />
-                    <Text style={[styles.priorityText, { color: isSelected ? Colors.bgPrimary : prio.color }]}>{prio.label}</Text>
+                    <Flag size={16} color={isSelected ? colors.bgPrimary : prio.color} />
+                    <Text style={[styles.priorityText, { color: isSelected ? colors.bgPrimary : prio.color }]}>{prio.label}</Text>
                   </TouchableOpacity>
                 );
               })}
@@ -252,7 +255,7 @@ export default function TaskModal() {
             <View style={styles.calendarHeader}>
               <Text style={styles.calendarTitle}>Select Date</Text>
               <TouchableOpacity style={styles.calendarCloseButton} onPress={() => setShowCalendar(false)}>
-                <X size={24} color={Colors.textPrimary} />
+                <X size={24} color={colors.textPrimary} />
               </TouchableOpacity>
             </View>
             <View style={styles.monthNavigation}>
@@ -319,8 +322,8 @@ export default function TaskModal() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: Colors.bgPrimary },
+const makeStyles = (colors: typeof Colors) => StyleSheet.create({
+  container: { flex: 1, backgroundColor: colors.bgPrimary },
   keyboardView: { flex: 1 },
   header: {
     flexDirection: "row",
@@ -329,88 +332,88 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: Colors.border,
+    borderBottomColor: colors.border,
   },
   closeButton: {
     width: 40, height: 40, borderRadius: 12,
-    backgroundColor: Colors.bgSecondary, justifyContent: "center", alignItems: "center",
+    backgroundColor: colors.bgSecondary, justifyContent: "center", alignItems: "center",
   },
-  headerTitle: { fontSize: 18, fontWeight: "600", color: Colors.textPrimary },
+  headerTitle: { fontSize: 18, fontWeight: "600", color: colors.textPrimary },
   saveButton: {
     width: 40, height: 40, borderRadius: 12,
     backgroundColor: Colors.gold, justifyContent: "center", alignItems: "center",
     shadowColor: Colors.gold, shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.3, shadowRadius: 4, elevation: 4,
   },
-  saveButtonDisabled: { backgroundColor: Colors.border, shadowOpacity: 0, elevation: 0 },
+  saveButtonDisabled: { backgroundColor: colors.border, shadowOpacity: 0, elevation: 0 },
   scrollView: { flex: 1 },
   scrollContent: { padding: 20, paddingBottom: 40 },
   inputSection: { marginBottom: 24 },
   inputLabel: {
-    fontSize: 14, fontWeight: "600", color: Colors.textSecondary,
+    fontSize: 14, fontWeight: "600", color: colors.textSecondary,
     marginBottom: 10, textTransform: "uppercase", letterSpacing: 0.5,
   },
   titleInputContainer: {
-    backgroundColor: Colors.bgSecondary, borderRadius: 16, borderWidth: 1,
-    borderColor: Colors.border, paddingHorizontal: 16, paddingVertical: 4,
+    backgroundColor: colors.bgSecondary, borderRadius: 16, borderWidth: 1,
+    borderColor: colors.border, paddingHorizontal: 16, paddingVertical: 4,
   },
   titleInput: {
-    height: 52, backgroundColor: "transparent", color: Colors.textPrimary,
+    height: 52, backgroundColor: "transparent", color: colors.textPrimary,
     fontSize: 18, fontWeight: "500", paddingHorizontal: 12, width: "100%",
   },
   inputError: { borderColor: Colors.danger },
   errorContainer: { flexDirection: "row", alignItems: "center", gap: 6, marginTop: 8 },
   errorText: { fontSize: 13, color: Colors.danger },
   descriptionInputContainer: {
-    backgroundColor: Colors.bgSecondary, borderRadius: 16, borderWidth: 1, borderColor: Colors.border, padding: 16,
+    backgroundColor: colors.bgSecondary, borderRadius: 16, borderWidth: 1, borderColor: colors.border, padding: 16,
   },
   descriptionInput: {
-    width: "100%", backgroundColor: "transparent", color: Colors.textPrimary,
+    width: "100%", backgroundColor: "transparent", color: colors.textPrimary,
     fontSize: 15, lineHeight: 20, paddingHorizontal: 12, paddingVertical: 10, height: 80,
   },
   categoryGrid: { flexDirection: "row", flexWrap: "wrap", gap: 10 },
   categoryCard: {
     flexDirection: "row", alignItems: "center", gap: 8, paddingHorizontal: 16, paddingVertical: 12,
-    borderRadius: 12, backgroundColor: Colors.bgSecondary, borderWidth: 1, borderColor: Colors.border, minWidth: 100,
+    borderRadius: 12, backgroundColor: colors.bgSecondary, borderWidth: 1, borderColor: colors.border, minWidth: 100,
   },
-  categoryLabel: { fontSize: 14, fontWeight: "500", color: Colors.textPrimary },
-  categoryLabelSelected: { color: Colors.bgPrimary, fontWeight: "600" },
+  categoryLabel: { fontSize: 14, fontWeight: "500", color: colors.textPrimary },
+  categoryLabelSelected: { color: colors.bgPrimary, fontWeight: "600" },
   priorityRow: { flexDirection: "row", gap: 10 },
   priorityButton: {
     flexDirection: "row", alignItems: "center", gap: 6, paddingHorizontal: 16, paddingVertical: 10,
-    borderRadius: 12, backgroundColor: Colors.bgSecondary, borderWidth: 1, borderColor: Colors.border, flex: 1, justifyContent: "center",
+    borderRadius: 12, backgroundColor: colors.bgSecondary, borderWidth: 1, borderColor: colors.border, flex: 1, justifyContent: "center",
   },
   priorityText: { fontSize: 14, fontWeight: "600" },
   dateContainer: {
-    backgroundColor: Colors.bgSecondary, borderRadius: 16, padding: 16, borderWidth: 1, borderColor: Colors.border,
+    backgroundColor: colors.bgSecondary, borderRadius: 16, padding: 16, borderWidth: 1, borderColor: colors.border,
   },
-  dateDisplay: { flexDirection: "row", alignItems: "center", gap: 10, marginBottom: 16, paddingBottom: 16, borderBottomWidth: 1, borderBottomColor: Colors.border },
-  dateText: { fontSize: 16, fontWeight: "600", color: Colors.textPrimary },
+  dateDisplay: { flexDirection: "row", alignItems: "center", gap: 10, marginBottom: 16, paddingBottom: 16, borderBottomWidth: 1, borderBottomColor: colors.border },
+  dateText: { fontSize: 16, fontWeight: "600", color: colors.textPrimary },
   dateButtons: { flexDirection: "row", gap: 8, justifyContent: "space-between" },
-  dateButton: { flex: 1, paddingVertical: 10, paddingHorizontal: 12, borderRadius: 10, backgroundColor: Colors.bgTertiary, alignItems: "center" },
-  dateButtonText: { fontSize: 13, fontWeight: "600", color: Colors.textSecondary },
+  dateButton: { flex: 1, paddingVertical: 10, paddingHorizontal: 12, borderRadius: 10, backgroundColor: colors.bgTertiary, alignItems: "center" },
+  dateButtonText: { fontSize: 13, fontWeight: "600", color: colors.textSecondary },
   calendarModalOverlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.6)", justifyContent: "flex-end" },
   calendarModal: {
-    backgroundColor: Colors.bgPrimary, borderTopLeftRadius: 24, borderTopRightRadius: 24,
+    backgroundColor: colors.bgPrimary, borderTopLeftRadius: 24, borderTopRightRadius: 24,
     paddingTop: 20, paddingBottom: 30, elevation: 10,
   },
   calendarHeader: {
     flexDirection: "row", justifyContent: "space-between", alignItems: "center",
     paddingHorizontal: 20, marginBottom: 16,
   },
-  calendarTitle: { fontSize: 18, fontWeight: "700", color: Colors.textPrimary },
+  calendarTitle: { fontSize: 18, fontWeight: "700", color: colors.textPrimary },
   calendarCloseButton: { padding: 4 },
   monthNavigation: {
     flexDirection: "row", alignItems: "center", justifyContent: "space-between",
     paddingHorizontal: 16, marginBottom: 16,
   },
-  navButton: { padding: 8, borderRadius: 10, backgroundColor: Colors.bgSecondary },
-  monthYear: { fontSize: 16, fontWeight: "700", color: Colors.textPrimary },
+  navButton: { padding: 8, borderRadius: 10, backgroundColor: colors.bgSecondary },
+  monthYear: { fontSize: 16, fontWeight: "700", color: colors.textPrimary },
   dayHeaders: {
     flexDirection: "row", paddingHorizontal: 16, marginBottom: 8,
   },
   dayHeader: {
     flex: 1, textAlign: "center", fontSize: 12, fontWeight: "600",
-    color: Colors.textSecondary, textTransform: "uppercase",
+    color: colors.textSecondary, textTransform: "uppercase",
   },
   calendarDaysContainer: { paddingHorizontal: 16 },
   weekRow: { flexDirection: "row", marginBottom: 4 },
@@ -420,14 +423,14 @@ const styles = StyleSheet.create({
   },
   daySelected: { backgroundColor: Colors.gold },
   dayToday: { borderWidth: 1, borderColor: Colors.gold },
-  dayText: { fontSize: 15, fontWeight: "500", color: Colors.textPrimary },
-  daySelectedText: { color: Colors.bgPrimary, fontWeight: "700" },
+  dayText: { fontSize: 15, fontWeight: "500", color: colors.textPrimary },
+  daySelectedText: { color: colors.bgPrimary, fontWeight: "700" },
   dayTodayText: { color: Colors.gold, fontWeight: "600" },
-  dayDisabledText: { color: Colors.textMuted, opacity: 0.4 },
+  dayDisabledText: { color: colors.textMuted, opacity: 0.4 },
   calendarActions: { paddingHorizontal: 20, paddingTop: 16 },
   calendarButton: {
     backgroundColor: Colors.gold, borderRadius: 14, paddingVertical: 14,
     alignItems: "center",
   },
-  calendarButtonText: { fontSize: 16, fontWeight: "700", color: Colors.bgPrimary },
+  calendarButtonText: { fontSize: 16, fontWeight: "700", color: colors.bgPrimary },
 });

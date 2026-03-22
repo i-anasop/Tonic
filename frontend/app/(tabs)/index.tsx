@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useCallback } from "react";
+import React, { useEffect, useRef, useCallback, useMemo } from "react";
 import {
   ScrollView,
   StyleSheet,
@@ -23,6 +23,7 @@ import {
 import { useRouter } from "expo-router";
 
 import { Colors } from "@/constants/colors";
+import { useTheme } from "@/providers/ThemeProvider";
 import { useAppState } from "@/providers/AppStateProvider";
 import { useTasks } from "@/providers/TasksProvider";
 import type { Task, AIInsight } from "@/types/tasks";
@@ -39,6 +40,8 @@ function ProgressRing({
   strokeWidth?: number;
 }) {
   const animatedValue = useRef(new Animated.Value(0)).current;
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
 
   useEffect(() => {
     Animated.timing(animatedValue, {
@@ -100,6 +103,8 @@ function StatCard({
   label: string;
   color: string;
 }) {
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   return (
     <View style={styles.statCard}>
       <View style={[styles.statIconContainer, { backgroundColor: `${color}20` }]}>
@@ -112,6 +117,8 @@ function StatCard({
 }
 
 function TaskItem({ task, onToggle }: { task: Task; onToggle: (id: string) => void }) {
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const priorityColors: Record<string, string> = {
     high: Colors.danger,
     medium: Colors.warning,
@@ -173,13 +180,15 @@ function TaskItem({ task, onToggle }: { task: Task; onToggle: (id: string) => vo
             ]}
           />
         </View>
-        <CategoryIcon size={16} color={Colors.textMuted} />
+        <CategoryIcon size={16} color={colors.textMuted} />
       </View>
     </TouchableOpacity>
   );
 }
 
 function WeeklyChart({ data }: { data: number[] }) {
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const maxValue = Math.max(...data, 1);
   const days = ["M", "T", "W", "T", "F", "S", "S"];
 
@@ -201,6 +210,8 @@ function WeeklyChart({ data }: { data: number[] }) {
 }
 
 function InsightCard({ insight }: { insight: AIInsight }) {
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const getIconColor = () => {
     switch (insight.type) {
       case "focus": return Colors.gold;
@@ -240,6 +251,8 @@ function InsightCard({ insight }: { insight: AIInsight }) {
 export default function DashboardScreen() {
   const router = useRouter();
   const { user, isOnboarded, isLoading } = useAppState();
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const { tasks, insights, toggleTaskStatus, getStats, getTodayTasks } = useTasks();
   const [stats, setStats] = React.useState({
     tasksCompleted: 0,
@@ -325,7 +338,7 @@ export default function DashboardScreen() {
           </View>
           <View style={styles.headerButtons}>
             <TouchableOpacity style={styles.addButton} activeOpacity={0.8} onPress={handleAddTask}>
-              <Plus size={20} color={Colors.bgPrimary} />
+              <Plus size={20} color={colors.bgPrimary} />
             </TouchableOpacity>
           </View>
         </View>
@@ -374,7 +387,7 @@ export default function DashboardScreen() {
             <Text style={styles.sectionTitle}>Weekly Activity</Text>
             <TouchableOpacity style={styles.seeAllButton}>
               <Text style={styles.seeAllText}>See all</Text>
-              <ChevronRight size={14} color={Colors.textMuted} />
+              <ChevronRight size={14} color={colors.textMuted} />
             </TouchableOpacity>
           </View>
           <WeeklyChart data={stats.weeklyCompletion} />
@@ -385,7 +398,7 @@ export default function DashboardScreen() {
             <Text style={styles.sectionTitle}>Today&apos;s Tasks</Text>
             <TouchableOpacity style={styles.seeAllButton} onPress={handleSeeAllTasks}>
               <Text style={styles.seeAllText}>See all</Text>
-              <ChevronRight size={14} color={Colors.textMuted} />
+              <ChevronRight size={14} color={colors.textMuted} />
             </TouchableOpacity>
           </View>
           {todayTasks.length === 0 ? (
@@ -415,10 +428,10 @@ export default function DashboardScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: typeof Colors) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.bgPrimary,
+    backgroundColor: colors.bgPrimary,
   },
   scrollView: {
     flex: 1,
@@ -436,13 +449,13 @@ const styles = StyleSheet.create({
   },
   greeting: {
     fontSize: 16,
-    color: Colors.textSecondary,
+    color: colors.textSecondary,
     marginBottom: 4,
   },
   userName: {
     fontSize: 28,
     fontWeight: "bold",
-    color: Colors.textPrimary,
+    color: colors.textPrimary,
   },
   headerButtons: {
     flexDirection: "row",
@@ -463,12 +476,12 @@ const styles = StyleSheet.create({
     elevation: 8,
   },
   insightCard: {
-    backgroundColor: Colors.bgSecondary,
+    backgroundColor: colors.bgSecondary,
     borderRadius: 20,
     padding: 20,
     marginBottom: 20,
     borderWidth: 1,
-    borderColor: Colors.border,
+    borderColor: colors.border,
     flexDirection: "row",
     gap: 16,
   },
@@ -497,19 +510,19 @@ const styles = StyleSheet.create({
   },
   insightDescription: {
     fontSize: 14,
-    color: Colors.textSecondary,
+    color: colors.textSecondary,
     lineHeight: 20,
   },
   progressSection: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    backgroundColor: Colors.bgSecondary,
+    backgroundColor: colors.bgSecondary,
     borderRadius: 20,
     padding: 20,
     marginBottom: 16,
     borderWidth: 1,
-    borderColor: Colors.border,
+    borderColor: colors.border,
   },
   progressLeft: {
     flex: 1,
@@ -517,12 +530,12 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 17,
     fontWeight: "700",
-    color: Colors.textPrimary,
+    color: colors.textPrimary,
     marginBottom: 4,
   },
   progressSubtitle: {
     fontSize: 13,
-    color: Colors.textSecondary,
+    color: colors.textSecondary,
     marginBottom: 12,
   },
   progressStats: {
@@ -533,14 +546,14 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 6,
-    backgroundColor: Colors.bgTertiary,
+    backgroundColor: colors.bgTertiary,
     paddingHorizontal: 10,
     paddingVertical: 6,
     borderRadius: 20,
   },
   progressStatText: {
     fontSize: 12,
-    color: Colors.textSecondary,
+    color: colors.textSecondary,
     fontWeight: "500",
   },
   progressContainer: {
@@ -564,11 +577,11 @@ const styles = StyleSheet.create({
   progressText: {
     fontSize: 24,
     fontWeight: "bold",
-    color: Colors.textPrimary,
+    color: colors.textPrimary,
   },
   progressLabel: {
     fontSize: 11,
-    color: Colors.textMuted,
+    color: colors.textMuted,
   },
   statsGrid: {
     flexDirection: "row",
@@ -577,12 +590,12 @@ const styles = StyleSheet.create({
   },
   statCard: {
     flex: 1,
-    backgroundColor: Colors.bgSecondary,
+    backgroundColor: colors.bgSecondary,
     borderRadius: 16,
     padding: 16,
     alignItems: "center",
     borderWidth: 1,
-    borderColor: Colors.border,
+    borderColor: colors.border,
   },
   statIconContainer: {
     width: 40,
@@ -595,12 +608,12 @@ const styles = StyleSheet.create({
   statValue: {
     fontSize: 20,
     fontWeight: "bold",
-    color: Colors.textPrimary,
+    color: colors.textPrimary,
     marginBottom: 2,
   },
   statLabel: {
     fontSize: 11,
-    color: Colors.textSecondary,
+    color: colors.textSecondary,
   },
   section: {
     marginBottom: 20,
@@ -618,18 +631,18 @@ const styles = StyleSheet.create({
   },
   seeAllText: {
     fontSize: 13,
-    color: Colors.textMuted,
+    color: colors.textMuted,
   },
   chartContainer: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "flex-end",
     height: 80,
-    backgroundColor: Colors.bgSecondary,
+    backgroundColor: colors.bgSecondary,
     borderRadius: 16,
     padding: 16,
     borderWidth: 1,
-    borderColor: Colors.border,
+    borderColor: colors.border,
   },
   chartBarContainer: {
     alignItems: "center",
@@ -637,7 +650,7 @@ const styles = StyleSheet.create({
   },
   chartBar: {
     width: 8,
-    backgroundColor: Colors.bgTertiary,
+    backgroundColor: colors.bgTertiary,
     borderRadius: 4,
     justifyContent: "flex-end",
     overflow: "hidden",
@@ -651,11 +664,11 @@ const styles = StyleSheet.create({
   },
   chartLabel: {
     fontSize: 11,
-    color: Colors.textMuted,
+    color: colors.textMuted,
     marginTop: 8,
   },
   emptyTasksCard: {
-    backgroundColor: Colors.bgSecondary,
+    backgroundColor: colors.bgSecondary,
     borderRadius: 16,
     padding: 28,
     alignItems: "center",
@@ -676,7 +689,7 @@ const styles = StyleSheet.create({
   },
   emptyTasksText: {
     fontSize: 15,
-    color: Colors.textSecondary,
+    color: colors.textSecondary,
     fontWeight: "600",
   },
   emptyTasksButton: {
@@ -694,10 +707,10 @@ const styles = StyleSheet.create({
     color: Colors.gold,
   },
   tasksList: {
-    backgroundColor: Colors.bgSecondary,
+    backgroundColor: colors.bgSecondary,
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: Colors.border,
+    borderColor: colors.border,
     overflow: "hidden",
   },
   taskItem: {
@@ -706,7 +719,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     padding: 16,
     borderBottomWidth: 1,
-    borderBottomColor: Colors.border,
+    borderBottomColor: colors.border,
   },
   taskCompleted: {
     opacity: 0.6,
@@ -722,7 +735,7 @@ const styles = StyleSheet.create({
     height: 22,
     borderRadius: 7,
     borderWidth: 2,
-    borderColor: Colors.border,
+    borderColor: colors.border,
     justifyContent: "center",
     alignItems: "center",
   },
@@ -731,7 +744,7 @@ const styles = StyleSheet.create({
     borderColor: Colors.success,
   },
   checkmark: {
-    color: Colors.bgPrimary,
+    color: colors.bgPrimary,
     fontSize: 12,
     fontWeight: "bold",
   },
@@ -741,12 +754,12 @@ const styles = StyleSheet.create({
   taskTitle: {
     fontSize: 15,
     fontWeight: "600",
-    color: Colors.textPrimary,
+    color: colors.textPrimary,
     marginBottom: 4,
   },
   taskTitleCompleted: {
     textDecorationLine: "line-through",
-    color: Colors.textMuted,
+    color: colors.textMuted,
   },
   aiBadge: {
     flexDirection: "row",
@@ -779,16 +792,16 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: Colors.bgPrimary,
+    backgroundColor: colors.bgPrimary,
   },
   loadingText: {
     fontSize: 24,
     fontWeight: "bold",
-    color: Colors.textPrimary,
+    color: colors.textPrimary,
     marginBottom: 8,
   },
   loadingSubtext: {
     fontSize: 14,
-    color: Colors.textSecondary,
+    color: colors.textSecondary,
   },
 });

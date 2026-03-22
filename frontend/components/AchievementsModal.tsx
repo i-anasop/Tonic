@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import {
   View,
   Text,
@@ -11,6 +11,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { X, Trophy, Lock, Zap, Star } from "lucide-react-native";
 import { Colors } from "@/constants/colors";
+import { useTheme } from "@/providers/ThemeProvider";
 import { useAchievements } from "@/providers/AchievementsProvider";
 
 interface AchievementsModalProps {
@@ -39,6 +40,8 @@ const LEVEL_EMOJIS = ["", "🌱", "⚡", "🌟", "👑", "🏆", "🔥"];
 
 export const AchievementsModal: React.FC<AchievementsModalProps> = ({ isVisible, onClose }) => {
   const { achievements, stats } = useAchievements();
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const [activeTab, setActiveTab] = useState<FilterTab>("all");
 
   const unlocked = achievements.filter((a) => a.unlocked);
@@ -103,7 +106,7 @@ export const AchievementsModal: React.FC<AchievementsModalProps> = ({ isVisible,
       <View style={[styles.lockedCard, isClose && styles.lockedCardClose]}>
         <View style={[styles.lockedIconBg, isClose && styles.lockedIconBgClose]}>
           {isSecretLocked ? (
-            <Lock size={22} color={Colors.textMuted} />
+            <Lock size={22} color={colors.textMuted} />
           ) : (
             <Text style={[styles.achievementEmoji, { opacity: 0.5 }]}>{emoji}</Text>
           )}
@@ -175,7 +178,7 @@ export const AchievementsModal: React.FC<AchievementsModalProps> = ({ isVisible,
             <Text style={styles.headerTitle}>Achievements</Text>
           </View>
           <TouchableOpacity onPress={onClose} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
-            <X size={22} color={Colors.textPrimary} />
+            <X size={22} color={colors.textPrimary} />
           </TouchableOpacity>
         </View>
 
@@ -281,15 +284,15 @@ export const AchievementsModal: React.FC<AchievementsModalProps> = ({ isVisible,
   );
 };
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: Colors.bgPrimary },
+const makeStyles = (colors: typeof Colors) => StyleSheet.create({
+  container: { flex: 1, backgroundColor: colors.bgPrimary },
   header: {
     flexDirection: "row", justifyContent: "space-between", alignItems: "center",
     paddingHorizontal: 20, paddingVertical: 14,
-    borderBottomWidth: 1, borderBottomColor: Colors.border,
+    borderBottomWidth: 1, borderBottomColor: colors.border,
   },
   headerLeft: { flexDirection: "row", alignItems: "center", gap: 10 },
-  headerTitle: { fontSize: 22, fontWeight: "800", color: Colors.textPrimary },
+  headerTitle: { fontSize: 22, fontWeight: "800", color: colors.textPrimary },
 
   levelBanner: {
     flexDirection: "row", justifyContent: "space-between", alignItems: "center",
@@ -297,13 +300,13 @@ const styles = StyleSheet.create({
   },
   levelLeft: { flexDirection: "row", alignItems: "center", gap: 14 },
   levelEmoji: { fontSize: 40 },
-  levelTitle: { fontSize: 20, fontWeight: "800", color: Colors.textPrimary },
-  levelSub: { fontSize: 13, color: Colors.textSecondary, marginTop: 2 },
+  levelTitle: { fontSize: 20, fontWeight: "800", color: colors.textPrimary },
+  levelSub: { fontSize: 13, color: colors.textSecondary, marginTop: 2 },
   levelRight: { alignItems: "flex-end" },
   levelPct: { fontSize: 28, fontWeight: "800", color: Colors.gold },
-  levelNextLabel: { fontSize: 11, color: Colors.textSecondary },
+  levelNextLabel: { fontSize: 11, color: colors.textSecondary },
   levelBarTrack: {
-    marginHorizontal: 20, height: 10, backgroundColor: Colors.bgTertiary,
+    marginHorizontal: 20, height: 10, backgroundColor: colors.bgTertiary,
     borderRadius: 5, overflow: "hidden",
   },
   levelBarFill: {
@@ -312,18 +315,18 @@ const styles = StyleSheet.create({
   },
   levelBarCaption: {
     textAlign: "right", marginHorizontal: 20, marginTop: 6,
-    fontSize: 12, color: Colors.textSecondary,
+    fontSize: 12, color: colors.textSecondary,
   },
 
   statsRow: {
     flexDirection: "row", marginHorizontal: 20, marginTop: 16,
-    backgroundColor: Colors.bgSecondary, borderRadius: 16, borderWidth: 1, borderColor: Colors.border,
+    backgroundColor: colors.bgSecondary, borderRadius: 16, borderWidth: 1, borderColor: colors.border,
     overflow: "hidden",
   },
   statBox: { flex: 1, alignItems: "center", paddingVertical: 16 },
-  statBoxMid: { borderLeftWidth: 1, borderRightWidth: 1, borderColor: Colors.border },
+  statBoxMid: { borderLeftWidth: 1, borderRightWidth: 1, borderColor: colors.border },
   statNumber: { fontSize: 22, fontWeight: "800", color: Colors.gold },
-  statLabel: { fontSize: 11, color: Colors.textSecondary, marginTop: 4 },
+  statLabel: { fontSize: 11, color: colors.textSecondary, marginTop: 4 },
 
   nextUpSection: {
     marginHorizontal: 20, marginTop: 20,
@@ -336,9 +339,9 @@ const styles = StyleSheet.create({
     flexDirection: "row", alignItems: "center", gap: 12, marginBottom: 10,
   },
   nextUpEmoji: { fontSize: 24 },
-  nextUpName: { fontSize: 13, fontWeight: "600", color: Colors.textPrimary, marginBottom: 6 },
+  nextUpName: { fontSize: 13, fontWeight: "600", color: colors.textPrimary, marginBottom: 6 },
   nextUpProgressTrack: {
-    height: 6, backgroundColor: Colors.bgTertiary, borderRadius: 3, overflow: "hidden",
+    height: 6, backgroundColor: colors.bgTertiary, borderRadius: 3, overflow: "hidden",
   },
   nextUpProgressFill: {
     height: "100%", backgroundColor: Colors.warning, borderRadius: 3,
@@ -347,15 +350,15 @@ const styles = StyleSheet.create({
 
   tabRow: {
     flexDirection: "row", marginHorizontal: 20, marginTop: 20, marginBottom: 16,
-    backgroundColor: Colors.bgSecondary, borderRadius: 12, padding: 4,
-    borderWidth: 1, borderColor: Colors.border,
+    backgroundColor: colors.bgSecondary, borderRadius: 12, padding: 4,
+    borderWidth: 1, borderColor: colors.border,
   },
   tab: {
     flex: 1, paddingVertical: 9, borderRadius: 10, alignItems: "center",
   },
   tabActive: { backgroundColor: Colors.gold },
-  tabText: { fontSize: 13, fontWeight: "600", color: Colors.textSecondary },
-  tabTextActive: { color: Colors.bgPrimary },
+  tabText: { fontSize: 13, fontWeight: "600", color: colors.textSecondary },
+  tabTextActive: { color: colors.bgPrimary },
 
   listContainer: { paddingHorizontal: 20, paddingBottom: 40 },
 
@@ -378,8 +381,8 @@ const styles = StyleSheet.create({
   },
   lockedCard: {
     flexDirection: "row", alignItems: "flex-start", gap: 14,
-    backgroundColor: Colors.bgSecondary, borderRadius: 18,
-    borderWidth: 1, borderColor: Colors.border,
+    backgroundColor: colors.bgSecondary, borderRadius: 18,
+    borderWidth: 1, borderColor: colors.border,
     padding: 14, marginBottom: 12, opacity: 0.75,
   },
   lockedCardClose: {
@@ -388,7 +391,7 @@ const styles = StyleSheet.create({
   },
   lockedIconBg: {
     width: 52, height: 52, borderRadius: 14,
-    backgroundColor: Colors.bgTertiary, justifyContent: "center", alignItems: "center",
+    backgroundColor: colors.bgTertiary, justifyContent: "center", alignItems: "center",
   },
   lockedIconBgClose: {
     backgroundColor: `${Colors.warning}15`, borderWidth: 1, borderColor: `${Colors.warning}40`,
@@ -396,19 +399,19 @@ const styles = StyleSheet.create({
   achievementEmoji: { fontSize: 26 },
   cardBody: { flex: 1 },
   cardTopRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 4 },
-  unlockedName: { fontSize: 15, fontWeight: "700", color: Colors.textPrimary, flex: 1, marginRight: 8 },
-  lockedName: { fontSize: 15, fontWeight: "600", color: Colors.textSecondary, flex: 1, marginRight: 8 },
-  lockedNameClose: { color: Colors.textPrimary },
-  cardDescription: { fontSize: 12.5, color: Colors.textSecondary, lineHeight: 18, marginBottom: 8 },
-  lockedDescription: { fontSize: 12.5, color: Colors.textMuted, lineHeight: 18, marginBottom: 8 },
+  unlockedName: { fontSize: 15, fontWeight: "700", color: colors.textPrimary, flex: 1, marginRight: 8 },
+  lockedName: { fontSize: 15, fontWeight: "600", color: colors.textSecondary, flex: 1, marginRight: 8 },
+  lockedNameClose: { color: colors.textPrimary },
+  cardDescription: { fontSize: 12.5, color: colors.textSecondary, lineHeight: 18, marginBottom: 8 },
+  lockedDescription: { fontSize: 12.5, color: colors.textMuted, lineHeight: 18, marginBottom: 8 },
 
   progressTrack: {
-    height: 6, backgroundColor: Colors.bgTertiary, borderRadius: 3, overflow: "hidden", marginBottom: 4,
+    height: 6, backgroundColor: colors.bgTertiary, borderRadius: 3, overflow: "hidden", marginBottom: 4,
   },
   progressFill: { height: "100%", borderRadius: 3 },
   progressLabelRow: { flexDirection: "row", justifyContent: "space-between", marginBottom: 8 },
-  progressLabel: { fontSize: 11, color: Colors.textSecondary },
-  progressRemaining: { fontSize: 11, color: Colors.textSecondary },
+  progressLabel: { fontSize: 11, color: colors.textSecondary },
+  progressRemaining: { fontSize: 11, color: colors.textSecondary },
 
   metaRow: { flexDirection: "row", alignItems: "center", gap: 8 },
   diffBadge: {
@@ -421,10 +424,10 @@ const styles = StyleSheet.create({
   },
   pointsBadgeTextGold: { fontSize: 11, fontWeight: "700", color: Colors.gold },
   pointsBadge: {
-    backgroundColor: Colors.bgTertiary, paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8,
+    backgroundColor: colors.bgTertiary, paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8,
   },
   pointsBadgeClose: { backgroundColor: `${Colors.warning}18` },
-  pointsBadgeText: { fontSize: 11, fontWeight: "600", color: Colors.textMuted },
+  pointsBadgeText: { fontSize: 11, fontWeight: "600", color: colors.textMuted },
   pointsBadgeTextClose: { color: Colors.warning },
   unlockedBadge: {
     backgroundColor: `${Colors.success}18`, paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6,
@@ -438,5 +441,5 @@ const styles = StyleSheet.create({
 
   emptyState: { alignItems: "center", paddingVertical: 48 },
   emptyEmoji: { fontSize: 48, marginBottom: 12 },
-  emptyText: { fontSize: 14, color: Colors.textSecondary, textAlign: "center" },
+  emptyText: { fontSize: 14, color: colors.textSecondary, textAlign: "center" },
 });
