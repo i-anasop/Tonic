@@ -8,6 +8,7 @@ import {
   Animated,
   Dimensions,
   TextInput,
+  Alert,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import {
@@ -238,8 +239,8 @@ export default function TasksScreen() {
       const today = new Date().toDateString();
       result = result.filter((t) => new Date(t.dueDate).toDateString() === today);
     } else if (activeFilter === "upcoming") {
-      const today = new Date();
-      result = result.filter((t) => new Date(t.dueDate) > today && t.status !== "completed");
+      const tomorrow = new Date(); tomorrow.setHours(0, 0, 0, 0); tomorrow.setDate(tomorrow.getDate() + 1);
+      result = result.filter((t) => new Date(t.dueDate) >= tomorrow && t.status !== "completed");
     } else if (activeFilter === "completed") {
       result = result.filter((t) => t.status === "completed");
     }
@@ -263,12 +264,22 @@ export default function TasksScreen() {
   const counts = useMemo(() => ({
     all: tasks.filter((t) => t.status !== "completed").length,
     today: tasks.filter((t) => new Date(t.dueDate).toDateString() === new Date().toDateString() && t.status !== "completed").length,
-    upcoming: tasks.filter((t) => new Date(t.dueDate) > new Date() && t.status !== "completed").length,
+    upcoming: tasks.filter((t) => { const tm = new Date(); tm.setHours(0,0,0,0); tm.setDate(tm.getDate()+1); return new Date(t.dueDate) >= tm && t.status !== "completed"; }).length,
     completed: tasks.filter((t) => t.status === "completed").length,
   }), [tasks]);
 
   const handleToggle = useCallback((id: string) => { toggleTaskStatus(id); }, [toggleTaskStatus]);
-  const handleDelete = useCallback((id: string) => { deleteTask(id); }, [deleteTask]);
+  const handleDelete = useCallback((id: string) => {
+    const task = tasks.find((t) => t.id === id);
+    Alert.alert(
+      "Delete Task",
+      `Delete "${task?.title ?? "this task"}"? This cannot be undone.`,
+      [
+        { text: "Cancel", style: "cancel" },
+        { text: "Delete", style: "destructive", onPress: () => deleteTask(id) },
+      ]
+    );
+  }, [tasks, deleteTask]);
   const handleEdit = useCallback((id: string) => { router.push({ pathname: "/modal", params: { editTaskId: id } }); }, [router]);
   const handleAdd = useCallback(() => { router.push("/modal"); }, [router]);
 

@@ -53,7 +53,7 @@ export const useTonConnect = (): UseTonConnectReturn => {
       try {
         const unsubscribe = tonConnectUI.onStatusChange((walletInfo) => {
           if (walletInfo) {
-            console.log("[useTonConnect] Wallet connected:", walletInfo.account?.address);
+            // wallet connected
           }
         });
         unsubscribeRef.current = unsubscribe;
@@ -73,7 +73,6 @@ export const useTonConnect = (): UseTonConnectReturn => {
   useEffect(() => {
     if (wallet && wallet.account && wallet.account.address) {
       const address = wallet.account.address;
-      console.log("[useTonConnect] Wallet connected:", address);
       setState((prev) => ({
         ...prev,
         isConnected: true,
@@ -187,7 +186,6 @@ export const useTonConnect = (): UseTonConnectReturn => {
           amount: "50000000",
           comment,
         });
-        console.log("[TON] Achievement recorded on-chain:", result.boc);
         return result;
       } catch (err) {
         console.error("[TON] Failed to record achievement:", err);

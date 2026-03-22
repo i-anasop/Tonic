@@ -248,6 +248,9 @@ export default function AgentScreen() {
   const [isLoading, setIsLoading] = useState(false);
   const [isListening, setIsListening] = useState(false);
   const scrollRef = useRef<ScrollView>(null);
+  const abortRef = useRef<AbortController | null>(null);
+
+  useEffect(() => () => { abortRef.current?.abort(); }, []);
 
   const scrollToBottom = useCallback(() => { setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 100); }, []);
   useEffect(() => { scrollToBottom(); }, [messages]);
@@ -310,7 +313,7 @@ export default function AgentScreen() {
           tasks: tasks.map((t) => ({ id: t.id, title: t.title, category: t.category, priority: t.priority, status: t.status, dueDate: t.dueDate })),
           stats, userId: user?.id,
         }),
-        signal: AbortSignal.timeout(45000),
+        signal: (abortRef.current = new AbortController()).signal,
       });
 
       if (!res.ok || !res.body) throw new Error("Stream failed");
