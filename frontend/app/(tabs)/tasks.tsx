@@ -7,7 +7,7 @@ import {
   TouchableOpacity,
   Animated,
   Dimensions,
-  Platform,
+  TextInput,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import {
@@ -304,21 +304,14 @@ export default function TasksScreen() {
       {showSearch && (
         <View style={styles.searchBar}>
           <Search size={16} color={colors.textMuted} />
-          <input
-            type="text"
+          <TextInput
+            style={[styles.searchInput, { outlineWidth: 0 } as any]}
             placeholder="Search tasks…"
+            placeholderTextColor={colors.textMuted}
             value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            style={{
-              flex: 1,
-              height: 36,
-              backgroundColor: "transparent",
-              border: "none",
-              outline: "none",
-              color: colors.textPrimary,
-              fontSize: 15,
-              fontFamily: Platform.select({ ios: "-apple-system", android: "Roboto", default: "system-ui" }),
-            }}
+            onChangeText={setSearchQuery}
+            autoFocus
+            returnKeyType="search"
           />
           {searchQuery.length > 0 && (
             <TouchableOpacity onPress={() => setSearchQuery("")}>
@@ -411,6 +404,7 @@ const makeStyles = (colors: AppColors) => StyleSheet.create({
   },
 
   searchBar: { flexDirection: "row", alignItems: "center", backgroundColor: colors.bgSecondary, marginHorizontal: 20, marginBottom: 10, paddingHorizontal: 14, paddingVertical: 6, borderRadius: 14, borderWidth: 1, borderColor: Colors.gold, gap: 8 },
+  searchInput: { flex: 1, height: 36, color: colors.textPrimary, fontSize: 15 },
   clearBtn: { width: 20, height: 20, borderRadius: 10, backgroundColor: colors.bgTertiary, justifyContent: "center", alignItems: "center" },
   clearText: { color: colors.textMuted, fontSize: 14, lineHeight: 18 },
 

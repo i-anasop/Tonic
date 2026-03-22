@@ -29,6 +29,8 @@ import {
   Edit3,
   Zap,
   CheckCircle,
+  ExternalLink,
+  Activity,
 } from "lucide-react-native";
 import { useRouter } from "expo-router";
 import * as ImagePicker from "expo-image-picker";
@@ -111,6 +113,15 @@ export default function ProfileScreen() {
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
   const [isAchievementsModalVisible, setIsAchievementsModalVisible] = useState(false);
   const [stats, setStats] = useState({ tasksCompleted: 0, currentStreak: 0, productivityScore: 0 });
+  const [onChainRecords, setOnChainRecords] = useState<any[]>([]);
+
+  useEffect(() => {
+    if (!user?.id) return;
+    fetch(`${API_BASE_URL}/api/users/${user.id}/records`)
+      .then((r) => r.json())
+      .then((data) => { if (Array.isArray(data.records)) setOnChainRecords(data.records); })
+      .catch(() => {});
+  }, [user?.id, lastTxHash]);
 
   const loadStats = useCallback(async () => {
     const newStats = await getStats();
@@ -349,6 +360,63 @@ export default function ProfileScreen() {
             </View>
           </View>
 
+          {/* ── Last TX Hash ── */}
+          {lastTxHash && (
+            <View style={[styles.section, { marginTop: -4 }]}>
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 10, backgroundColor: `${Colors.blue}10`, borderRadius: 14, padding: 14, borderWidth: 1, borderColor: `${Colors.blue}25` }}>
+                <CheckCircle size={17} color={Colors.blue} />
+                <View style={{ flex: 1 }}>
+                  <Text style={{ fontSize: 11, fontWeight: "700", color: Colors.blue, marginBottom: 2 }}>⛓️ Verified on TON Blockchain</Text>
+                  <Text style={{ fontSize: 11, color: colors.textMuted, fontFamily: "monospace" }} numberOfLines={1}>{lastTxHash.slice(0, 32)}…</Text>
+                </View>
+              </View>
+            </View>
+          )}
+
+          {/* ── On-Chain Activity Feed ── */}
+          {onChainRecords.length > 0 && (
+            <View style={styles.section}>
+              <View style={styles.activityHeader}>
+                <Activity size={14} color={Colors.blue} />
+                <Text style={styles.sectionLabel}>On-Chain Activity</Text>
+              </View>
+              <View style={styles.menuCard}>
+                {onChainRecords.slice(0, 5).map((record: any, i: number) => {
+                  const date = new Date(record.recorded_at || record.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric" });
+                  const shortHash = record.tx_hash ? `${record.tx_hash.slice(0, 8)}…${record.tx_hash.slice(-5)}` : "pending";
+                  const tonscanUrl = record.tx_hash ? `https://tonscan.org/tx/${record.tx_hash}` : null;
+                  return (
+                    <View key={record.id || i}>
+                      {i > 0 && <View style={styles.divider} />}
+                      <View style={styles.activityRow}>
+                        <View style={[styles.activityDot, { backgroundColor: record.tx_hash ? Colors.blue : colors.textMuted }]} />
+                        <View style={{ flex: 1 }}>
+                          <Text style={styles.activityTitle} numberOfLines={1}>{record.title || "Proof of Productivity"}</Text>
+                          <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginTop: 2 }}>
+                            <Text style={styles.activityHash}>{shortHash}</Text>
+                            <Text style={styles.activityDate}>{date}</Text>
+                            {record.score != null && <Text style={[styles.activityDate, { color: Colors.gold }]}>{record.score}pts</Text>}
+                          </View>
+                        </View>
+                        {tonscanUrl && (
+                          <TouchableOpacity
+                            onPress={() => { if (typeof window !== "undefined") window.open(tonscanUrl, "_blank"); }}
+                            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                          >
+                            <View style={styles.tonscanBtn}>
+                              <ExternalLink size={12} color={Colors.blue} />
+                              <Text style={styles.tonscanText}>View</Text>
+                            </View>
+                          </TouchableOpacity>
+                        )}
+                      </View>
+                    </View>
+                  );
+                })}
+              </View>
+            </View>
+          )}
+
           {/* ── Preferences ── */}
           <View style={styles.section}>
             <Text style={styles.sectionLabel}>Preferences</Text>
@@ -501,4 +569,13 @@ const makeStyles = (colors: AppColors) => StyleSheet.create({
   appInfo: { alignItems: "center", paddingTop: 8, paddingBottom: 8, gap: 2 },
   appVer: { fontSize: 12, color: colors.textMuted, fontWeight: "600" },
   appBuild: { fontSize: 11, color: colors.textMuted },
+
+  activityHeader: { flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 8 },
+  activityRow: { flexDirection: "row", alignItems: "center", gap: 12, padding: 14 },
+  activityDot: { width: 10, height: 10, borderRadius: 5, flexShrink: 0 },
+  activityTitle: { fontSize: 13, fontWeight: "600", color: colors.textPrimary },
+  activityHash: { fontSize: 10, color: colors.textMuted, fontFamily: "monospace" },
+  activityDate: { fontSize: 10, color: colors.textMuted },
+  tonscanBtn: { flexDirection: "row", alignItems: "center", gap: 3, paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8, backgroundColor: `${Colors.blue}12`, borderWidth: 1, borderColor: `${Colors.blue}30` },
+  tonscanText: { fontSize: 10, fontWeight: "600", color: Colors.blue },
 });

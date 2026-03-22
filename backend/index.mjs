@@ -215,6 +215,23 @@ RESPONSE RULES — follow every time, no exceptions:
           },
         },
       },
+      {
+        type: "function",
+        function: {
+          name: "reschedule_task",
+          description: "Reschedule a specific task to a new due date. Use when user wants to move, delay, or push a task.",
+          parameters: {
+            type: "object",
+            properties: {
+              taskId: { type: "string", description: "The exact task ID to reschedule" },
+              taskTitle: { type: "string", description: "The task title for confirmation" },
+              newDueDate: { type: "string", description: "New ISO date string for the due date" },
+              reason: { type: "string", description: "Brief reason for the reschedule" },
+            },
+            required: ["taskId", "taskTitle", "newDueDate"],
+          },
+        },
+      },
     ];
 
     const allMessages = [
@@ -318,6 +335,33 @@ RESPONSE RULES — follow every time, no exceptions:
         });
         finalMessage = confirmRes.choices[0].message.content || "Here's your productivity summary!";
         action = { type: "show_stats", data: stats };
+
+      } else if (toolName === "reschedule_task") {
+        action = {
+          type: "reschedule_task",
+          data: { taskId: toolArgs.taskId, taskTitle: toolArgs.taskTitle, newDueDate: toolArgs.newDueDate },
+        };
+
+        if (userId) {
+          try {
+            await db.query(
+              "UPDATE tasks SET due_date = $1 WHERE id = $2 AND user_id = $3",
+              [toolArgs.newDueDate, toolArgs.taskId, userId]
+            );
+          } catch (dbErr) {
+            console.warn("DB reschedule failed:", dbErr.message);
+          }
+        }
+
+        const confirmRes = await openai.chat.completions.create({
+          model: "gpt-5.2",
+          messages: [
+            ...allMessages,
+            aiMessage,
+            { role: "tool", content: JSON.stringify({ success: true, taskTitle: toolArgs.taskTitle, newDueDate: toolArgs.newDueDate, reason: toolArgs.reason }), tool_call_id: toolCall.id },
+          ],
+        });
+        finalMessage = confirmRes.choices[0].message.content || `"${toolArgs.taskTitle}" rescheduled!`;
 
       } else if (toolName === "plan_my_day") {
         const todayPending = pendingTasks.filter((t) => {
@@ -509,6 +553,35 @@ app.post("/api/claim-points", async (req, res) => {
   } catch (error) {
     console.error("Claim points error:", error.message);
     res.status(500).json({ error: "Failed to save claim" });
+  }
+});
+
+app.get("/api/leaderboard", async (req, res) => {
+  try {
+    const result = await db.query(`
+      SELECT
+        u.id,
+        u.name,
+        u.wallet_address,
+        COUNT(t.id) FILTER (WHERE t.status = 'completed') AS completed_tasks,
+        COUNT(t.id) AS total_tasks,
+        ROUND(
+          CASE WHEN COUNT(t.id) > 0
+            THEN (COUNT(t.id) FILTER (WHERE t.status = 'completed')::float / COUNT(t.id)::float) * 100
+            ELSE 0
+          END
+        ) AS completion_rate
+      FROM users u
+      LEFT JOIN tasks t ON t.user_id = u.id
+      GROUP BY u.id, u.name, u.wallet_address
+      HAVING COUNT(t.id) > 0
+      ORDER BY completed_tasks DESC
+      LIMIT 10
+    `);
+    res.json({ leaderboard: result.rows });
+  } catch (error) {
+    console.error("Leaderboard error:", error.message);
+    res.status(500).json({ error: "Failed to fetch leaderboard", leaderboard: [] });
   }
 });
 

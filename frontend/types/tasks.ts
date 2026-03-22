@@ -43,10 +43,11 @@ export interface AgentMessage {
   timestamp: Date;
   action?: AgentAction;
   isLoading?: boolean;
+  isNew?: boolean;
 }
 
 export interface AgentAction {
-  type: "create_task" | "complete_task" | "show_stats" | "schedule";
+  type: "create_task" | "complete_task" | "show_stats" | "schedule" | "reschedule_task";
   data?: Record<string, unknown>;
   success?: boolean;
 }

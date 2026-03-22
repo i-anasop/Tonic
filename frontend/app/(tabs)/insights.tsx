@@ -22,12 +22,14 @@ import {
   Flame,
   Zap,
   RefreshCw,
+  Trophy,
 } from "lucide-react-native";
 
 import { Colors } from "@/constants/colors";
 import { useTheme, type AppColors } from "@/providers/ThemeProvider";
 import { useTasks } from "@/providers/TasksProvider";
 import type { AIInsight } from "@/types/tasks";
+import { API_BASE_URL } from "@/constants/api";
 
 type InsightType = "focus" | "warning" | "suggestion" | "pattern" | "achievement";
 
@@ -152,12 +154,49 @@ function CategoryBar({ name, count, total, color }: { name: string; count: numbe
   );
 }
 
+interface LeaderboardEntry {
+  id: string;
+  name: string;
+  wallet_address?: string;
+  completed_tasks: number;
+  total_tasks: number;
+  completion_rate: number;
+}
+
+function LeaderboardRow({ entry, rank }: { entry: LeaderboardEntry; rank: number }) {
+  const { colors } = useTheme();
+  const isTop3 = rank <= 3;
+  const rankColors = ["#FFD700", "#C0C0C0", "#CD7F32"];
+  const rankColor = isTop3 ? rankColors[rank - 1] : colors.textMuted;
+  return (
+    <View style={{ flexDirection: "row", alignItems: "center", gap: 12, paddingHorizontal: 14, paddingVertical: 12 }}>
+      <View style={{ width: 28, height: 28, borderRadius: 14, backgroundColor: isTop3 ? `${rankColor}20` : colors.bgTertiary, justifyContent: "center", alignItems: "center" }}>
+        {rank === 1 ? (
+          <Trophy size={14} color={rankColor} />
+        ) : (
+          <Text style={{ fontSize: 12, fontWeight: "700", color: rankColor }}>#{rank}</Text>
+        )}
+      </View>
+      <View style={{ flex: 1 }}>
+        <Text style={{ fontSize: 13, fontWeight: "600", color: colors.textPrimary }} numberOfLines={1}>{entry.name}</Text>
+        <Text style={{ fontSize: 10, color: colors.textMuted, marginTop: 1 }}>{entry.completion_rate}% rate · {entry.total_tasks} tasks</Text>
+      </View>
+      <View style={{ alignItems: "flex-end" }}>
+        <Text style={{ fontSize: 16, fontWeight: "800", color: isTop3 ? rankColor : colors.textPrimary }}>{entry.completed_tasks}</Text>
+        <Text style={{ fontSize: 9, color: colors.textMuted, letterSpacing: 0.5 }}>DONE</Text>
+      </View>
+    </View>
+  );
+}
+
 export default function InsightsScreen() {
   const [activeTab, setActiveTab] = useState<"insights" | "analytics">("insights");
   const { insights, tasks, getStats, isGeneratingInsights, generateInsights } = useTasks();
   const { colors } = useTheme();
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const [stats, setStats] = useState({ tasksCompleted: 0, tasksCreated: 0, currentStreak: 0, productivityScore: 0 });
+  const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
+  const [leaderboardLoading, setLeaderboardLoading] = useState(false);
 
   const loadStats = useCallback(async () => {
     const s = await getStats();
@@ -165,6 +204,16 @@ export default function InsightsScreen() {
   }, [getStats]);
 
   useEffect(() => { void loadStats(); }, [loadStats, tasks]);
+
+  useEffect(() => {
+    if (activeTab !== "analytics") return;
+    setLeaderboardLoading(true);
+    fetch(`${API_BASE_URL}/api/leaderboard`)
+      .then((r) => r.json())
+      .then((data) => { if (Array.isArray(data.leaderboard)) setLeaderboard(data.leaderboard); })
+      .catch(() => {})
+      .finally(() => setLeaderboardLoading(false));
+  }, [activeTab]);
 
   const iconMap: Record<string, typeof Sparkles> = {
     target: Target, alert: AlertTriangle, balance: Zap, trending: TrendingUp, clock: Clock, brain: Brain,
@@ -335,6 +384,31 @@ export default function InsightsScreen() {
                 ))}
               </View>
             </View>
+
+            {/* Leaderboard */}
+            <View style={styles.leaderboardCard}>
+              <View style={styles.leaderboardHeader}>
+                <Trophy size={16} color={Colors.gold} />
+                <Text style={styles.leaderboardTitle}>Global Leaderboard</Text>
+                <Text style={styles.leaderboardSub}>Top 10 users by tasks completed</Text>
+              </View>
+              {leaderboardLoading ? (
+                <View style={{ padding: 20, alignItems: "center" }}><ActivityIndicator size="small" color={Colors.gold} /></View>
+              ) : leaderboard.length === 0 ? (
+                <View style={{ padding: 20, alignItems: "center" }}>
+                  <Text style={{ fontSize: 12, color: colors.textMuted, textAlign: "center" }}>No leaderboard data yet. Complete tasks to appear here!</Text>
+                </View>
+              ) : (
+                <View>
+                  {leaderboard.map((entry, i) => (
+                    <View key={entry.id}>
+                      {i > 0 && <View style={{ height: 1, backgroundColor: colors.border, marginLeft: 54 }} />}
+                      <LeaderboardRow entry={entry} rank={i + 1} />
+                    </View>
+                  ))}
+                </View>
+              )}
+            </View>
           </>
         )}
       </ScrollView>
@@ -423,4 +497,9 @@ const makeStyles = (colors: AppColors) => StyleSheet.create({
   barPctSub: { fontSize: 11, color: colors.textMuted, fontWeight: "400" },
   barTrack: { height: 6, borderRadius: 3, backgroundColor: colors.bgTertiary, overflow: "hidden" },
   barFill: { height: "100%", borderRadius: 3 },
+
+  leaderboardCard: { backgroundColor: colors.bgSecondary, borderRadius: 18, borderWidth: 1, borderColor: colors.border, overflow: "hidden", marginTop: 16 },
+  leaderboardHeader: { flexDirection: "row", alignItems: "center", gap: 8, padding: 14, borderBottomWidth: 1, borderBottomColor: colors.border },
+  leaderboardTitle: { fontSize: 14, fontWeight: "700", color: colors.textPrimary, flex: 1 },
+  leaderboardSub: { fontSize: 10, color: colors.textMuted },
 });
