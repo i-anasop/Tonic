@@ -9,13 +9,30 @@ interface TonConnectState {
   walletAddress: string | null;
   error: string | null;
   isInitialized: boolean;
+  isSendingTx: boolean;
+}
+
+export interface TonTxResult {
+  boc: string;
 }
 
 interface UseTonConnectReturn extends TonConnectState {
   connectWallet: () => Promise<boolean>;
   disconnectWallet: () => Promise<boolean>;
   getWalletAddress: () => string | null;
+  sendTransaction: (params: {
+    to: string;
+    amount: string;
+    comment?: string;
+  }) => Promise<TonTxResult>;
+  recordAchievementOnChain: (params: {
+    title: string;
+    tasksCompleted: number;
+    streak: number;
+  }) => Promise<TonTxResult | null>;
 }
+
+const ACHIEVEMENT_CONTRACT = "EQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAM9c";
 
 export const useTonConnect = (): UseTonConnectReturn => {
   const [tonConnectUI] = useTonConnectUI();
@@ -25,24 +42,20 @@ export const useTonConnect = (): UseTonConnectReturn => {
     walletAddress: null,
     error: null,
     isInitialized: false,
+    isSendingTx: false,
   });
   const unsubscribeRef = useRef<(() => void) | null>(null);
 
-  // Check initialization and setup listeners
   useEffect(() => {
     if (tonConnectUI) {
       setState((prev) => ({ ...prev, isInitialized: true }));
-      console.log("[useTonConnect] Successfully initialized");
 
-      // Listen to wallet changes
       try {
         const unsubscribe = tonConnectUI.onStatusChange((walletInfo) => {
-          console.log("[useTonConnect] Wallet status changed:", walletInfo);
           if (walletInfo) {
-            console.log("[useTonConnect] Wallet connected with address:", walletInfo.account?.address);
+            console.log("[useTonConnect] Wallet connected:", walletInfo.account?.address);
           }
         });
-        
         unsubscribeRef.current = unsubscribe;
       } catch (err) {
         console.error("[useTonConnect] Failed to setup status listener:", err);
@@ -54,21 +67,13 @@ export const useTonConnect = (): UseTonConnectReturn => {
           unsubscribeRef.current = null;
         }
       };
-    } else {
-      console.warn("[useTonConnect] UI not yet initialized");
     }
   }, [tonConnectUI]);
 
-  // Update connection state when wallet changes
   useEffect(() => {
     if (wallet && wallet.account && wallet.account.address) {
       const address = wallet.account.address;
-      console.log("[useTonConnect] ✅ Wallet successfully connected:", address);
-      console.log("[useTonConnect] Wallet account:", {
-        address: wallet.account.address,
-        chain: wallet.account.chain,
-      });
-
+      console.log("[useTonConnect] Wallet connected:", address);
       setState((prev) => ({
         ...prev,
         isConnected: true,
@@ -76,7 +81,6 @@ export const useTonConnect = (): UseTonConnectReturn => {
         error: null,
       }));
     } else {
-      console.log("[useTonConnect] ❌ Wallet disconnected or not available");
       setState((prev) => ({
         ...prev,
         isConnected: false,
@@ -88,65 +92,118 @@ export const useTonConnect = (): UseTonConnectReturn => {
   const connectWallet = useCallback(async (): Promise<boolean> => {
     try {
       if (!tonConnectUI) {
-        const msg = "TonConnect UI not initialized. Please try again.";
-        console.error("[useTonConnect]", msg);
-        setState((prev) => ({ ...prev, error: msg }));
-        throw new Error(msg);
+        throw new Error("TonConnect UI not initialized. Please try again.");
       }
-
-      console.log("[useTonConnect] 🔓 Opening wallet selection modal...");
       setState((prev) => ({ ...prev, error: null }));
-
-      // Open modal - user can select and connect a wallet, or close the modal
-      // The wallet state listener will detect when wallet is connected
       await tonConnectUI.openModal();
-
-      console.log("[useTonConnect] ⏳ Modal closed");
       return true;
     } catch (err) {
       const errorMsg = err instanceof Error ? err.message : "Unknown error";
-      console.error("[useTonConnect] ❌ Modal error:", errorMsg);
+      setState((prev) => ({ ...prev, error: errorMsg }));
       throw err;
     }
   }, [tonConnectUI]);
 
   const disconnectWallet = useCallback(async (): Promise<boolean> => {
     try {
-      if (!tonConnectUI) {
-        throw new Error("TonConnect UI not available");
-      }
-
-      console.log("[useTonConnect] 🔐 Disconnecting wallet...");
+      if (!tonConnectUI) throw new Error("TonConnect UI not available");
       await tonConnectUI.disconnect();
-
       setState((prev) => ({
         ...prev,
         isConnected: false,
         walletAddress: null,
         error: null,
       }));
-      console.log("[useTonConnect] ✅ Wallet disconnected");
       return true;
     } catch (err) {
       const errorMsg = err instanceof Error ? err.message : "Unknown error";
-      console.error("[useTonConnect] ❌ Disconnection error:", errorMsg);
       setState((prev) => ({ ...prev, error: errorMsg }));
       throw err;
     }
   }, [tonConnectUI]);
 
   const getWalletAddress = useCallback((): string | null => {
-    if (!wallet || !wallet.account || !wallet.account.address) {
-      return null;
-    }
+    if (!wallet?.account?.address) return null;
     return wallet.account.address;
   }, [wallet]);
+
+  const sendTransaction = useCallback(
+    async (params: {
+      to: string;
+      amount: string;
+      comment?: string;
+    }): Promise<TonTxResult> => {
+      if (!tonConnectUI) throw new Error("TonConnect UI not initialized");
+      if (!state.isConnected) throw new Error("Wallet not connected");
+
+      setState((prev) => ({ ...prev, isSendingTx: true }));
+      try {
+        let payload: string | undefined;
+        if (params.comment) {
+          const encoder = new TextEncoder();
+          const encoded = encoder.encode(params.comment);
+          const bytes = new Uint8Array(4 + encoded.length);
+          bytes[0] = 0;
+          bytes[1] = 0;
+          bytes[2] = 0;
+          bytes[3] = 0;
+          bytes.set(encoded, 4);
+          payload = btoa(String.fromCharCode(...bytes));
+        }
+
+        const transaction = {
+          validUntil: Math.floor(Date.now() / 1000) + 360,
+          messages: [
+            {
+              address: params.to,
+              amount: params.amount,
+              ...(payload ? { payload } : {}),
+            },
+          ],
+        };
+
+        const result = await tonConnectUI.sendTransaction(transaction);
+        return result as TonTxResult;
+      } finally {
+        setState((prev) => ({ ...prev, isSendingTx: false }));
+      }
+    },
+    [tonConnectUI, state.isConnected]
+  );
+
+  const recordAchievementOnChain = useCallback(
+    async (params: {
+      title: string;
+      tasksCompleted: number;
+      streak: number;
+    }): Promise<TonTxResult | null> => {
+      if (!state.isConnected) return null;
+
+      const comment = `Tonic AI | ${params.title} | Tasks: ${params.tasksCompleted} | Streak: ${params.streak}d`;
+
+      try {
+        const result = await sendTransaction({
+          to: ACHIEVEMENT_CONTRACT,
+          amount: "50000000",
+          comment,
+        });
+        console.log("[TON] Achievement recorded on-chain:", result.boc);
+        return result;
+      } catch (err) {
+        console.error("[TON] Failed to record achievement:", err);
+        return null;
+      }
+    },
+    [state.isConnected, sendTransaction]
+  );
 
   return {
     ...state,
     connectWallet,
     disconnectWallet,
     getWalletAddress,
+    sendTransaction,
+    recordAchievementOnChain,
   };
 };
 

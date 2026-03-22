@@ -44,6 +44,8 @@ import { useAppState } from "@/providers/AppStateProvider";
 import { useTasks } from "@/providers/TasksProvider";
 import { useAchievements } from "@/providers/AchievementsProvider";
 import { AchievementsModal } from "@/components/AchievementsModal";
+import { useTonConnect } from "@/hooks/useTonConnect";
+import { API_BASE_URL } from "@/constants/api";
 
 interface StatItemProps {
   icon: React.ElementType;
@@ -112,6 +114,9 @@ export default function ProfileScreen() {
   const { user, signOut, setUser } = useAppState();
   const { tasks, getStats, getCompletedTasks } = useTasks();
   const { stats: achievementStats } = useAchievements();
+  const { isConnected: isTonConnected, recordAchievementOnChain, isSendingTx } = useTonConnect();
+  const [isRecordingOnChain, setIsRecordingOnChain] = useState(false);
+  const [lastTxHash, setLastTxHash] = useState<string | null>(null);
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
   const [darkModeEnabled, setDarkModeEnabled] = useState(true);
   const [isAchievementsModalVisible, setIsAchievementsModalVisible] = useState(false);
@@ -199,6 +204,64 @@ export default function ProfileScreen() {
       Alert.alert("Error", "Failed to pick image");
     }
   }, [user, setUser]);
+
+  const handleRecordOnChain = useCallback(async () => {
+    if (!isTonConnected) {
+      Alert.alert(
+        "Wallet Required",
+        "Connect your TON wallet first to record achievements on the blockchain.",
+        [{ text: "OK" }]
+      );
+      return;
+    }
+
+    Alert.alert(
+      "Record Achievement on TON",
+      `This will record your current achievement (${stats.tasksCompleted} tasks, ${stats.currentStreak}-day streak) permanently on the TON blockchain.\n\nThis requires a small gas fee (~0.05 TON).`,
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Record On-Chain",
+          onPress: async () => {
+            setIsRecordingOnChain(true);
+            try {
+              const result = await recordAchievementOnChain({
+                title: `Productivity Milestone`,
+                tasksCompleted: stats.tasksCompleted,
+                streak: stats.currentStreak,
+              });
+              if (result) {
+                setLastTxHash(result.boc);
+                if (user?.id) {
+                  await fetch(`${API_BASE_URL}/api/records`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                      id: `${user.id}_${Date.now()}`,
+                      userId: user.id,
+                      recordType: "achievement",
+                      title: `Productivity Milestone`,
+                      description: `${stats.tasksCompleted} tasks completed, ${stats.currentStreak}-day streak`,
+                      tonTxHash: result.boc,
+                    }),
+                  });
+                }
+                Alert.alert(
+                  "On-Chain!",
+                  "Your achievement has been permanently recorded on the TON blockchain.",
+                  [{ text: "Awesome!" }]
+                );
+              }
+            } catch (err) {
+              Alert.alert("Transaction Failed", "Could not send the transaction. Please try again.");
+            } finally {
+              setIsRecordingOnChain(false);
+            }
+          },
+        },
+      ]
+    );
+  }, [isTonConnected, stats, recordAchievementOnChain, user]);
 
   const completedTasks = getCompletedTasks();
   const completionRate = tasks.length > 0
@@ -341,7 +404,50 @@ export default function ProfileScreen() {
             </View>
           </TouchableOpacity>
           
-          {/* Old achievements grid removed - now in modal */}
+          {/* TON Blockchain Section */}
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>TON Blockchain</Text>
+            <View style={styles.menuCard}>
+              <TouchableOpacity
+                style={styles.tonRecordButton}
+                onPress={handleRecordOnChain}
+                activeOpacity={0.8}
+                disabled={isRecordingOnChain || isSendingTx}
+              >
+                <View style={styles.tonRecordLeft}>
+                  <View style={[styles.menuIconContainer, { backgroundColor: `${Colors.gold}15` }]}>
+                    <Award size={20} color={Colors.gold} />
+                  </View>
+                  <View style={styles.menuContent}>
+                    <Text style={styles.menuTitle}>
+                      {isRecordingOnChain ? "Recording..." : "Record Achievement On-Chain"}
+                    </Text>
+                    <Text style={styles.menuSubtitle}>
+                      {isTonConnected
+                        ? `Permanently store your ${stats.tasksCompleted} tasks on TON`
+                        : "Connect wallet to record achievements"}
+                    </Text>
+                  </View>
+                </View>
+                <View style={[styles.tonBadge, !isTonConnected && styles.tonBadgeInactive]}>
+                  <Text style={[styles.tonBadgeText, !isTonConnected && styles.tonBadgeTextInactive]}>
+                    {isTonConnected ? "LIVE" : "OFF"}
+                  </Text>
+                </View>
+              </TouchableOpacity>
+              {lastTxHash && (
+                <>
+                  <View style={styles.menuDivider} />
+                  <View style={styles.txHashContainer}>
+                    <Zap size={14} color={Colors.success} />
+                    <Text style={styles.txHashText} numberOfLines={1}>
+                      Last TX: {lastTxHash.slice(0, 24)}...
+                    </Text>
+                  </View>
+                </>
+              )}
+            </View>
+          </View>
 
         {/* Preferences Section */}
         <View style={styles.section}>
@@ -464,7 +570,7 @@ export default function ProfileScreen() {
 
         {/* App Info */}
         <View style={styles.appInfo}>
-          <Text style={styles.appVersion}>Pulse AI v1.0.0</Text>
+          <Text style={styles.appVersion}>Tonic AI v1.0.0</Text>
           <Text style={styles.appBuild}>Built for TON & Telegram</Text>
         </View>
       </ScrollView>
@@ -865,5 +971,50 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: "bold",
     color: Colors.bgPrimary,
+  },
+  tonRecordButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    padding: 16,
+  },
+  tonRecordLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    flex: 1,
+  },
+  tonBadge: {
+    backgroundColor: `${Colors.gold}20`,
+    borderWidth: 1,
+    borderColor: `${Colors.gold}60`,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 8,
+  },
+  tonBadgeInactive: {
+    backgroundColor: `${Colors.textMuted}15`,
+    borderColor: `${Colors.textMuted}40`,
+  },
+  tonBadgeText: {
+    fontSize: 11,
+    fontWeight: "700",
+    color: Colors.gold,
+    letterSpacing: 0.5,
+  },
+  tonBadgeTextInactive: {
+    color: Colors.textMuted,
+  },
+  txHashContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+  },
+  txHashText: {
+    fontSize: 12,
+    color: Colors.textSecondary,
+    fontFamily: "monospace",
+    flex: 1,
   },
 });

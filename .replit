@@ -18,10 +18,14 @@ args = "Start application"
 name = "Start application"
 author = "agent"
 
-[[workflows.workflow.tasks]]
-task = "shell.exec"
-args = "pnpm --filter @workspace/api-server run dev"
-waitForPort = 8080
-
 [workflows.workflow.metadata]
 outputType = "console"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "node /home/runner/workspace/server/index.mjs"
+waitForPort = 3000
+
+[[ports]]
+localPort = 3000
+externalPort = 80

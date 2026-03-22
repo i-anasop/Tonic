@@ -3,11 +3,13 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useEffect, useState, useCallback, useRef, useMemo } from "react";
 import { v4 as uuidv4 } from "uuid";
 import type { Task, TaskCategory, AIInsight, UserStats } from "@/types/tasks";
+import { API_BASE_URL } from "@/constants/api";
 
 interface TasksState {
   tasks: Task[];
   insights: AIInsight[];
   isLoading: boolean;
+  isGeneratingInsights: boolean;
   addTask: (task: Omit<Task, "id" | "createdAt">) => void;
   updateTask: (id: string, updates: Partial<Task>) => void;
   deleteTask: (id: string) => void;
@@ -18,7 +20,8 @@ interface TasksState {
   getCompletedTasks: () => Task[];
   getPendingTasks: () => Task[];
   getStats: () => Promise<UserStats>;
-  generateInsights: () => void;
+  generateInsights: () => Promise<void>;
+  syncTasksToBackend: (userId: string) => Promise<void>;
 }
 
 const STORAGE_KEY = "@tonic_tasks";
@@ -28,7 +31,9 @@ function useTasksProvider(): TasksState {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [insights, setInsights] = useState<AIInsight[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isGeneratingInsights, setIsGeneratingInsights] = useState(false);
   const longestStreakRef = useRef(0);
+  const insightCooldownRef = useRef(0);
 
   const loadTasks = useCallback(async () => {
     try {
@@ -70,20 +75,18 @@ function useTasksProvider(): TasksState {
     void loadTasks();
   }, [loadTasks]);
 
-  const saveTasks = useCallback(async () => {
+  const saveTasks = useCallback(async (currentTasks: Task[], currentInsights: AIInsight[]) => {
     try {
-      console.log("💾 Saving", tasks.length, "tasks to AsyncStorage");
-      await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(tasks));
-      await AsyncStorage.setItem(INSIGHTS_KEY, JSON.stringify(insights));
-      console.log("✏️ Saved successfully");
+      await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(currentTasks));
+      await AsyncStorage.setItem(INSIGHTS_KEY, JSON.stringify(currentInsights));
     } catch (error) {
-      console.error("❌ Error saving tasks:", error);
+      console.error("Error saving tasks:", error);
     }
-  }, [tasks, insights]);
+  }, []);
 
   useEffect(() => {
     if (!isLoading) {
-      void saveTasks();
+      void saveTasks(tasks, insights);
     }
   }, [tasks, insights, isLoading, saveTasks]);
 
@@ -93,19 +96,12 @@ function useTasksProvider(): TasksState {
       id: uuidv4(),
       createdAt: new Date(),
     };
-    console.log("📝 Adding task:", newTask.title, "Due:", newTask.dueDate);
-    setTasks((prev) => {
-      const updated = [newTask, ...prev];
-      console.log("✅ Tasks updated. Total tasks:", updated.length);
-      return updated;
-    });
+    setTasks((prev) => [newTask, ...prev]);
   }, []);
 
   const updateTask = useCallback((id: string, updates: Partial<Task>) => {
     setTasks((prev) =>
-      prev.map((task) =>
-        task.id === id ? { ...task, ...updates } : task
-      )
+      prev.map((task) => (task.id === id ? { ...task, ...updates } : task))
     );
   }, []);
 
@@ -138,12 +134,7 @@ function useTasksProvider(): TasksState {
   }, [tasks]);
 
   const getTodayTasks = useCallback(() => {
-    const today = getTasksByDate(new Date());
-    console.log("📅 Today's tasks:", today.length, "tasks");
-    today.forEach((t) => {
-      console.log(`  - ${t.title} (Due: ${t.dueDate.toDateString()})`);
-    });
-    return today;
+    return getTasksByDate(new Date());
   }, [getTasksByDate]);
 
   const getCompletedTasks = useCallback(() => {
@@ -217,120 +208,208 @@ function useTasksProvider(): TasksState {
     };
   }, [tasks, getCompletedTasks, calculateStreak]);
 
-  const generateInsights = useCallback(() => {
-    const newInsights: AIInsight[] = [];
-    const pending = getPendingTasks();
-    const today = new Date();
+  const generateInsights = useCallback(async () => {
+    const now = Date.now();
+    if (now - insightCooldownRef.current < 30000) return;
+    insightCooldownRef.current = now;
 
-    const hour = today.getHours();
-    let focusTitle = "Deep Work Session";
-    let focusDesc = "Your peak productivity window is 9-11 AM. Focus on high-priority tasks during this time.";
+    setIsGeneratingInsights(true);
+    try {
+      const stats = await getStats();
 
-    if (hour >= 11 && hour < 14) {
-      focusTitle = "Midday Momentum";
-      focusDesc = "Great time for collaborative tasks and quick wins while energy is steady.";
-    } else if (hour >= 14 && hour < 18) {
-      focusTitle = "Afternoon Sprint";
-      focusDesc = "Power through remaining tasks. Consider the Pomodoro technique for focus.";
-    } else if (hour >= 18) {
-      focusTitle = "Evening Wind-down";
-      focusDesc = "Perfect time for planning tomorrow and light review tasks.";
-    }
-
-    newInsights.push({
-      id: "focus",
-      type: "focus",
-      title: focusTitle,
-      description: focusDesc,
-      icon: "target",
-      priority: "high",
-      createdAt: new Date(),
-    });
-
-    const highPriorityPending = pending.filter((t) => t.priority === "high");
-    if (highPriorityPending.length >= 3) {
-      newInsights.push({
-        id: "workload",
-        type: "warning",
-        title: "Workload Alert",
-        description: `You have ${highPriorityPending.length} high-priority tasks pending. Consider rescheduling lower priority items.`,
-        icon: "alert",
-        priority: "high",
-        createdAt: new Date(),
+      const response = await fetch(`${API_BASE_URL}/api/insights`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          tasks: tasks.map((t) => ({
+            id: t.id,
+            title: t.title,
+            category: t.category,
+            priority: t.priority,
+            status: t.status,
+            dueDate: t.dueDate,
+            completedAt: t.completedAt,
+          })),
+          stats,
+        }),
+        signal: AbortSignal.timeout(15000),
       });
-    }
 
-    const completed = getCompletedTasks();
-    if (completed.length > 5) {
-      const recentCompletions = completed.filter(
-        (t) =>
-          t.completedAt &&
-          new Date(t.completedAt).getTime() > Date.now() - 7 * 24 * 60 * 60 * 1000
-      );
-      if (recentCompletions.length >= 5) {
-        newInsights.push({
-          id: "pattern",
-          type: "pattern",
-          title: "Consistency Champion",
-          description: "You've completed 5+ tasks this week. Your productivity pattern shows strong momentum!",
-          icon: "trending",
-          priority: "medium",
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      const data = await response.json() as { insights: AIInsight[] };
+
+      if (Array.isArray(data.insights) && data.insights.length > 0) {
+        const newInsights: AIInsight[] = data.insights.map((i: any) => ({
+          id: i.id || uuidv4(),
+          type: i.type || "suggestion",
+          title: i.title || "Insight",
+          description: i.description || "",
+          icon: i.icon || "brain",
+          priority: i.priority || "medium",
           createdAt: new Date(),
-        });
+        }));
+        setInsights(newInsights);
+        return;
       }
+    } catch (error) {
+      console.warn("AI insights API unavailable, using local fallback:", error);
+    } finally {
+      setIsGeneratingInsights(false);
     }
 
-    const categories = ["work", "personal", "health", "learning"] as const;
-    const categoryCounts = categories.map((cat) => ({
-      category: cat,
-      count: pending.filter((t) => t.category === cat).length,
-    }));
-    const maxCategory = categoryCounts.reduce((max, c) =>
-      c.count > max.count ? c : max
-    );
-    if (maxCategory.count > 5) {
-      const balanceSuggestions: Record<string, string> = {
-        work: "Consider taking a break for personal activities to maintain balance.",
-        personal: "Great work-life balance! Maybe focus on some professional goals too.",
-        health: "Prioritizing wellness is great! Don't forget your other commitments.",
-        learning: "Love the growth mindset! Balance with execution on current tasks.",
-      };
-      newInsights.push({
-        id: "balance",
-        type: "suggestion",
-        title: "Category Balance",
-        description: balanceSuggestions[maxCategory.category],
-        icon: "balance",
-        priority: "low",
-        createdAt: new Date(),
+    const fallbackInsights = generateFallbackInsights(tasks, getPendingTasks(), getCompletedTasks());
+    setInsights(fallbackInsights);
+  }, [tasks, getStats, getPendingTasks, getCompletedTasks]);
+
+  const syncTasksToBackend = useCallback(async (userId: string) => {
+    if (!userId || tasks.length === 0) return;
+    try {
+      await fetch(`${API_BASE_URL}/api/tasks/sync`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          userId,
+          tasks: tasks.map((t) => ({
+            id: t.id,
+            userId,
+            title: t.title,
+            description: t.description,
+            category: t.category,
+            priority: t.priority,
+            status: t.status,
+            dueDate: t.dueDate,
+            createdAt: t.createdAt,
+            completedAt: t.completedAt || null,
+          })),
+        }),
+        signal: AbortSignal.timeout(10000),
       });
+    } catch (error) {
+      console.warn("Task sync failed (offline mode):", error);
     }
-
-    setInsights(newInsights);
-  }, [getPendingTasks, getCompletedTasks]);
+  }, [tasks]);
 
   useEffect(() => {
     if (!isLoading) {
-      generateInsights();
+      void generateInsights();
     }
-  }, [tasks, isLoading]);
+  }, [isLoading]);
 
-  return useMemo(() => ({
-    tasks,
-    insights,
-    isLoading,
-    addTask,
-    updateTask,
-    deleteTask,
-    toggleTaskStatus,
-    getTasksByDate,
-    getTasksByCategory,
-    getTodayTasks,
-    getCompletedTasks,
-    getPendingTasks,
-    getStats,
-    generateInsights,
-  }), [tasks, insights, isLoading, addTask, updateTask, deleteTask, toggleTaskStatus, getTasksByDate, getTasksByCategory, getTodayTasks, getCompletedTasks, getPendingTasks, getStats, generateInsights]);
+  return useMemo(
+    () => ({
+      tasks,
+      insights,
+      isLoading,
+      isGeneratingInsights,
+      addTask,
+      updateTask,
+      deleteTask,
+      toggleTaskStatus,
+      getTasksByDate,
+      getTasksByCategory,
+      getTodayTasks,
+      getCompletedTasks,
+      getPendingTasks,
+      getStats,
+      generateInsights,
+      syncTasksToBackend,
+    }),
+    [
+      tasks,
+      insights,
+      isLoading,
+      isGeneratingInsights,
+      addTask,
+      updateTask,
+      deleteTask,
+      toggleTaskStatus,
+      getTasksByDate,
+      getTasksByCategory,
+      getTodayTasks,
+      getCompletedTasks,
+      getPendingTasks,
+      getStats,
+      generateInsights,
+      syncTasksToBackend,
+    ]
+  );
+}
+
+function generateFallbackInsights(
+  tasks: Task[],
+  pending: Task[],
+  completed: Task[]
+): AIInsight[] {
+  const insights: AIInsight[] = [];
+  const hour = new Date().getHours();
+
+  let focusTitle = "Deep Work Session";
+  let focusDesc = "Peak focus time — tackle your most complex high-priority tasks now.";
+  if (hour >= 11 && hour < 14) {
+    focusTitle = "Midday Momentum";
+    focusDesc = "Great time for collaborative tasks and quick wins while energy holds steady.";
+  } else if (hour >= 14 && hour < 18) {
+    focusTitle = "Afternoon Sprint";
+    focusDesc = "Power through remaining tasks with Pomodoro technique for sustained focus.";
+  } else if (hour >= 18) {
+    focusTitle = "Evening Planning";
+    focusDesc = "Perfect time to review today's progress and plan tomorrow's priorities.";
+  }
+
+  insights.push({
+    id: "focus",
+    type: "focus",
+    title: focusTitle,
+    description: focusDesc,
+    icon: "target",
+    priority: "high",
+    createdAt: new Date(),
+  });
+
+  const highPriorityPending = pending.filter((t) => t.priority === "high");
+  if (highPriorityPending.length >= 3) {
+    insights.push({
+      id: "workload",
+      type: "warning",
+      title: "Workload Alert",
+      description: `${highPriorityPending.length} high-priority tasks are pending. Reschedule lower-priority items to focus.`,
+      icon: "alert",
+      priority: "high",
+      createdAt: new Date(),
+    });
+  }
+
+  const recentCompletions = completed.filter(
+    (t) => t.completedAt && new Date(t.completedAt).getTime() > Date.now() - 7 * 86400000
+  );
+  if (recentCompletions.length >= 5) {
+    insights.push({
+      id: "pattern",
+      type: "pattern",
+      title: "Consistency Champion",
+      description: `${recentCompletions.length} tasks completed this week — your momentum is building strong!`,
+      icon: "trending",
+      priority: "medium",
+      createdAt: new Date(),
+    });
+  }
+
+  if (tasks.length > 0) {
+    const completionRate = Math.round((completed.length / tasks.length) * 100);
+    if (completionRate < 40) {
+      insights.push({
+        id: "balance",
+        type: "suggestion",
+        title: "Completion Opportunity",
+        description: `${completionRate}% completion rate — try breaking large tasks into smaller, achievable steps.`,
+        icon: "brain",
+        priority: "medium",
+        createdAt: new Date(),
+      });
+    }
+  }
+
+  return insights;
 }
 
 export const [TasksProvider, useTasks] = createContextHook(useTasksProvider);

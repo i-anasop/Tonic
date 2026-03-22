@@ -30,7 +30,7 @@ const { width: _width } = Dimensions.get("window");
 const onboardingData = [
   {
     id: 1,
-    title: "Welcome to Pulse",
+    title: "Welcome to Tonic AI",
     subtitle: "Your AI-Powered Productivity Partner",
     description: "Experience the future of task management with intelligent insights, voice commands, and seamless TON blockchain integration.",
     icon: Sparkles,

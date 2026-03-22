@@ -1,4 +1,4 @@
-// Dark elegant theme for Pulse AI
+// Dark elegant theme for Tonic AI
 
 export const Colors = {
   // Backgrounds

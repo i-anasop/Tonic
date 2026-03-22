@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   Animated,
   Dimensions,
+  ActivityIndicator,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import {
@@ -217,7 +218,7 @@ function CategoryBar({
 
 export default function InsightsScreen() {
   const [activeTab, setActiveTab] = useState<"insights" | "analytics">("insights");
-  const { insights, tasks, getStats } = useTasks();
+  const { insights, tasks, getStats, isGeneratingInsights, generateInsights } = useTasks();
   const [stats, setStats] = useState({
     tasksCompleted: 0,
     tasksCreated: 0,
@@ -309,11 +310,25 @@ export default function InsightsScreen() {
               <Sparkles size={20} color={Colors.gold} />
               <Text style={styles.headerTitle}>AI Insights</Text>
             </View>
-            <Text style={styles.headerSubtitle}>Powered by Pulse AI</Text>
+            <Text style={styles.headerSubtitle}>Powered by Tonic AI</Text>
           </View>
-          <View style={styles.scoreBadge}>
-            <Brain size={16} color={Colors.gold} />
-            <Text style={styles.scoreText}>{stats.productivityScore}</Text>
+          <View style={styles.headerRight}>
+            <TouchableOpacity
+              style={[styles.refreshButton, isGeneratingInsights && styles.refreshButtonLoading]}
+              onPress={() => void generateInsights()}
+              disabled={isGeneratingInsights}
+              activeOpacity={0.8}
+            >
+              {isGeneratingInsights ? (
+                <ActivityIndicator size={14} color={Colors.gold} />
+              ) : (
+                <Brain size={16} color={Colors.gold} />
+              )}
+            </TouchableOpacity>
+            <View style={styles.scoreBadge}>
+              <Sparkles size={14} color={Colors.gold} />
+              <Text style={styles.scoreText}>{stats.productivityScore}</Text>
+            </View>
           </View>
         </View>
 
@@ -383,9 +398,29 @@ export default function InsightsScreen() {
             <Text style={styles.sectionTitle}>Smart Recommendations</Text>
             {allInsights.length === 0 ? (
               <View style={styles.emptyInsights}>
-                <Text style={styles.emptyInsightsText}>
-                  Complete some tasks to get personalized AI insights
-                </Text>
+                {isGeneratingInsights ? (
+                  <>
+                    <ActivityIndicator size={32} color={Colors.gold} style={{ marginBottom: 16 }} />
+                    <Text style={styles.emptyInsightsText}>
+                      Tonic AI is analyzing your productivity data...
+                    </Text>
+                  </>
+                ) : (
+                  <>
+                    <Brain size={32} color={Colors.textMuted} style={{ marginBottom: 16 }} />
+                    <Text style={styles.emptyInsightsText}>
+                      Add and complete tasks to get personalized AI insights
+                    </Text>
+                    <TouchableOpacity
+                      style={styles.generateButton}
+                      onPress={() => void generateInsights()}
+                      activeOpacity={0.8}
+                    >
+                      <Sparkles size={16} color={Colors.bgPrimary} />
+                      <Text style={styles.generateButtonText}>Generate Insights</Text>
+                    </TouchableOpacity>
+                  </>
+                )}
               </View>
             ) : (
               <View style={styles.insightsList}>
@@ -479,6 +514,44 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "flex-start",
     marginBottom: 20,
+  },
+  headerRight: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  refreshButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    backgroundColor: `${Colors.gold}15`,
+    borderWidth: 1,
+    borderColor: `${Colors.gold}30`,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  refreshButtonLoading: {
+    opacity: 0.7,
+  },
+  generateButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginTop: 16,
+    backgroundColor: Colors.gold,
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderRadius: 12,
+    shadowColor: Colors.gold,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 4,
+  },
+  generateButtonText: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: Colors.bgPrimary,
   },
   headerTitleRow: {
     flexDirection: "row",
