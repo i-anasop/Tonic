@@ -217,6 +217,8 @@ function FilterTabButton({
   isActive: boolean;
   onPress: () => void;
 }) {
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   return (
     <TouchableOpacity
       style={[styles.filterTab, isActive && styles.filterTabActive]}
@@ -244,6 +246,8 @@ function CategoryFilterChip({
   isSelected: boolean;
   onPress: () => void;
 }) {
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const label = category === "all" ? "All" : categoryConfig[category].label;
   const color = category === "all" ? Colors.gold : categoryConfig[category].color;
 

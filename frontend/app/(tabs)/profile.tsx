@@ -56,6 +56,8 @@ interface StatItemProps {
 }
 
 function StatItem({ icon: Icon, value, label, color }: StatItemProps) {
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   return (
     <View style={styles.statItem}>
       <View style={[styles.statIconContainer, { backgroundColor: `${color}15` }]}>
@@ -86,6 +88,8 @@ function MenuItem({
   color,
   danger,
 }: MenuItemProps) {
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   return (
     <TouchableOpacity
       style={[styles.menuItem, danger && styles.menuItemDanger]}
