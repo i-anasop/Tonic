@@ -30,7 +30,7 @@ function RootLayoutNav() {
         options={{
           headerShown: false,
           presentation: "fullScreenModal",
-          animationEnabled: true,
+          animation: "slide_from_bottom",
         }}
       />
       <Stack.Screen

@@ -11,7 +11,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { X, Trophy, Lock, Zap, Star } from "lucide-react-native";
 import { Colors } from "@/constants/colors";
-import { useTheme } from "@/providers/ThemeProvider";
+import { useTheme, type AppColors } from "@/providers/ThemeProvider";
 import { useAchievements } from "@/providers/AchievementsProvider";
 
 interface AchievementsModalProps {
@@ -284,7 +284,7 @@ export const AchievementsModal: React.FC<AchievementsModalProps> = ({ isVisible,
   );
 };
 
-const makeStyles = (colors: typeof Colors) => StyleSheet.create({
+const makeStyles = (colors: AppColors) => StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.bgPrimary },
   header: {
     flexDirection: "row", justifyContent: "space-between", alignItems: "center",

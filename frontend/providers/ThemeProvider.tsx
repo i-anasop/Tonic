@@ -9,17 +9,31 @@ export const LightColors = {
   bgPrimary: "#F5F7FA",
   bgSecondary: "#FFFFFF",
   bgTertiary: "#EEF1F6",
-  textPrimary: "#0D1117",
-  textSecondary: "#4A5568",
-  textMuted: "#8A94A6",
-  border: "#E2E8F0",
+  bgElevated: "#FFFFFF",
   gold: Colors.gold,
+  goldDim: Colors.goldDim,
+  blue: Colors.blue,
+  blueDim: Colors.blueDim,
+  purple: Colors.purple,
   success: Colors.success,
   warning: Colors.warning,
   danger: Colors.danger,
-  blue: Colors.blue,
-  purple: Colors.purple,
-};
+  info: Colors.info,
+  textPrimary: "#0D1117",
+  textSecondary: "#4A5568",
+  textTertiary: "#6B7280",
+  textMuted: "#8A94A6",
+  border: "#E2E8F0",
+  borderLight: "#D1D5DB",
+  gradientGold: Colors.gradientGold,
+  gradientBlue: Colors.gradientBlue,
+  gradientPurple: Colors.gradientPurple,
+  tabIconDefault: "#8A94A6",
+  tabIconSelected: Colors.gold,
+  tint: Colors.gold,
+} as const;
+
+export type AppColors = typeof Colors | typeof LightColors;
 
 export const [ThemeProvider, useTheme] = createContextHook(() => {
   const [isDark, setIsDark] = useState(true);

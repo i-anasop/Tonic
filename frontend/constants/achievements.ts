@@ -109,8 +109,8 @@ export const ACHIEVEMENTS: Achievement[] = [
   a("pts_200",   "Point Collector",    "Claim 200 achievement points",                               "timeless","medium","Star",      BP,  "points",          200),
   a("pts_500",   "Point Hunter",       "Claim 500 achievement points",                               "timeless","medium","Trophy",    BP,  "points",          500),
   a("pts_1500",  "Point Master",       "Claim 1,500 achievement points",                             "timeless","hard",  "Crown",     BP,  "points",          1500),
-  a("pts_5000",  "Point Lord",         "Claim 5,000 achievement points",                             "timeless","expert","Crown",     BP,  "points",          5000, true),
-  a("pts_15000", "Point Legend",       "Claim 15,000 achievement points — top 1%",                  "timeless","expert","Sparkles",  BP,  "points",          15000, true),
+  a("pts_5000",  "Point Lord",         "Claim 5,000 achievement points",                             "timeless","expert","Crown",     BP,  "points",          5000, undefined, true),
+  a("pts_15000", "Point Legend",       "Claim 15,000 achievement points — top 1%",                  "timeless","expert","Sparkles",  BP,  "points",          15000, undefined, true),
 
   // ══════════ TIME-BASED ══════════
   a("early_bird",  "Early Bird",        "Complete a task before 8 AM",                               "timeless","easy",  "Sunrise",   BP,  "custom",          1),

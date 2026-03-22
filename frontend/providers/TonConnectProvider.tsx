@@ -22,11 +22,7 @@ export const TonConnectProvider: React.FC<TonConnectProviderProps> = ({
         returnStrategy: "back",
         skipRedirectToWallet: "never",
       }}
-      walletsListConfiguration={{
-        includeAppWallet: true,
-      }}
       uiPreferences={{
-        colorsSet: "dark",
         borderRadius: "m",
       }}
       language="en"

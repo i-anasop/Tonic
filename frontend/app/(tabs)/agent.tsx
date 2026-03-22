@@ -16,7 +16,7 @@ import { Bot, Send, Mic, MicOff, Plus, BarChart2, Calendar, Zap, CheckCircle } f
 import { v4 as uuidv4 } from "uuid";
 
 import { Colors } from "@/constants/colors";
-import { useTheme } from "@/providers/ThemeProvider";
+import { useTheme, type AppColors } from "@/providers/ThemeProvider";
 import { API_BASE_URL } from "@/constants/api";
 import { useTasks } from "@/providers/TasksProvider";
 import { useAppState } from "@/providers/AppStateProvider";
@@ -461,7 +461,7 @@ export default function AgentScreen() {
   );
 }
 
-const makeStyles = (colors: typeof Colors) => StyleSheet.create({
+const makeStyles = (colors: AppColors) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.bgPrimary,

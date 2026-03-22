@@ -40,7 +40,7 @@ import {
 import { useRouter } from "expo-router";
 
 import { Colors } from "@/constants/colors";
-import { useTheme } from "@/providers/ThemeProvider";
+import { useTheme, type AppColors } from "@/providers/ThemeProvider";
 import { useAppState } from "@/providers/AppStateProvider";
 import { useTasks } from "@/providers/TasksProvider";
 import { useAchievements } from "@/providers/AchievementsProvider";
@@ -707,7 +707,7 @@ export default function ProfileScreen() {
   );
 }
 
-const makeStyles = (colors: typeof Colors) => StyleSheet.create({
+const makeStyles = (colors: AppColors) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.bgPrimary,

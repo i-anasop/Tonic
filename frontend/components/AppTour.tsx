@@ -87,12 +87,14 @@ export function AppTour({ onDone }: { onDone: () => void }) {
       opacity.setValue(0);
       setStep((p) => p + 1);
     } else {
-      Animated.timing(opacity, { toValue: 0, duration: 200, useNativeDriver: true }).start(() => onDone());
+      Animated.timing(opacity, { toValue: 0, duration: 180, useNativeDriver: true }).start();
+      onDone();
     }
   }, [step, opacity, onDone]);
 
   const skip = useCallback(() => {
-    Animated.timing(opacity, { toValue: 0, duration: 200, useNativeDriver: true }).start(() => onDone());
+    Animated.timing(opacity, { toValue: 0, duration: 180, useNativeDriver: true }).start();
+    onDone();
   }, [opacity, onDone]);
 
   const current = STEPS[step];

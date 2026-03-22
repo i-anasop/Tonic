@@ -70,9 +70,9 @@ export default function TabLayout() {
     });
   }, []);
 
-  const handleTourDone = useCallback(async () => {
-    await markTourSeen();
+  const handleTourDone = useCallback(() => {
     setShowTour(false);
+    void markTourSeen();
   }, []);
 
   return (

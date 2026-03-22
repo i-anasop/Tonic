@@ -25,7 +25,7 @@ import {
 } from "lucide-react-native";
 
 import { Colors } from "@/constants/colors";
-import { useTheme } from "@/providers/ThemeProvider";
+import { useTheme, type AppColors } from "@/providers/ThemeProvider";
 import { useTasks } from "@/providers/TasksProvider";
 import type { AIInsight } from "@/types/tasks";
 
@@ -505,7 +505,7 @@ export default function InsightsScreen() {
   );
 }
 
-const makeStyles = (colors: typeof Colors) => StyleSheet.create({
+const makeStyles = (colors: AppColors) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.bgPrimary,

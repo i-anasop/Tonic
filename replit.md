@@ -75,8 +75,23 @@ workspace/
 7. **Telegram Bot** — AI-powered bot (requires `TELEGRAM_BOT_TOKEN` secret).
 
 ### Point & Level System
-- Easy: 3 pts × 1 = 3 | Medium: 8 pts × 2 = 16 | Hard: 20 pts × 3 = 60 | Expert: 60 pts × 5 = 300
-- Levels: Rookie(0) → Apprentice(150) → Grinder(450) → Strategist(1k) → Pro(2.5k) → Elite(5.5k) → Master(11k) → Champion(22k) → Legend(45k) → Mythic(100k)
+- Base achievement points: easy=10, medium=20, hard=30, expert=50 (normalized)
+- `totalPoints` = all unlocked; `claimedPoints` = persisted after claim; `pendingPoints` = total − claimed
+- Level is based on `claimedPoints`. Standard claim = 1×; TON wallet claim = 2× multiplier
+- Levels: Rookie(0) → Apprentice(200) → Grinder(600) → Strategist(1.5k) → Pro(3.5k) → Elite(7.5k) → Master(15k) → Champion(30k) → Legend(60k) → Mythic(120k)
+
+### Type System
+- `AppColors` — union type (`typeof Colors | typeof LightColors`) exported from `ThemeProvider.tsx`
+- All `makeStyles` functions accept `AppColors` (not `typeof Colors` directly)
+- `LightColors` has all fields matching `Colors` (no undefined access risk in light mode)
+
+### Known Fixes Applied
+- Tour skip/advance: `onDone()` called immediately (not in animation `.start()` callback) — reliable on web
+- `handleTourDone`: synchronous — sets `showTour = false` instantly, fires `markTourSeen()` async
+- `achievements.ts` pts_5000/pts_15000: `undefined` passed for metric so `secret=true` is correctly set
+- `TonConnectProvider`: removed deprecated `includeAppWallet` and invalid `colorsSet` string
+- `app/_layout.tsx`: replaced non-existent `animationEnabled` with valid `animation: "slide_from_bottom"`
+- All 4 standalone sub-components (`StatItem`, `MenuItem`, `FilterTabButton`, `CategoryFilterChip`) call `useTheme()` themselves
 
 ## Running the App
 - **Backend**: `node backend/index.mjs` (workflow: "Start application", port 3000)
