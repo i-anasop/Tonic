@@ -29,6 +29,8 @@ interface AchievementsContextType {
   getTotalPoints: () => number;
   checkAndUpdateAchievements: () => Promise<void>;
   claimPoints: (viaWallet: boolean) => Promise<void>;
+  claimedAchievementIds: string[];
+  claimAchievement: (id: string, viaWallet: boolean) => Promise<void>;
 }
 
 const AchievementsContext = createContext<AchievementsContextType | undefined>(undefined);
@@ -56,13 +58,20 @@ export const AchievementsProvider: React.FC<{ children: React.ReactNode }> = ({ 
   const [achievements, setAchievements] = useState<Achievement[]>([]);
   const [stats, setStats] = useState<AchievementStats>(buildDefaultStats());
   const [claimedPointsState, setClaimedPointsState] = useState(0);
+  const [claimedAchievementIds, setClaimedAchievementIds] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const { tasks, getStats } = useTasks();
 
   useEffect(() => {
     const load = async () => {
       try {
-        const stored = await AsyncStorage.getItem("@tonic_achievements_v2");
+        const [stored, storedClaimedIds] = await Promise.all([
+          AsyncStorage.getItem("@tonic_achievements_v2"),
+          AsyncStorage.getItem("@tonic_claimed_ids"),
+        ]);
+        if (storedClaimedIds) {
+          try { setClaimedAchievementIds(JSON.parse(storedClaimedIds)); } catch {}
+        }
         if (stored) {
           const parsed = JSON.parse(stored) as AchievementState;
           const claimed = parsed.claimedPoints ?? 0;
@@ -317,6 +326,42 @@ export const AchievementsProvider: React.FC<{ children: React.ReactNode }> = ({ 
       }),
     [achievements]
   );
+  const claimAchievement = useCallback(
+    async (id: string, viaWallet: boolean) => {
+      const achievement = achievements.find((a) => a.id === id);
+      if (!achievement || !achievement.unlocked || claimedAchievementIds.includes(id)) return;
+
+      const earned = Math.round(achievement.basePoints * achievement.difficultyMultiplier);
+      const multiplier = viaWallet ? 2 : 1;
+      const gain = earned * multiplier;
+      const newClaimed = claimedPointsState + gain;
+      const newClaimedIds = [...claimedAchievementIds, id];
+
+      setClaimedAchievementIds(newClaimedIds);
+      setClaimedPointsState(newClaimed);
+
+      const updatedAchievements = achievements.map((a) => {
+        if (a.condition.type === "points") {
+          return {
+            ...a,
+            progress: Math.min((newClaimed / a.condition.target) * 100, 100),
+            unlocked: newClaimed >= a.condition.target || a.unlocked,
+          };
+        }
+        return a;
+      });
+
+      const newStats = buildStats(updatedAchievements, newClaimed);
+      setAchievements(updatedAchievements);
+      setStats(newStats);
+      await Promise.all([
+        saveAchievements(updatedAchievements, newStats, newClaimed),
+        AsyncStorage.setItem("@tonic_claimed_ids", JSON.stringify(newClaimedIds)),
+      ]);
+    },
+    [achievements, claimedAchievementIds, claimedPointsState, buildStats, saveAchievements]
+  );
+
   const getCurrentLevel = useCallback(() => stats.currentLevel, [stats]);
   const getTotalPoints = useCallback(() => stats.claimedPoints, [stats]);
 
@@ -334,6 +379,8 @@ export const AchievementsProvider: React.FC<{ children: React.ReactNode }> = ({ 
         getTotalPoints,
         checkAndUpdateAchievements,
         claimPoints,
+        claimedAchievementIds,
+        claimAchievement,
       }}
     >
       {children}

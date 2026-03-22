@@ -39,7 +39,7 @@ const DIFFICULTY_CONFIG: Record<string, { label: string; color: string; bg: stri
 const LEVEL_EMOJIS = ["", "🌱", "⚡", "🌟", "👑", "🏆", "🔥"];
 
 export const AchievementsModal: React.FC<AchievementsModalProps> = ({ isVisible, onClose }) => {
-  const { achievements, stats } = useAchievements();
+  const { achievements, stats, claimedAchievementIds, claimAchievement } = useAchievements();
   const { colors } = useTheme();
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const [activeTab, setActiveTab] = useState<FilterTab>("all");
@@ -69,6 +69,8 @@ export const AchievementsModal: React.FC<AchievementsModalProps> = ({ isVisible,
       ? Math.max(0, item.condition.target - Math.round((item.progress / 100) * item.condition.target))
       : null;
 
+    const isClaimed = claimedAchievementIds.includes(item.id);
+
     if (item.unlocked) {
       return (
         <View style={styles.unlockedCard}>
@@ -82,7 +84,7 @@ export const AchievementsModal: React.FC<AchievementsModalProps> = ({ isVisible,
               <Text style={styles.unlockedName}>{item.name}</Text>
               <View style={styles.pointsBadgeGold}>
                 <Star size={10} color={Colors.gold} />
-                <Text style={styles.pointsBadgeTextGold}>{earned}</Text>
+                <Text style={styles.pointsBadgeTextGold}>{earned} pts</Text>
               </View>
             </View>
             <Text style={styles.cardDescription}>{item.description}</Text>
@@ -93,6 +95,21 @@ export const AchievementsModal: React.FC<AchievementsModalProps> = ({ isVisible,
               <View style={styles.unlockedBadge}>
                 <Text style={styles.unlockedBadgeText}>✓ Earned</Text>
               </View>
+            </View>
+            <View style={styles.claimRow}>
+              {isClaimed ? (
+                <View style={styles.claimedBadge}>
+                  <Text style={styles.claimedText}>✓ Claimed</Text>
+                </View>
+              ) : (
+                <TouchableOpacity
+                  style={styles.claimBtn}
+                  onPress={() => void claimAchievement(item.id, false)}
+                  activeOpacity={0.8}
+                >
+                  <Text style={styles.claimBtnText}>Claim {earned} pts</Text>
+                </TouchableOpacity>
+              )}
             </View>
           </View>
         </View>
@@ -442,4 +459,10 @@ const makeStyles = (colors: AppColors) => StyleSheet.create({
   emptyState: { alignItems: "center", paddingVertical: 48 },
   emptyEmoji: { fontSize: 48, marginBottom: 12 },
   emptyText: { fontSize: 14, color: colors.textSecondary, textAlign: "center" },
+
+  claimRow: { marginTop: 10 },
+  claimBtn: { flexDirection: "row", alignItems: "center", justifyContent: "center", backgroundColor: Colors.gold, paddingHorizontal: 16, paddingVertical: 8, borderRadius: 10, alignSelf: "flex-start", shadowColor: Colors.gold, shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.3, shadowRadius: 4, elevation: 4 },
+  claimBtnText: { fontSize: 12, fontWeight: "700", color: "#0D1117" },
+  claimedBadge: { paddingHorizontal: 10, paddingVertical: 5, borderRadius: 8, backgroundColor: `${Colors.success}18`, alignSelf: "flex-start" },
+  claimedText: { fontSize: 11, fontWeight: "600", color: Colors.success },
 });

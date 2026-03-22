@@ -1,0 +1,14 @@
+AI Agent Quality — Current: 8/10 → Target: 9/10
+Enhance the agent to feel proactive, responsive, and autonomous. On app open, trigger a lightweight AI call that surfaces a single personalized nudge (e.g., overdue tasks or quick suggestions) to create an ambient assistant experience rather than chat-on-demand. Replace static responses in the Agent tab with streaming (SSE) so replies appear progressively, making interactions feel more alive. Expand agent capabilities by adding a reschedule_tasks tool alongside existing create/complete actions, enabling natural task reorganization via voice or text.
+
+TON Ecosystem Fit — Current: 5/10 → Target: 7/10
+Strengthen visible blockchain integration. Add a live on-chain activity feed in the Profile tab displaying past productivity records with transaction hashes and external explorer links. Introduce a TON Connect CTA on the Dashboard for unconnected users (e.g., subtle banner prompting connection with incentive messaging). Ensure blockchain interactions are clearly surfaced in the UI so the integration feels core, not optional.
+
+UI/UX — Current: 7/10 → Target: 8/10
+Improve polish and consistency. Replace the current HTML <input> with a proper React Native TextInput to fix crashes and ensure cross-platform consistency. Animate Dashboard stats with staggered entrance transitions (~80ms delay) to improve first impressions. Add micro-feedback on task completion (e.g., brief green flash before fade) to increase satisfaction. Redesign the empty Dashboard state with a more engaging visual (icon + short motivating message + subtle animation).
+
+Technical Completeness — Current: 7/10 → Target: 8.5/10
+Close key system gaps. Ensure task completion consistently syncs with the backend via reliable PATCH calls so the agent always has accurate state. Add a /api/leaderboard endpoint that returns top users by productivity score (even anonymized) to introduce a competitive layer. Verify all existing backend integrations are fully wired and functioning end-to-end.
+
+Originality — Current: 7.5/10 → Target: 8.5/10
+Improve differentiation and memorability. Rename “Proof of Productivity” to a more distinctive concept (e.g., branded achievement system). Introduce an AI Streak Guard: if a user is about to break their streak (e.g., no tasks completed by evening), the agent proactively sends a suggestion or quick task. Visually surface verification elements (e.g., transaction confirmation cards with badges) to make achievements feel tangible and rewarding.

@@ -272,6 +272,21 @@ export default function AgentScreen() {
     speechRecognition.start();
   }, [isListening]);
 
+  const applyAction = useCallback((action: AgentAction) => {
+    if (action.type === "create_task" && action.data) {
+      const d = action.data as any;
+      addTask({ title: d.title, category: d.category || "work", priority: d.priority || "medium", status: "pending", dueDate: new Date(d.dueDate), description: d.description || undefined, aiSuggested: true });
+    } else if (action.type === "complete_task" && action.data) {
+      const d = action.data as any;
+      const task = tasks.find((t) => t.id === d.taskId || t.title.toLowerCase() === (d.taskTitle || "").toLowerCase());
+      if (task && task.status !== "completed") toggleTaskStatus(task.id);
+    } else if (action.type === "reschedule_task" && action.data) {
+      const d = action.data as any;
+      const task = tasks.find((t) => t.id === d.taskId || t.title.toLowerCase() === (d.taskTitle || "").toLowerCase());
+      if (task) updateTask(task.id, { dueDate: new Date(d.newDueDate) });
+    }
+  }, [tasks, addTask, toggleTaskStatus, updateTask]);
+
   const sendMessage = useCallback(async (text: string) => {
     const trimmed = text.trim();
     if (!trimmed || isLoading) return;
@@ -280,10 +295,14 @@ export default function AgentScreen() {
     const loadingMsg: AgentMessage = { id: "loading", role: "assistant", content: "", timestamp: new Date(), isLoading: true };
     setMessages((prev) => [...prev, userMsg, loadingMsg]);
     setIsLoading(true);
+
+    const aiMsgId = uuidv4();
+
     try {
       const stats = await getStats();
       const history = messages.filter((m) => !m.isLoading && m.id !== "welcome").slice(-12).map((m) => ({ role: m.role, content: m.content }));
-      const res = await fetch(`${API_BASE_URL}/api/agent`, {
+
+      const res = await fetch(`${API_BASE_URL}/api/agent/stream`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -291,38 +310,63 @@ export default function AgentScreen() {
           tasks: tasks.map((t) => ({ id: t.id, title: t.title, category: t.category, priority: t.priority, status: t.status, dueDate: t.dueDate })),
           stats, userId: user?.id,
         }),
-        signal: AbortSignal.timeout(30000),
+        signal: AbortSignal.timeout(45000),
       });
-      const data = await res.json();
-      const aiMsg: AgentMessage = {
-        id: uuidv4(), role: "assistant",
-        content: data.message || "I couldn't process that. Try again!",
-        timestamp: new Date(),
-        action: data.action || undefined,
-        isNew: true,
-      };
-      if (data.action?.type === "create_task" && data.action.data) {
-        const d = data.action.data as any;
-        addTask({ title: d.title, category: d.category || "work", priority: d.priority || "medium", status: "pending", dueDate: new Date(d.dueDate), description: d.description || undefined, aiSuggested: true });
+
+      if (!res.ok || !res.body) throw new Error("Stream failed");
+
+      // Swap loading → empty streaming message
+      setMessages((prev) => prev.filter((m) => m.id !== "loading").concat({
+        id: aiMsgId, role: "assistant", content: "", timestamp: new Date(),
+      }));
+
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+      let aiContent = "";
+
+      outer: while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split("\n");
+        buffer = lines.pop() ?? "";
+        for (const line of lines) {
+          if (!line.startsWith("data: ")) continue;
+          const raw = line.slice(6).trim();
+          if (raw === "[DONE]" || raw === "") continue;
+          try {
+            const evt = JSON.parse(raw);
+            if (evt.delta) {
+              aiContent += evt.delta;
+              setMessages((prev) => prev.map((m) => m.id === aiMsgId ? { ...m, content: aiContent } : m));
+            }
+            if (evt.action) {
+              const action = evt.action as AgentAction;
+              setMessages((prev) => prev.map((m) => m.id === aiMsgId ? { ...m, action } : m));
+              applyAction(action);
+            }
+            if (evt.done) break outer;
+          } catch {}
+        }
       }
-      if (data.action?.type === "complete_task" && data.action.data) {
-        const d = data.action.data as any;
-        const task = tasks.find((t) => t.id === d.taskId || t.title.toLowerCase() === (d.taskTitle || "").toLowerCase());
-        if (task && task.status !== "completed") toggleTaskStatus(task.id);
+
+      // Ensure fallback content
+      if (!aiContent) {
+        setMessages((prev) => prev.map((m) => m.id === aiMsgId ? { ...m, content: "Done!" } : m));
       }
-      if (data.action?.type === "reschedule_task" && data.action.data) {
-        const d = data.action.data as any;
-        const task = tasks.find((t) => t.id === d.taskId || t.title.toLowerCase() === (d.taskTitle || "").toLowerCase());
-        if (task) updateTask(task.id, { dueDate: new Date(d.newDueDate) });
-      }
-      setMessages((prev) => prev.filter((m) => m.id !== "loading").concat(aiMsg));
     } catch {
-      const errMsg: AgentMessage = { id: uuidv4(), role: "assistant", content: "I'm having connection issues. Check your network and try again.", timestamp: new Date() };
-      setMessages((prev) => prev.filter((m) => m.id !== "loading").concat(errMsg));
+      setMessages((prev) => {
+        const hasMsg = prev.some((m) => m.id === aiMsgId && m.content);
+        if (hasMsg) return prev.filter((m) => m.id !== "loading");
+        return prev.filter((m) => m.id !== "loading" && m.id !== aiMsgId).concat({
+          id: uuidv4(), role: "assistant", content: "I'm having connection issues. Check your network and try again.", timestamp: new Date(),
+        });
+      });
     } finally {
       setIsLoading(false);
     }
-  }, [isLoading, messages, tasks, user, getStats, addTask, toggleTaskStatus, updateTask]);
+  }, [isLoading, messages, tasks, user, getStats, applyAction]);
 
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>

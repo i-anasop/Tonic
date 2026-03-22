@@ -227,6 +227,7 @@ export default function DashboardScreen() {
   const [stats, setStats] = React.useState({ tasksCompleted: 0, tasksCreated: 0, currentStreak: 0, productivityScore: 0, weeklyCompletion: [0, 0, 0, 0, 0, 0, 0] });
   const [refreshing, setRefreshing] = React.useState(false);
   const [streakGuardDismissed, setStreakGuardDismissed] = React.useState(false);
+  const [nudgeDismissed, setNudgeDismissed] = React.useState(false);
 
   // Staggered stat animations
   const stat1 = useRef(new Animated.Value(0)).current;
@@ -251,6 +252,12 @@ export default function DashboardScreen() {
 
   // Streak guard: after 6pm, streak > 0, no tasks done today
   const isStreakAtRisk = stats.currentStreak > 0 && new Date().getHours() >= 18 && todayCompleted === 0 && !streakGuardDismissed;
+
+  // Proactive AI nudge: overdue tasks
+  const now = new Date();
+  const todayMidnight = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const overdueCount = tasks.filter((t: Task) => t.status !== "completed" && new Date(t.dueDate) < todayMidnight).length;
+  const showNudge = overdueCount > 0 && !nudgeDismissed;
 
   useEffect(() => {
     if (!isLoading && !isOnboarded) { setTimeout(() => { router.replace("/onboarding"); }, 100); }
@@ -306,6 +313,26 @@ export default function DashboardScreen() {
 
         {/* Streak Guard */}
         {isStreakAtRisk && <StreakGuardBanner streak={stats.currentStreak} onDismiss={() => setStreakGuardDismissed(true)} />}
+
+        {/* Proactive AI Nudge — overdue tasks */}
+        {showNudge && (
+          <View style={styles.nudgeBanner}>
+            <View style={styles.nudgeIcon}>
+              <AlertCircle size={18} color={Colors.danger} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.nudgeTitle}>⚡ {overdueCount} Overdue Task{overdueCount > 1 ? "s" : ""}</Text>
+              <Text style={styles.nudgeSub}>I can help you reschedule these to stay on track.</Text>
+            </View>
+            <TouchableOpacity onPress={() => router.push("/(tabs)/agent")} style={styles.nudgeBtn} activeOpacity={0.8}>
+              <Text style={styles.nudgeBtnText}>Ask Agent</Text>
+              <ChevronRight size={11} color="#fff" />
+            </TouchableOpacity>
+            <TouchableOpacity onPress={() => setNudgeDismissed(true)} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }} style={{ marginLeft: 4 }}>
+              <X size={15} color={colors.textMuted} />
+            </TouchableOpacity>
+          </View>
+        )}
 
         {/* AI Focus Insight */}
         {focusInsight && !isStreakAtRisk && <InsightBanner insight={focusInsight} />}
@@ -412,6 +439,13 @@ const makeStyles = (colors: AppColors) => StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.bgPrimary },
   scroll: { flex: 1 },
   scrollContent: { paddingHorizontal: 20, paddingTop: 12, paddingBottom: 110 },
+
+  nudgeBanner: { flexDirection: "row", alignItems: "center", gap: 10, backgroundColor: `${Colors.danger}10`, borderRadius: 16, padding: 14, marginBottom: 14, borderWidth: 1, borderColor: `${Colors.danger}25` },
+  nudgeIcon: { width: 36, height: 36, borderRadius: 10, backgroundColor: `${Colors.danger}20`, justifyContent: "center", alignItems: "center" },
+  nudgeTitle: { fontSize: 13, fontWeight: "700" as const, color: Colors.danger, marginBottom: 2 },
+  nudgeSub: { fontSize: 12, color: colors.textSecondary, lineHeight: 17 },
+  nudgeBtn: { flexDirection: "row", alignItems: "center", gap: 3, backgroundColor: Colors.danger, paddingHorizontal: 10, paddingVertical: 6, borderRadius: 8 },
+  nudgeBtnText: { fontSize: 11, fontWeight: "700" as const, color: "#fff" },
 
   header: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 18 },
   greeting: { fontSize: 13, color: colors.textMuted, fontWeight: "500", letterSpacing: 0.2 },

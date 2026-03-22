@@ -394,6 +394,128 @@ RESPONSE RULES — follow every time, no exceptions:
   }
 });
 
+// ── SSE Streaming Agent ──────────────────────────────────────────────────────
+app.post("/api/agent/stream", async (req, res) => {
+  const { messages = [], tasks = [], stats = {}, userId } = req.body;
+
+  res.setHeader("Content-Type", "text/event-stream");
+  res.setHeader("Cache-Control", "no-cache");
+  res.setHeader("Connection", "keep-alive");
+  res.flushHeaders?.();
+
+  const sendEvent = (data) => {
+    try { res.write(`data: ${JSON.stringify(data)}\n\n`); } catch {}
+  };
+
+  try {
+    const pendingTasks = tasks.filter((t) => t.status !== "completed");
+
+    const systemPrompt = `You are Tonic, an AI productivity agent for Tonic AI — a TON blockchain-integrated task management app. Help users manage tasks through natural conversation.
+
+User's current pending tasks (${pendingTasks.length} total):
+${pendingTasks.slice(0, 15).map((t, i) => `${i + 1}. [${t.id}] "${t.title}" | ${t.priority} priority | ${t.category} | due: ${new Date(t.dueDate || t.due_date).toLocaleDateString()}`).join("\n")}
+
+User stats: ${stats.tasksCompleted || 0} tasks completed, ${stats.currentStreak || 0}-day streak, ${stats.productivityScore || 0} productivity score.
+Current date/time: ${new Date().toLocaleString()}
+
+You can create tasks, complete them, schedule the user's day, or give advice.
+
+RESPONSE RULES — follow every time, no exceptions:
+- Max 60 words total. No exceptions.
+- NEVER use markdown headers (##, ###).
+- Use at most 3 bullet points if listing; prefer plain sentences.
+- Be direct, warm, and punchy — like a smart friend, not a corporate bot.
+- After creating or completing a task, confirm it in ONE sentence then stop.`;
+
+    const tools = [
+      { type: "function", function: { name: "create_task", description: "Create a new task based on the user's request.", parameters: { type: "object", properties: { title: { type: "string" }, category: { type: "string", enum: ["work","personal","health","learning"] }, priority: { type: "string", enum: ["high","medium","low"] }, dueDate: { type: "string" }, description: { type: "string" } }, required: ["title","category","priority","dueDate"] } } },
+      { type: "function", function: { name: "complete_task", description: "Mark a pending task as completed.", parameters: { type: "object", properties: { taskId: { type: "string" }, taskTitle: { type: "string" } }, required: ["taskId","taskTitle"] } } },
+      { type: "function", function: { name: "get_productivity_summary", description: "Get a detailed productivity analysis.", parameters: { type: "object", properties: {} } } },
+      { type: "function", function: { name: "plan_my_day", description: "Create an optimized schedule for today.", parameters: { type: "object", properties: { focus: { type: "string", enum: ["work","personal","health","learning","balanced"] } }, required: ["focus"] } } },
+      { type: "function", function: { name: "reschedule_task", description: "Reschedule a specific task to a new due date.", parameters: { type: "object", properties: { taskId: { type: "string" }, taskTitle: { type: "string" }, newDueDate: { type: "string" }, reason: { type: "string" } }, required: ["taskId","taskTitle","newDueDate"] } } },
+    ];
+
+    const allMessages = [{ role: "system", content: systemPrompt }, ...messages.slice(-20)];
+
+    // First streaming call
+    const stream = await openai.chat.completions.create({
+      model: "gpt-5.2", messages: allMessages, tools, tool_choice: "auto", stream: true,
+    });
+
+    let toolCallId = "";
+    let toolCallName = "";
+    let toolCallArgs = "";
+    let hasToolCall = false;
+    let assistantContent = "";
+
+    for await (const chunk of stream) {
+      const delta = chunk.choices[0]?.delta;
+      if (delta?.content) {
+        assistantContent += delta.content;
+        sendEvent({ delta: delta.content });
+      }
+      if (delta?.tool_calls) {
+        hasToolCall = true;
+        const tc = delta.tool_calls[0];
+        if (tc.id) toolCallId = tc.id;
+        if (tc.function?.name) toolCallName = tc.function.name;
+        if (tc.function?.arguments) toolCallArgs += tc.function.arguments;
+      }
+    }
+
+    if (hasToolCall && toolCallName) {
+      let toolArgs = {};
+      try { toolArgs = JSON.parse(toolCallArgs); } catch {}
+
+      let action = null;
+      let toolResult = { success: true };
+
+      if (toolCallName === "create_task") {
+        const newTaskId = `agent_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`;
+        const dueDate = toolArgs.dueDate || new Date(Date.now() + 86400000).toISOString();
+        action = { type: "create_task", data: { id: newTaskId, title: toolArgs.title, category: toolArgs.category || "work", priority: toolArgs.priority || "medium", dueDate, description: toolArgs.description || null, status: "pending", createdAt: new Date().toISOString(), aiSuggested: true } };
+        toolResult = { success: true, taskId: newTaskId, title: toolArgs.title };
+        if (userId) { try { await db.query(`INSERT INTO tasks (id, user_id, title, description, category, priority, status, due_date, created_at, ai_suggested) VALUES ($1,$2,$3,$4,$5,$6,'pending',$7,NOW(),true) ON CONFLICT (id) DO NOTHING`, [newTaskId, userId, toolArgs.title, toolArgs.description || null, toolArgs.category || "work", toolArgs.priority || "medium", dueDate]); } catch {} }
+      } else if (toolCallName === "complete_task") {
+        action = { type: "complete_task", data: { taskId: toolArgs.taskId, taskTitle: toolArgs.taskTitle } };
+        toolResult = { success: true, taskTitle: toolArgs.taskTitle };
+        if (userId) { try { await db.query("UPDATE tasks SET status='completed', completed_at=NOW() WHERE id=$1 AND user_id=$2", [toolArgs.taskId, userId]); } catch {} }
+      } else if (toolCallName === "reschedule_task") {
+        action = { type: "reschedule_task", data: { taskId: toolArgs.taskId, taskTitle: toolArgs.taskTitle, newDueDate: toolArgs.newDueDate } };
+        toolResult = { success: true, taskTitle: toolArgs.taskTitle, newDueDate: toolArgs.newDueDate, reason: toolArgs.reason };
+        if (userId) { try { await db.query("UPDATE tasks SET due_date=$1 WHERE id=$2 AND user_id=$3", [toolArgs.newDueDate, toolArgs.taskId, userId]); } catch {} }
+      } else if (toolCallName === "get_productivity_summary") {
+        action = { type: "show_stats", data: stats };
+        toolResult = { stats, taskCount: tasks.length, pending: pendingTasks.length };
+      } else if (toolCallName === "plan_my_day") {
+        const todayPending = pendingTasks.filter((t) => { const due = new Date(t.dueDate || t.due_date); return due.toDateString() === new Date().toDateString() || due < new Date(); });
+        action = { type: "schedule", data: { focus: toolArgs.focus } };
+        toolResult = { todayTasks: todayPending, allPending: pendingTasks.slice(0, 10), focus: toolArgs.focus };
+      }
+
+      if (action) sendEvent({ action });
+
+      // Confirmation call (non-streaming for simplicity)
+      const aiMsg = { role: "assistant", content: assistantContent || null, tool_calls: [{ id: toolCallId, type: "function", function: { name: toolCallName, arguments: toolCallArgs } }] };
+      const confirmRes = await openai.chat.completions.create({
+        model: "gpt-5.2",
+        messages: [...allMessages, aiMsg, { role: "tool", content: JSON.stringify(toolResult), tool_call_id: toolCallId }],
+      });
+      const confirmText = confirmRes.choices[0].message.content || "";
+      if (confirmText) sendEvent({ delta: confirmText });
+    }
+
+    sendEvent({ done: true });
+    res.write("data: [DONE]\n\n");
+    res.end();
+  } catch (err) {
+    console.error("SSE agent error:", err.message);
+    sendEvent({ error: err.message, done: true });
+    res.write("data: [DONE]\n\n");
+    res.end();
+  }
+});
+
 app.post("/api/ton-proof", async (req, res) => {
   try {
     const { userId, walletAddress, proof, score } = req.body;

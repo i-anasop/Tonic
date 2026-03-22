@@ -256,7 +256,7 @@ export default function ProfileScreen() {
                 </View>
                 {/* Level badge on avatar */}
                 <View style={styles.lvlBadge}>
-                  <Text style={styles.lvlBadgeText}>{achievementStats.currentLevel.level}</Text>
+                  <Text style={styles.lvlBadgeText}>Lv {achievementStats.currentLevel.level}</Text>
                 </View>
               </TouchableOpacity>
 
@@ -503,7 +503,7 @@ const makeStyles = (colors: AppColors) => StyleSheet.create({
   avatarFallback: { width: "100%", height: "100%", borderRadius: 35, backgroundColor: `${Colors.gold}20`, justifyContent: "center", alignItems: "center" },
   avatarInitial: { fontSize: 26, fontWeight: "800", color: Colors.gold },
   cameraOverlay: { position: "absolute", bottom: 2, right: 2, width: 22, height: 22, borderRadius: 11, backgroundColor: colors.bgPrimary, justifyContent: "center", alignItems: "center", borderWidth: 1.5, borderColor: Colors.gold },
-  lvlBadge: { position: "absolute", top: -4, right: -4, width: 22, height: 22, borderRadius: 11, backgroundColor: Colors.gold, justifyContent: "center", alignItems: "center", borderWidth: 2, borderColor: colors.bgSecondary },
+  lvlBadge: { alignSelf: "center", marginTop: 6, paddingHorizontal: 9, paddingVertical: 3, borderRadius: 8, backgroundColor: Colors.gold, borderWidth: 1.5, borderColor: colors.bgSecondary },
   lvlBadgeText: { fontSize: 11, fontWeight: "800", color: "#0D1117" },
   nameArea: { flex: 1, gap: 3 },
   userName: { fontSize: 20, fontWeight: "800", color: colors.textPrimary, letterSpacing: -0.3 },
