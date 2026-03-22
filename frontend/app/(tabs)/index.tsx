@@ -22,6 +22,13 @@ import {
   Wallet,
   X,
   ShieldCheck,
+  Bot,
+  Brain,
+  Briefcase,
+  Heart,
+  Trophy,
+  Star,
+  CheckSquare,
 } from "lucide-react-native";
 import { useRouter } from "expo-router";
 
@@ -29,6 +36,7 @@ import { Colors } from "@/constants/colors";
 import { useTheme, type AppColors } from "@/providers/ThemeProvider";
 import { useAppState } from "@/providers/AppStateProvider";
 import { useTasks } from "@/providers/TasksProvider";
+import { useAchievements } from "@/providers/AchievementsProvider";
 import type { Task, AIInsight } from "@/types/tasks";
 
 // ── Progress Ring ────────────────────────────────────────────────────────────
@@ -217,6 +225,123 @@ function StreakGuardBanner({ streak, onDismiss }: { streak: number; onDismiss: (
   );
 }
 
+// ── Quick Actions Grid ────────────────────────────────────────────────────────
+const QUICK_ACTIONS = [
+  { id: "task",   label: "New Task",  Icon: Plus,        color: Colors.gold,    bg: `${Colors.gold}15`,    route: "/modal" as const },
+  { id: "ai",     label: "Ask AI",    Icon: Bot,         color: Colors.purple,  bg: `${Colors.purple}15`,  route: "/(tabs)/agent" as const },
+  { id: "tasks",  label: "All Tasks", Icon: CheckSquare, color: Colors.blue,    bg: `${Colors.blue}15`,    route: "/(tabs)/tasks" as const },
+  { id: "trophy", label: "Rewards",   Icon: Trophy,      color: Colors.warning, bg: `${Colors.warning}15`, route: "/(tabs)/profile" as const },
+];
+
+function QuickActions({ onNavigate }: { onNavigate: (route: string) => void }) {
+  const { colors } = useTheme();
+  return (
+    <View style={{ marginBottom: 18 }}>
+      <Text style={{ fontSize: 16, fontWeight: "700", color: colors.textPrimary, marginBottom: 10 }}>Quick Actions</Text>
+      <View style={{ flexDirection: "row", gap: 10 }}>
+        {QUICK_ACTIONS.map(({ id, label, Icon, color, bg, route }) => (
+          <TouchableOpacity
+            key={id}
+            activeOpacity={0.78}
+            onPress={() => onNavigate(route)}
+            style={{ flex: 1, backgroundColor: colors.bgSecondary, borderRadius: 18, paddingVertical: 16, paddingHorizontal: 10, alignItems: "center", gap: 8, borderWidth: 1, borderColor: colors.border }}
+          >
+            <View style={{ width: 40, height: 40, borderRadius: 12, backgroundColor: bg, justifyContent: "center", alignItems: "center" }}>
+              <Icon size={19} color={color} />
+            </View>
+            <Text style={{ fontSize: 11, fontWeight: "600", color: colors.textSecondary, textAlign: "center" }}>{label}</Text>
+          </TouchableOpacity>
+        ))}
+      </View>
+    </View>
+  );
+}
+
+// ── Category Breakdown ────────────────────────────────────────────────────────
+const CATEGORIES = [
+  { key: "work",     label: "Work",     Icon: Briefcase, color: Colors.blue },
+  { key: "personal", label: "Personal", Icon: Heart,     color: Colors.purple },
+  { key: "health",   label: "Health",   Icon: Flame,     color: Colors.success },
+  { key: "learning", label: "Learning", Icon: Brain,     color: Colors.gold },
+] as const;
+
+function CategoryBreakdown({ tasks }: { tasks: Task[] }) {
+  const { colors } = useTheme();
+  return (
+    <View style={{ marginBottom: 18 }}>
+      <Text style={{ fontSize: 16, fontWeight: "700", color: colors.textPrimary, marginBottom: 10 }}>By Category</Text>
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginHorizontal: -2 }} contentContainerStyle={{ paddingHorizontal: 2, gap: 10 }}>
+        {CATEGORIES.map(({ key, label, Icon, color }) => {
+          const all = tasks.filter((t) => t.category === key);
+          const done = all.filter((t) => t.status === "completed").length;
+          const pct = all.length > 0 ? done / all.length : 0;
+          return (
+            <View
+              key={key}
+              style={{ width: 112, backgroundColor: colors.bgSecondary, borderRadius: 18, padding: 14, borderWidth: 1, borderColor: colors.border }}
+            >
+              <View style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: `${color}15`, justifyContent: "center", alignItems: "center", marginBottom: 10 }}>
+                <Icon size={17} color={color} />
+              </View>
+              <Text style={{ fontSize: 13, fontWeight: "700", color: colors.textPrimary, marginBottom: 2 }}>{label}</Text>
+              <Text style={{ fontSize: 11, color: colors.textMuted, marginBottom: 8 }}>
+                {done}/{all.length} done
+              </Text>
+              <View style={{ height: 4, backgroundColor: `${color}20`, borderRadius: 4 }}>
+                <View style={{ height: 4, width: `${Math.round(pct * 100)}%`, backgroundColor: color, borderRadius: 4 }} />
+              </View>
+            </View>
+          );
+        })}
+      </ScrollView>
+    </View>
+  );
+}
+
+// ── Level / XP Card ───────────────────────────────────────────────────────────
+function LevelProgressCard() {
+  const { colors } = useTheme();
+  const { stats } = useAchievements();
+  const lvl = stats.currentLevel;
+  const current = lvl.currentPoints;
+  const next = lvl.nextLevelPoints;
+  const pct = next > 0 ? Math.min(current / next, 1) : 1;
+  const barAnim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    Animated.timing(barAnim, { toValue: pct, duration: 1000, useNativeDriver: false }).start();
+  }, [pct]);
+
+  const barWidth = barAnim.interpolate({ inputRange: [0, 1], outputRange: ["0%", "100%"] });
+
+  return (
+    <View style={{ backgroundColor: colors.bgSecondary, borderRadius: 20, padding: 18, marginBottom: 18, borderWidth: 1, borderColor: colors.border }}>
+      <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 14 }}>
+        <View style={{ width: 44, height: 44, borderRadius: 14, backgroundColor: `${Colors.gold}20`, justifyContent: "center", alignItems: "center", marginRight: 12 }}>
+          <Star size={20} color={Colors.gold} fill={Colors.gold} />
+        </View>
+        <View style={{ flex: 1 }}>
+          <Text style={{ fontSize: 13, color: colors.textMuted, fontWeight: "500" }}>Your Level</Text>
+          <Text style={{ fontSize: 18, fontWeight: "800", color: colors.textPrimary, letterSpacing: -0.3 }}>
+            Lv {lvl.level} <Text style={{ fontSize: 14, fontWeight: "600", color: Colors.gold }}>{lvl.name}</Text>
+          </Text>
+        </View>
+        <View style={{ alignItems: "flex-end" }}>
+          <Text style={{ fontSize: 18, fontWeight: "800", color: Colors.gold }}>{stats.totalPoints}</Text>
+          <Text style={{ fontSize: 10, color: colors.textMuted, fontWeight: "500" }}>total pts</Text>
+        </View>
+      </View>
+      <View style={{ flexDirection: "row", justifyContent: "space-between", marginBottom: 6 }}>
+        <Text style={{ fontSize: 11, color: colors.textMuted }}>{current} pts earned</Text>
+        <Text style={{ fontSize: 11, color: colors.textMuted }}>{next} to Lv {lvl.level + 1}</Text>
+      </View>
+      <View style={{ height: 7, backgroundColor: `${Colors.gold}18`, borderRadius: 10 }}>
+        <Animated.View style={{ height: 7, width: barWidth, backgroundColor: Colors.gold, borderRadius: 10 }} />
+      </View>
+    </View>
+  );
+}
+
 // ── Main Screen ──────────────────────────────────────────────────────────────
 export default function DashboardScreen() {
   const router = useRouter();
@@ -363,6 +488,15 @@ export default function DashboardScreen() {
           <View style={styles.statDivider} />
           <StatPill icon={Zap} value={stats.productivityScore} label="Score" color={Colors.blue} animValue={stat3} />
         </View>
+
+        {/* Quick Actions */}
+        <QuickActions onNavigate={(r) => router.push(r as any)} />
+
+        {/* Level / XP Progress */}
+        <LevelProgressCard />
+
+        {/* Category Breakdown */}
+        <CategoryBreakdown tasks={tasks} />
 
         {/* TON CTA */}
         {showTonCTA && <TonConnectCTA onPress={() => router.push("/onboarding")} />}
