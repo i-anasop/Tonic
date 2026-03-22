@@ -1,6 +1,5 @@
 import React, { useRef, useState, useEffect, useCallback } from "react";
 import {
-  Modal,
   View,
   Text,
   StyleSheet,
@@ -13,7 +12,6 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Colors } from "@/constants/colors";
 
 const { width: W, height: H } = Dimensions.get("window");
-
 const TOUR_KEY = "@tonic_tour_v1_seen";
 
 interface Slide {
@@ -25,296 +23,7 @@ interface Slide {
   visual: React.ReactNode;
 }
 
-function ProgressRingMini({ color }: { color: string }) {
-  return (
-    <View style={[viz.ringOuter, { borderColor: `${color}25` }]}>
-      <View style={[viz.ringProgress, { borderColor: color, borderRightColor: "transparent", borderBottomColor: "transparent" }]} />
-      <View style={viz.ringCenter}>
-        <Text style={[viz.ringNum, { color }]}>74%</Text>
-      </View>
-    </View>
-  );
-}
-
-function MiniTaskList({ color }: { color: string }) {
-  const items = [
-    { done: true, label: "Morning run", priority: Colors.success },
-    { done: false, label: "Team standup", priority: Colors.danger },
-    { done: false, label: "Review PRs", priority: Colors.warning },
-  ];
-  return (
-    <View style={viz.taskList}>
-      {items.map((item, i) => (
-        <View key={i} style={viz.taskRow}>
-          <View style={[viz.taskCheck, item.done && { backgroundColor: color, borderColor: color }]}>
-            {item.done && <Text style={viz.taskCheckMark}>✓</Text>}
-          </View>
-          <Text style={[viz.taskLabel, item.done && viz.taskLabelDone]}>{item.label}</Text>
-          <View style={[viz.priorityDot, { backgroundColor: item.priority }]} />
-        </View>
-      ))}
-    </View>
-  );
-}
-
-function MiniChat({ color }: { color: string }) {
-  return (
-    <View style={viz.chatWrap}>
-      <View style={[viz.chatBubbleUser, { backgroundColor: color }]}>
-        <Text style={viz.chatTextUser}>Plan my day 🗓</Text>
-      </View>
-      <View style={viz.chatBubbleBot}>
-        <Text style={viz.chatTextBot}>Here's your top 3 priorities…</Text>
-      </View>
-      <View style={[viz.chatBubbleUser, { backgroundColor: color, alignSelf: "flex-end", marginTop: 6 }]}>
-        <Text style={viz.chatTextUser}>Add a task for me ⚡</Text>
-      </View>
-    </View>
-  );
-}
-
-function MiniStats({ color }: { color: string }) {
-  const boxes = [
-    { emoji: "🔥", val: "7", sub: "streak" },
-    { emoji: "📊", val: "82%", sub: "rate" },
-    { emoji: "⭐", val: "1,240", sub: "score" },
-  ];
-  return (
-    <View style={viz.statsRow}>
-      {boxes.map((b, i) => (
-        <View key={i} style={[viz.statBox, { borderColor: `${color}40` }]}>
-          <Text style={viz.statEmoji}>{b.emoji}</Text>
-          <Text style={[viz.statVal, { color }]}>{b.val}</Text>
-          <Text style={viz.statSub}>{b.sub}</Text>
-        </View>
-      ))}
-    </View>
-  );
-}
-
-function MiniBlockchain({ color }: { color: string }) {
-  return (
-    <View style={viz.chainWrap}>
-      <View style={[viz.chainCard, { borderColor: `${color}60`, backgroundColor: `${color}08` }]}>
-        <Text style={viz.chainEmoji}>⚡</Text>
-        <Text style={[viz.chainPts, { color }]}>1,240</Text>
-        <Text style={viz.chainLabel}>pts claimable</Text>
-      </View>
-      <View style={viz.chainConnector}>
-        <View style={[viz.chainDot, { backgroundColor: color }]} />
-        <View style={[viz.chainLine, { backgroundColor: `${color}40` }]} />
-        <View style={[viz.chainDot, { backgroundColor: color }]} />
-      </View>
-      <View style={[viz.chainBlock, { borderColor: `${color}40` }]}>
-        <Text style={viz.chainBlockText}>TON Blockchain</Text>
-        <Text style={viz.chainTx}>0x7f3a...d91c ✓</Text>
-      </View>
-    </View>
-  );
-}
-
-const SLIDES: Slide[] = [
-  {
-    id: 1,
-    emoji: "⚡",
-    accentColor: Colors.gold,
-    title: "Welcome to Tonic",
-    desc: "AI-powered productivity on TON",
-    visual: (
-      <View style={[viz.welcomeWrap]}>
-        <View style={[viz.welcomeGlow, { shadowColor: Colors.gold }]}>
-          <Text style={viz.welcomeBigEmoji}>⚡</Text>
-        </View>
-        <View style={viz.welcomeDots}>
-          {[Colors.gold, Colors.blue, Colors.purple, Colors.success].map((c, i) => (
-            <View key={i} style={[viz.welcomeDot, { backgroundColor: c }]} />
-          ))}
-        </View>
-      </View>
-    ),
-  },
-  {
-    id: 2,
-    emoji: "🏠",
-    accentColor: Colors.blue,
-    title: "Dashboard",
-    desc: "Daily progress at a glance",
-    visual: (
-      <View style={viz.slideVisual}>
-        <ProgressRingMini color={Colors.blue} />
-        <View style={viz.miniStatsRow}>
-          {["✅ 12", "🔥 7d", "⚡ 840"].map((s, i) => (
-            <View key={i} style={[viz.miniChip, { borderColor: `${Colors.blue}40` }]}>
-              <Text style={[viz.miniChipText, { color: Colors.blue }]}>{s}</Text>
-            </View>
-          ))}
-        </View>
-      </View>
-    ),
-  },
-  {
-    id: 3,
-    emoji: "✅",
-    accentColor: Colors.success,
-    title: "Tasks",
-    desc: "AI-prioritized, always on time",
-    visual: (
-      <View style={viz.slideVisual}>
-        <MiniTaskList color={Colors.success} />
-      </View>
-    ),
-  },
-  {
-    id: 4,
-    emoji: "🤖",
-    accentColor: Colors.purple,
-    title: "Tonic Agent",
-    desc: "Chat · Plan · Get things done",
-    visual: (
-      <View style={viz.slideVisual}>
-        <MiniChat color={Colors.purple} />
-      </View>
-    ),
-  },
-  {
-    id: 5,
-    emoji: "📊",
-    accentColor: Colors.warning,
-    title: "Insights",
-    desc: "Deep patterns, honest feedback",
-    visual: (
-      <View style={viz.slideVisual}>
-        <MiniStats color={Colors.warning} />
-      </View>
-    ),
-  },
-  {
-    id: 6,
-    emoji: "⛓️",
-    accentColor: Colors.gold,
-    title: "Earn & Claim",
-    desc: "Your score lives on TON forever",
-    visual: (
-      <View style={viz.slideVisual}>
-        <MiniBlockchain color={Colors.gold} />
-      </View>
-    ),
-  },
-];
-
-export function AppTour({ onDone }: { onDone: () => void }) {
-  const [idx, setIdx] = useState(0);
-  const slide = SLIDES[idx];
-  const isLast = idx === SLIDES.length - 1;
-
-  const slideAnim = useRef(new Animated.Value(0)).current;
-  const scaleAnim = useRef(new Animated.Value(0.92)).current;
-  const fadeAnim = useRef(new Animated.Value(0)).current;
-  const dotScale = useRef(SLIDES.map(() => new Animated.Value(1))).current;
-
-  useEffect(() => {
-    Animated.parallel([
-      Animated.timing(fadeAnim, { toValue: 1, duration: 400, useNativeDriver: true }),
-      Animated.spring(scaleAnim, { toValue: 1, friction: 7, tension: 60, useNativeDriver: true }),
-    ]).start();
-  }, []);
-
-  const goNext = useCallback(() => {
-    if (isLast) { onDone(); return; }
-    Animated.parallel([
-      Animated.timing(slideAnim, { toValue: -W, duration: 280, useNativeDriver: true }),
-      Animated.timing(fadeAnim, { toValue: 0, duration: 200, useNativeDriver: true }),
-    ]).start(() => {
-      slideAnim.setValue(W);
-      setIdx(prev => prev + 1);
-      Animated.parallel([
-        Animated.timing(slideAnim, { toValue: 0, duration: 280, useNativeDriver: true }),
-        Animated.timing(fadeAnim, { toValue: 1, duration: 260, useNativeDriver: true }),
-        Animated.spring(scaleAnim, { toValue: 1, friction: 7, tension: 60, useNativeDriver: true }),
-      ]).start();
-    });
-    Animated.sequence([
-      Animated.timing(dotScale[idx + 1], { toValue: 1.4, duration: 200, useNativeDriver: true }),
-      Animated.timing(dotScale[idx + 1], { toValue: 1, duration: 200, useNativeDriver: true }),
-    ]).start();
-  }, [idx, isLast, onDone, slideAnim, fadeAnim, scaleAnim, dotScale]);
-
-  const bgColor = slide.accentColor;
-
-  return (
-    <Animated.View style={[styles.overlay, { opacity: fadeAnim }]}>
-      <View style={styles.container}>
-        <TouchableOpacity style={styles.skipBtn} onPress={onDone} activeOpacity={0.7}>
-          <Text style={styles.skipText}>Skip</Text>
-        </TouchableOpacity>
-
-        <Animated.View
-          style={[
-            styles.card,
-            {
-              transform: [{ translateX: slideAnim }, { scale: scaleAnim }],
-              opacity: fadeAnim,
-            },
-          ]}
-        >
-          <View style={[styles.visualArea, { backgroundColor: `${bgColor}10` }]}>
-            <View style={[styles.accentLine, { backgroundColor: bgColor }]} />
-            {slide.visual}
-          </View>
-
-          <View style={styles.textArea}>
-            <View style={[styles.emojiWrap, { backgroundColor: `${bgColor}18`, borderColor: `${bgColor}40` }]}>
-              <Text style={styles.slideEmoji}>{slide.emoji}</Text>
-            </View>
-            <Text style={styles.slideTitle}>{slide.title}</Text>
-            <Text style={styles.slideDesc}>{slide.desc}</Text>
-          </View>
-        </Animated.View>
-
-        <View style={styles.footer}>
-          <View style={styles.dots}>
-            {SLIDES.map((_, i) => (
-              <Animated.View
-                key={i}
-                style={[
-                  styles.dot,
-                  i === idx
-                    ? [styles.dotActive, { backgroundColor: bgColor, width: 20 }]
-                    : styles.dotInactive,
-                  { transform: [{ scale: dotScale[i] }] },
-                ]}
-              />
-            ))}
-          </View>
-
-          <TouchableOpacity
-            style={[styles.nextBtn, { backgroundColor: bgColor }]}
-            onPress={goNext}
-            activeOpacity={0.85}
-          >
-            <Text style={styles.nextText}>{isLast ? "Get Started 🚀" : "Next"}</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
-    </Animated.View>
-  );
-}
-
-export async function checkTourSeen(): Promise<boolean> {
-  try {
-    const val = await AsyncStorage.getItem(TOUR_KEY);
-    return val === "true";
-  } catch {
-    return false;
-  }
-}
-
-export async function markTourSeen(): Promise<void> {
-  try {
-    await AsyncStorage.setItem(TOUR_KEY, "true");
-  } catch {}
-}
-
+/* ─── viz StyleSheet MUST be defined before SLIDES ─── */
 const viz = StyleSheet.create({
   welcomeWrap: {
     alignItems: "center",
@@ -546,17 +255,320 @@ const viz = StyleSheet.create({
   },
 });
 
+/* ─── Mini visual components ─── */
+
+function ProgressRingMini({ color }: { color: string }) {
+  return (
+    <View style={[viz.ringOuter, { borderColor: `${color}25` }]}>
+      <View style={[viz.ringProgress, { borderColor: color, borderRightColor: "transparent", borderBottomColor: "transparent" }]} />
+      <View style={viz.ringCenter}>
+        <Text style={[viz.ringNum, { color }]}>74%</Text>
+      </View>
+    </View>
+  );
+}
+
+function MiniTaskList({ color }: { color: string }) {
+  const items = [
+    { done: true, label: "Morning run", priority: Colors.success },
+    { done: false, label: "Team standup", priority: Colors.danger },
+    { done: false, label: "Review PRs", priority: Colors.warning },
+  ];
+  return (
+    <View style={viz.taskList}>
+      {items.map((item, i) => (
+        <View key={i} style={viz.taskRow}>
+          <View style={[viz.taskCheck, item.done && { backgroundColor: color, borderColor: color }]}>
+            {item.done && <Text style={viz.taskCheckMark}>✓</Text>}
+          </View>
+          <Text style={[viz.taskLabel, item.done && viz.taskLabelDone]}>{item.label}</Text>
+          <View style={[viz.priorityDot, { backgroundColor: item.priority }]} />
+        </View>
+      ))}
+    </View>
+  );
+}
+
+function MiniChat({ color }: { color: string }) {
+  return (
+    <View style={viz.chatWrap}>
+      <View style={[viz.chatBubbleUser, { backgroundColor: color }]}>
+        <Text style={viz.chatTextUser}>Plan my day 🗓</Text>
+      </View>
+      <View style={viz.chatBubbleBot}>
+        <Text style={viz.chatTextBot}>Here's your top 3 priorities…</Text>
+      </View>
+      <View style={[viz.chatBubbleUser, { backgroundColor: color, alignSelf: "flex-end", marginTop: 6 }]}>
+        <Text style={viz.chatTextUser}>Add a task for me ⚡</Text>
+      </View>
+    </View>
+  );
+}
+
+function MiniStats({ color }: { color: string }) {
+  const boxes = [
+    { emoji: "🔥", val: "7", sub: "streak" },
+    { emoji: "📊", val: "82%", sub: "rate" },
+    { emoji: "⭐", val: "1,240", sub: "score" },
+  ];
+  return (
+    <View style={viz.statsRow}>
+      {boxes.map((b, i) => (
+        <View key={i} style={[viz.statBox, { borderColor: `${color}40` }]}>
+          <Text style={viz.statEmoji}>{b.emoji}</Text>
+          <Text style={[viz.statVal, { color }]}>{b.val}</Text>
+          <Text style={viz.statSub}>{b.sub}</Text>
+        </View>
+      ))}
+    </View>
+  );
+}
+
+function MiniBlockchain({ color }: { color: string }) {
+  return (
+    <View style={viz.chainWrap}>
+      <View style={[viz.chainCard, { borderColor: `${color}60`, backgroundColor: `${color}08` }]}>
+        <Text style={viz.chainEmoji}>⚡</Text>
+        <Text style={[viz.chainPts, { color }]}>1,240</Text>
+        <Text style={viz.chainLabel}>pts claimable</Text>
+      </View>
+      <View style={viz.chainConnector}>
+        <View style={[viz.chainDot, { backgroundColor: color }]} />
+        <View style={[viz.chainLine, { backgroundColor: `${color}40` }]} />
+        <View style={[viz.chainDot, { backgroundColor: color }]} />
+      </View>
+      <View style={[viz.chainBlock, { borderColor: `${color}40` }]}>
+        <Text style={viz.chainBlockText}>TON Blockchain</Text>
+        <Text style={viz.chainTx}>0x7f3a...d91c ✓</Text>
+      </View>
+    </View>
+  );
+}
+
+/* ─── Slides (defined after viz + mini components) ─── */
+
+function makeSlides(): Slide[] {
+  return [
+    {
+      id: 1,
+      emoji: "⚡",
+      accentColor: Colors.gold,
+      title: "Welcome to Tonic",
+      desc: "AI-powered productivity on TON",
+      visual: (
+        <View style={viz.welcomeWrap}>
+          <View style={[viz.welcomeGlow, { shadowColor: Colors.gold }]}>
+            <Text style={viz.welcomeBigEmoji}>⚡</Text>
+          </View>
+          <View style={viz.welcomeDots}>
+            {[Colors.gold, Colors.blue, Colors.purple, Colors.success].map((c, i) => (
+              <View key={i} style={[viz.welcomeDot, { backgroundColor: c }]} />
+            ))}
+          </View>
+        </View>
+      ),
+    },
+    {
+      id: 2,
+      emoji: "🏠",
+      accentColor: Colors.blue,
+      title: "Dashboard",
+      desc: "Daily progress at a glance",
+      visual: (
+        <View style={viz.slideVisual}>
+          <ProgressRingMini color={Colors.blue} />
+          <View style={viz.miniStatsRow}>
+            {["✅ 12", "🔥 7d", "⚡ 840"].map((s, i) => (
+              <View key={i} style={[viz.miniChip, { borderColor: `${Colors.blue}40` }]}>
+                <Text style={[viz.miniChipText, { color: Colors.blue }]}>{s}</Text>
+              </View>
+            ))}
+          </View>
+        </View>
+      ),
+    },
+    {
+      id: 3,
+      emoji: "✅",
+      accentColor: Colors.success,
+      title: "Tasks",
+      desc: "AI-prioritized, always on time",
+      visual: (
+        <View style={viz.slideVisual}>
+          <MiniTaskList color={Colors.success} />
+        </View>
+      ),
+    },
+    {
+      id: 4,
+      emoji: "🤖",
+      accentColor: Colors.purple,
+      title: "Tonic Agent",
+      desc: "Chat · Plan · Get things done",
+      visual: (
+        <View style={viz.slideVisual}>
+          <MiniChat color={Colors.purple} />
+        </View>
+      ),
+    },
+    {
+      id: 5,
+      emoji: "📊",
+      accentColor: Colors.warning,
+      title: "Insights",
+      desc: "Deep patterns, honest feedback",
+      visual: (
+        <View style={viz.slideVisual}>
+          <MiniStats color={Colors.warning} />
+        </View>
+      ),
+    },
+    {
+      id: 6,
+      emoji: "⛓️",
+      accentColor: Colors.gold,
+      title: "Earn & Claim",
+      desc: "Your score lives on TON forever",
+      visual: (
+        <View style={viz.slideVisual}>
+          <MiniBlockchain color={Colors.gold} />
+        </View>
+      ),
+    },
+  ];
+}
+
+/* ─── Main AppTour component ─── */
+
+export function AppTour({ onDone }: { onDone: () => void }) {
+  const SLIDES = React.useMemo(() => makeSlides(), []);
+  const [idx, setIdx] = useState(0);
+  const slide = SLIDES[idx];
+  const isLast = idx === SLIDES.length - 1;
+
+  const slideAnim = useRef(new Animated.Value(0)).current;
+  const scaleAnim = useRef(new Animated.Value(0.92)).current;
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const dotScales = useRef(SLIDES.map(() => new Animated.Value(1))).current;
+
+  useEffect(() => {
+    Animated.parallel([
+      Animated.timing(fadeAnim, { toValue: 1, duration: 400, useNativeDriver: true }),
+      Animated.spring(scaleAnim, { toValue: 1, friction: 7, tension: 60, useNativeDriver: true }),
+    ]).start();
+  }, [fadeAnim, scaleAnim]);
+
+  const goNext = useCallback(() => {
+    if (isLast) { onDone(); return; }
+
+    Animated.parallel([
+      Animated.timing(slideAnim, { toValue: -W, duration: 280, useNativeDriver: true }),
+      Animated.timing(fadeAnim, { toValue: 0, duration: 200, useNativeDriver: true }),
+    ]).start(() => {
+      slideAnim.setValue(W);
+      setIdx(prev => {
+        const next = prev + 1;
+        Animated.parallel([
+          Animated.timing(slideAnim, { toValue: 0, duration: 280, useNativeDriver: true }),
+          Animated.timing(fadeAnim, { toValue: 1, duration: 260, useNativeDriver: true }),
+          Animated.spring(scaleAnim, { toValue: 1, friction: 7, tension: 60, useNativeDriver: true }),
+        ]).start();
+        Animated.sequence([
+          Animated.timing(dotScales[next], { toValue: 1.4, duration: 180, useNativeDriver: true }),
+          Animated.timing(dotScales[next], { toValue: 1, duration: 180, useNativeDriver: true }),
+        ]).start();
+        return next;
+      });
+    });
+  }, [isLast, onDone, slideAnim, fadeAnim, scaleAnim, dotScales]);
+
+  return (
+    <Animated.View style={[styles.overlay, { opacity: fadeAnim }]}>
+      <View style={styles.container}>
+        <TouchableOpacity style={styles.skipBtn} onPress={onDone} activeOpacity={0.7}>
+          <Text style={styles.skipText}>Skip</Text>
+        </TouchableOpacity>
+
+        <Animated.View
+          style={[
+            styles.card,
+            {
+              transform: [{ translateX: slideAnim }, { scale: scaleAnim }],
+            },
+          ]}
+        >
+          <View style={[styles.visualArea, { backgroundColor: `${slide.accentColor}10` }]}>
+            <View style={[styles.accentLine, { backgroundColor: slide.accentColor }]} />
+            {slide.visual}
+          </View>
+
+          <View style={styles.textArea}>
+            <View style={[styles.emojiWrap, { backgroundColor: `${slide.accentColor}18`, borderColor: `${slide.accentColor}40` }]}>
+              <Text style={styles.slideEmoji}>{slide.emoji}</Text>
+            </View>
+            <Text style={styles.slideTitle}>{slide.title}</Text>
+            <Text style={styles.slideDesc}>{slide.desc}</Text>
+          </View>
+        </Animated.View>
+
+        <View style={styles.footer}>
+          <View style={styles.dots}>
+            {SLIDES.map((_, i) => (
+              <Animated.View
+                key={i}
+                style={[
+                  styles.dot,
+                  i === idx
+                    ? [styles.dotActive, { backgroundColor: slide.accentColor, width: 20 }]
+                    : styles.dotInactive,
+                  { transform: [{ scale: dotScales[i] }] },
+                ]}
+              />
+            ))}
+          </View>
+
+          <TouchableOpacity
+            style={[styles.nextBtn, { backgroundColor: slide.accentColor }]}
+            onPress={goNext}
+            activeOpacity={0.85}
+          >
+            <Text style={styles.nextText}>{isLast ? "Get Started 🚀" : "Next"}</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    </Animated.View>
+  );
+}
+
+/* ─── Storage helpers ─── */
+
+export async function checkTourSeen(): Promise<boolean> {
+  try {
+    const val = await AsyncStorage.getItem(TOUR_KEY);
+    return val === "true";
+  } catch {
+    return false;
+  }
+}
+
+export async function markTourSeen(): Promise<void> {
+  try {
+    await AsyncStorage.setItem(TOUR_KEY, "true");
+  } catch {}
+}
+
+/* ─── Main styles (defined after components that reference them via hoisting) ─── */
+
 const styles = StyleSheet.create({
   overlay: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(0,0,0,0.85)",
+    backgroundColor: "rgba(0,0,0,0.88)",
     zIndex: 999,
     justifyContent: "center",
     alignItems: "center",
   },
   container: {
     width: W - 32,
-    maxHeight: H * 0.82,
     alignItems: "center",
     gap: 20,
   },
@@ -596,7 +608,7 @@ const styles = StyleSheet.create({
     top: 0,
   },
   visualArea: {
-    height: H * 0.32,
+    height: H * 0.30,
     width: "100%",
     justifyContent: "center",
     alignItems: "center",
@@ -659,15 +671,6 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
     borderRadius: 18,
     alignItems: "center",
-    ...Platform.select({
-      ios: {
-        shadowColor: Colors.gold,
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.3,
-        shadowRadius: 10,
-      },
-      android: { elevation: 6 },
-    }),
   },
   nextText: {
     color: Colors.bgPrimary,
