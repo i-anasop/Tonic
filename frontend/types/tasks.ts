@@ -19,11 +19,14 @@ export interface Task {
 
 export interface AIInsight {
   id: string;
-  type: "focus" | "warning" | "suggestion" | "pattern";
+  type: "focus" | "warning" | "suggestion" | "pattern" | "achievement";
   title: string;
   description: string;
   icon: string;
   priority: "high" | "medium" | "low";
+  metric?: string;
+  trend?: "up" | "down" | "neutral";
+  action?: string;
   createdAt: Date;
 }
 

@@ -113,7 +113,7 @@ app.post("/api/insights", async (req, res) => {
       messages: [
         {
           role: "system",
-          content: `You are a productivity coach AI for Tonic AI, a TON blockchain-integrated task management app. Generate 3-5 concise, personalized, actionable insights based on the user's real task data. Be specific with numbers, encouraging but honest. Return ONLY valid JSON with an "insights" array. Each insight must have: id (unique string), type ("focus"|"warning"|"suggestion"|"pattern"|"achievement"), title (max 6 words), description (max 35 words, specific and actionable), icon ("target"|"alert"|"balance"|"trending"|"clock"|"brain"), priority ("high"|"medium"|"low").`,
+          content: `You are a productivity coach AI for Tonic AI. Generate exactly 4-5 personalized insights from the user's real task data. Return ONLY valid JSON with an "insights" array. Each insight MUST have ALL of these fields: id (unique string), type ("focus"|"warning"|"suggestion"|"pattern"|"achievement"), title (max 5 words, punchy and specific), description (STRICT max 12 words, actionable and specific — no filler), icon ("target"|"alert"|"balance"|"trending"|"clock"|"brain"), priority ("high"|"medium"|"low"), metric (a specific number/percentage string pulled from real data e.g. "73%", "5", "3d", "2x"), trend ("up"|"down"|"neutral"), action (2-3 word imperative CTA e.g. "Do it now", "Keep going", "Add tasks").`,
         },
         {
           role: "user",
