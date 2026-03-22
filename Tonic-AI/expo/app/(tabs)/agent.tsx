@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback, useEffect } from "react";
+import React, { useState, useRef, useCallback, useEffect } from "react";
 import {
   View,
   Text,
@@ -108,6 +108,48 @@ function ActionBubble({ action }: { action: AgentAction }) {
   return null;
 }
 
+function MarkdownText({ text, style }: { text: string; style?: object }) {
+  const lines = text.split("\n");
+  return (
+    <View style={{ gap: 2 }}>
+      {lines.map((line, i) => {
+        if (line.startsWith("### ")) {
+          return <Text key={i} style={[style, { fontWeight: "700", fontSize: 14, marginTop: 4 }]}>{renderInline(line.slice(4))}</Text>;
+        }
+        if (line.startsWith("## ")) {
+          return <Text key={i} style={[style, { fontWeight: "700", fontSize: 15, marginTop: 6 }]}>{renderInline(line.slice(3))}</Text>;
+        }
+        if (line.startsWith("# ")) {
+          return <Text key={i} style={[style, { fontWeight: "800", fontSize: 16, marginTop: 6 }]}>{renderInline(line.slice(2))}</Text>;
+        }
+        if (line.startsWith("- ") || line.startsWith("* ")) {
+          return (
+            <View key={i} style={{ flexDirection: "row", alignItems: "flex-start", gap: 6 }}>
+              <Text style={[style, { lineHeight: 20 }]}>•</Text>
+              <Text style={[style, { flex: 1, lineHeight: 20 }]}>{renderInline(line.slice(2))}</Text>
+            </View>
+          );
+        }
+        if (line === "") return <Text key={i} style={{ height: 4 }} />;
+        return <Text key={i} style={[style, { lineHeight: 20 }]}>{renderInline(line)}</Text>;
+      })}
+    </View>
+  );
+}
+
+function renderInline(text: string): React.ReactNode[] {
+  const parts = text.split(/(\*\*[^*]+\*\*|\*[^*]+\*)/);
+  return parts.map((part, i) => {
+    if (part.startsWith("**") && part.endsWith("**")) {
+      return <Text key={i} style={{ fontWeight: "700" }}>{part.slice(2, -2)}</Text>;
+    }
+    if (part.startsWith("*") && part.endsWith("*") && part.length > 2) {
+      return <Text key={i} style={{ fontStyle: "italic" }}>{part.slice(1, -1)}</Text>;
+    }
+    return <Text key={i}>{part}</Text>;
+  });
+}
+
 function MessageBubble({ message }: { message: AgentMessage }) {
   const isUser = message.role === "user";
 
@@ -136,9 +178,11 @@ function MessageBubble({ message }: { message: AgentMessage }) {
         </View>
       )}
       <View style={[styles.messageBubble, isUser ? styles.userBubble : styles.aiBubble]}>
-        <Text style={[styles.messageText, isUser ? styles.userText : styles.aiText]}>
-          {message.content}
-        </Text>
+        {isUser ? (
+          <Text style={[styles.messageText, styles.userText]}>{message.content}</Text>
+        ) : (
+          <MarkdownText text={message.content} style={styles.aiText} />
+        )}
         {message.action && <ActionBubble action={message.action} />}
       </View>
       <Text style={[styles.messageTime, isUser && styles.messageTimeRight]}>

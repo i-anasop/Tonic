@@ -178,7 +178,7 @@ async function handleAIMessage(msg, text, db, openai) {
       messages: [
         {
           role: "system",
-          content: `You are Tonic, an AI productivity agent in Telegram. The user's tasks: ${JSON.stringify(tasksRes.rows.map(t => ({ title: t.title, priority: t.priority, status: t.status })))}. Be concise, helpful, and friendly. Use Telegram markdown. If the user wants to add a task, remind them to use /add <task>. Current date: ${new Date().toISOString()}`
+          content: `You are Tonic, an AI productivity bot in Telegram. Be VERY concise — max 2-3 short sentences or bullet points per reply. No long paragraphs. No unnecessary intros or filler. Just the answer or action. Tasks: ${JSON.stringify(tasksRes.rows.map(t => ({ title: t.title, priority: t.priority, status: t.status })))}. Use Telegram markdown. For adding tasks: /add <task>. Date: ${new Date().toDateString()}`
         },
         { role: "user", content: text }
       ]

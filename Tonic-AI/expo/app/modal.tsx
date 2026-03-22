@@ -9,7 +9,6 @@ import {
   KeyboardAvoidingView,
   TextInput,
   Modal,
-  Alert,
   ActivityIndicator,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -18,22 +17,18 @@ import {
   Calendar,
   Flag,
   Check,
-  AlertCircle,
+  AlertCircle as AlertCircleIcon,
   Zap,
   Target,
   TrendingUp,
   Sparkles,
   ChevronLeft,
   ChevronRight,
-  Coins,
-  Shield,
 } from "lucide-react-native";
 import { useRouter, useLocalSearchParams } from "expo-router";
 
 import { Colors } from "@/constants/colors";
 import { useTasks } from "@/providers/TasksProvider";
-import { useTonConnect } from "@/hooks/useTonConnect";
-import { TON_REWARD_ADDRESS } from "@/constants/api";
 import type { TaskCategory, TaskPriority } from "@/types/tasks";
 
 const categories: { key: TaskCategory; label: string; icon: typeof Target; color: string }[] = [
@@ -49,17 +44,10 @@ const priorities: { key: TaskPriority; label: string; color: string }[] = [
   { key: "low", label: "Low", color: Colors.success },
 ];
 
-const STAKE_AMOUNTS = [
-  { label: "0.05 TON", value: 0.05, nanotons: "50000000" },
-  { label: "0.1 TON", value: 0.1, nanotons: "100000000" },
-  { label: "0.5 TON", value: 0.5, nanotons: "500000000" },
-];
-
 export default function TaskModal() {
   const router = useRouter();
   const { editTaskId } = useLocalSearchParams<{ editTaskId?: string }>();
   const { tasks, addTask, updateTask } = useTasks();
-  const { isConnected: isTonConnected, sendTransaction } = useTonConnect();
 
   const existingTask = editTaskId ? tasks.find((t) => t.id === editTaskId) : null;
 
@@ -71,9 +59,6 @@ export default function TaskModal() {
   const [titleError, setTitleError] = useState(false);
   const [showCalendar, setShowCalendar] = useState(false);
   const [calendarMonth, setCalendarMonth] = useState(new Date(dueDate));
-
-  const [stakeEnabled, setStakeEnabled] = useState(false);
-  const [selectedStake, setSelectedStake] = useState(1);
   const [isSaving, setIsSaving] = useState(false);
 
   const calendarDays = useMemo(() => {
@@ -93,34 +78,7 @@ export default function TaskModal() {
       return;
     }
 
-    if (stakeEnabled && !isTonConnected) {
-      Alert.alert(
-        "Wallet Required",
-        "Connect your TON wallet to stake TON on this task. The stake is returned when you complete it!",
-        [{ text: "OK" }]
-      );
-      return;
-    }
-
     setIsSaving(true);
-
-    let stakeTxHash: string | undefined;
-    let stakeAmount: number | undefined;
-
-    if (stakeEnabled && isTonConnected && !existingTask) {
-      try {
-        const stake = STAKE_AMOUNTS[selectedStake];
-        const result = await sendTransaction({
-          to: TON_REWARD_ADDRESS,
-          amount: stake.nanotons,
-          comment: `Tonic AI Stake | ${title.trim()} | ${stake.value} TON`,
-        });
-        stakeTxHash = result.boc;
-        stakeAmount = stake.value;
-      } catch (err) {
-        Alert.alert("Transaction Failed", "Could not stake TON. Task will be created without stake.");
-      }
-    }
 
     const taskData = {
       title: title.trim(),
@@ -129,8 +87,6 @@ export default function TaskModal() {
       priority,
       status: existingTask?.status ?? ("pending" as const),
       dueDate,
-      stakeAmount,
-      stakeTxHash,
     };
 
     if (existingTask) {
@@ -141,7 +97,7 @@ export default function TaskModal() {
 
     setIsSaving(false);
     router.back();
-  }, [title, description, category, priority, dueDate, existingTask, addTask, updateTask, router, stakeEnabled, isTonConnected, selectedStake, sendTransaction]);
+  }, [title, description, category, priority, dueDate, existingTask, addTask, updateTask, router]);
 
   const formatDate = (date: Date) => {
     const today = new Date();
@@ -202,7 +158,7 @@ export default function TaskModal() {
             </View>
             {titleError && (
               <View style={styles.errorContainer}>
-                <AlertCircle size={14} color={Colors.danger} />
+                <AlertCircleIcon size={14} color={Colors.danger} />
                 <Text style={styles.errorText}>Please enter a task title</Text>
               </View>
             )}
@@ -287,63 +243,6 @@ export default function TaskModal() {
               </View>
             </View>
           </View>
-
-          {!existingTask && (
-            <View style={styles.inputSection}>
-              <View style={styles.stakeHeader}>
-                <View style={styles.stakeLabelRow}>
-                  <Coins size={16} color={Colors.gold} />
-                  <Text style={styles.inputLabel}>Stake TON to Commit</Text>
-                </View>
-                <TouchableOpacity
-                  style={[styles.stakeToggle, stakeEnabled && styles.stakeToggleActive]}
-                  onPress={() => setStakeEnabled(!stakeEnabled)}
-                  activeOpacity={0.8}
-                >
-                  <View style={[styles.stakeToggleThumb, stakeEnabled && styles.stakeToggleThumbActive]} />
-                </TouchableOpacity>
-              </View>
-
-              {stakeEnabled && (
-                <View style={styles.stakeCard}>
-                  <View style={styles.stakeDescription}>
-                    <Shield size={14} color={Colors.gold} />
-                    <Text style={styles.stakeDescText}>
-                      Stake TON as commitment. Complete the task to get it back. Miss it and it supports the community.
-                    </Text>
-                  </View>
-                  <View style={styles.stakeAmounts}>
-                    {STAKE_AMOUNTS.map((s, i) => (
-                      <TouchableOpacity
-                        key={s.label}
-                        style={[styles.stakeAmountButton, selectedStake === i && styles.stakeAmountButtonActive]}
-                        onPress={() => setSelectedStake(i)}
-                        activeOpacity={0.8}
-                      >
-                        <Text style={[styles.stakeAmountText, selectedStake === i && styles.stakeAmountTextActive]}>
-                          {s.label}
-                        </Text>
-                      </TouchableOpacity>
-                    ))}
-                  </View>
-                  {!isTonConnected && (
-                    <View style={styles.stakeWarning}>
-                      <AlertCircle size={12} color={Colors.warning} />
-                      <Text style={styles.stakeWarningText}>Connect your TON wallet to enable staking</Text>
-                    </View>
-                  )}
-                  {isTonConnected && (
-                    <View style={styles.stakeActive}>
-                      <Check size={12} color={Colors.success} />
-                      <Text style={styles.stakeActiveText}>
-                        {STAKE_AMOUNTS[selectedStake].value} TON will be staked on save
-                      </Text>
-                    </View>
-                  )}
-                </View>
-              )}
-            </View>
-          )}
         </ScrollView>
       </KeyboardAvoidingView>
 
@@ -489,74 +388,46 @@ const styles = StyleSheet.create({
   dateButtons: { flexDirection: "row", gap: 8, justifyContent: "space-between" },
   dateButton: { flex: 1, paddingVertical: 10, paddingHorizontal: 12, borderRadius: 10, backgroundColor: Colors.bgTertiary, alignItems: "center" },
   dateButtonText: { fontSize: 13, fontWeight: "600", color: Colors.textSecondary },
-  stakeHeader: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 0 },
-  stakeLabelRow: { flexDirection: "row", alignItems: "center", gap: 8 },
-  stakeToggle: {
-    width: 48, height: 28, borderRadius: 14, backgroundColor: Colors.bgTertiary,
-    justifyContent: "center", paddingHorizontal: 3, borderWidth: 1, borderColor: Colors.border,
-  },
-  stakeToggleActive: { backgroundColor: `${Colors.gold}30`, borderColor: Colors.gold },
-  stakeToggleThumb: {
-    width: 22, height: 22, borderRadius: 11, backgroundColor: Colors.textMuted, alignSelf: "flex-start",
-  },
-  stakeToggleThumbActive: { backgroundColor: Colors.gold, alignSelf: "flex-end" },
-  stakeCard: {
-    backgroundColor: Colors.bgSecondary, borderRadius: 16, padding: 16, borderWidth: 1,
-    borderColor: `${Colors.gold}30`, gap: 12, marginTop: 12,
-  },
-  stakeDescription: { flexDirection: "row", alignItems: "flex-start", gap: 8 },
-  stakeDescText: { fontSize: 13, color: Colors.textSecondary, flex: 1, lineHeight: 18 },
-  stakeAmounts: { flexDirection: "row", gap: 8 },
-  stakeAmountButton: {
-    flex: 1, paddingVertical: 10, borderRadius: 10, backgroundColor: Colors.bgTertiary,
-    alignItems: "center", borderWidth: 1, borderColor: Colors.border,
-  },
-  stakeAmountButtonActive: { backgroundColor: `${Colors.gold}20`, borderColor: Colors.gold },
-  stakeAmountText: { fontSize: 13, fontWeight: "600", color: Colors.textSecondary },
-  stakeAmountTextActive: { color: Colors.gold },
-  stakeWarning: { flexDirection: "row", alignItems: "center", gap: 6 },
-  stakeWarningText: { fontSize: 12, color: Colors.warning },
-  stakeActive: { flexDirection: "row", alignItems: "center", gap: 6 },
-  stakeActiveText: { fontSize: 12, color: Colors.success },
   calendarModalOverlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.6)", justifyContent: "flex-end" },
   calendarModal: {
     backgroundColor: Colors.bgPrimary, borderTopLeftRadius: 24, borderTopRightRadius: 24,
     paddingTop: 20, paddingBottom: 30, elevation: 10,
-    shadowColor: "#000", shadowOffset: { width: 0, height: -2 }, shadowOpacity: 0.25, shadowRadius: 8,
   },
   calendarHeader: {
     flexDirection: "row", justifyContent: "space-between", alignItems: "center",
-    paddingHorizontal: 20, paddingBottom: 16, borderBottomWidth: 1, borderBottomColor: Colors.border,
+    paddingHorizontal: 20, marginBottom: 16,
   },
-  calendarTitle: { fontSize: 18, fontWeight: "600", color: Colors.textPrimary },
-  calendarCloseButton: {
-    width: 40, height: 40, borderRadius: 12, backgroundColor: Colors.bgSecondary,
-    justifyContent: "center", alignItems: "center",
-  },
-  calendarActions: {
-    flexDirection: "row", gap: 12, paddingHorizontal: 20, paddingTop: 20,
-    borderTopWidth: 1, borderTopColor: Colors.border,
-  },
-  calendarButton: {
-    flex: 1, paddingVertical: 12, borderRadius: 12, backgroundColor: Colors.gold, alignItems: "center",
-    shadowColor: Colors.gold, shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.3, shadowRadius: 4, elevation: 4,
-  },
-  calendarButtonText: { fontSize: 16, fontWeight: "600", color: Colors.bgPrimary },
+  calendarTitle: { fontSize: 18, fontWeight: "700", color: Colors.textPrimary },
+  calendarCloseButton: { padding: 4 },
   monthNavigation: {
-    flexDirection: "row", justifyContent: "space-between", alignItems: "center",
-    paddingHorizontal: 20, paddingVertical: 16, borderBottomWidth: 1, borderBottomColor: Colors.border,
+    flexDirection: "row", alignItems: "center", justifyContent: "space-between",
+    paddingHorizontal: 16, marginBottom: 16,
   },
-  navButton: { width: 40, height: 40, justifyContent: "center", alignItems: "center" },
-  monthYear: { fontSize: 16, fontWeight: "600", color: Colors.textPrimary },
-  dayHeaders: { flexDirection: "row", paddingHorizontal: 20, paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: Colors.border },
-  dayHeader: { flex: 1, textAlign: "center", fontSize: 12, fontWeight: "600", color: Colors.textMuted, textTransform: "uppercase" },
-  calendarDaysContainer: { paddingHorizontal: 12, paddingTop: 8 },
+  navButton: { padding: 8, borderRadius: 10, backgroundColor: Colors.bgSecondary },
+  monthYear: { fontSize: 16, fontWeight: "700", color: Colors.textPrimary },
+  dayHeaders: {
+    flexDirection: "row", paddingHorizontal: 16, marginBottom: 8,
+  },
+  dayHeader: {
+    flex: 1, textAlign: "center", fontSize: 12, fontWeight: "600",
+    color: Colors.textSecondary, textTransform: "uppercase",
+  },
+  calendarDaysContainer: { paddingHorizontal: 16 },
   weekRow: { flexDirection: "row", marginBottom: 4 },
-  dayCell: { flex: 1, height: 40, justifyContent: "center", alignItems: "center", borderRadius: 10 },
+  dayCell: {
+    flex: 1, aspectRatio: 1, justifyContent: "center", alignItems: "center",
+    borderRadius: 10, maxHeight: 44,
+  },
   daySelected: { backgroundColor: Colors.gold },
   dayToday: { borderWidth: 1, borderColor: Colors.gold },
-  dayText: { fontSize: 14, fontWeight: "500", color: Colors.textPrimary },
+  dayText: { fontSize: 15, fontWeight: "500", color: Colors.textPrimary },
   daySelectedText: { color: Colors.bgPrimary, fontWeight: "700" },
-  dayTodayText: { color: Colors.gold },
-  dayDisabledText: { color: Colors.textTertiary },
+  dayTodayText: { color: Colors.gold, fontWeight: "600" },
+  dayDisabledText: { color: Colors.textMuted, opacity: 0.4 },
+  calendarActions: { paddingHorizontal: 20, paddingTop: 16 },
+  calendarButton: {
+    backgroundColor: Colors.gold, borderRadius: 14, paddingVertical: 14,
+    alignItems: "center",
+  },
+  calendarButtonText: { fontSize: 16, fontWeight: "700", color: Colors.bgPrimary },
 });

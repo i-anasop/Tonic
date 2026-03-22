@@ -9,16 +9,7 @@ import {
   FlatList,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import {
-  X,
-  Filter,
-  Trophy,
-  Zap,
-  Award,
-  Target,
-  TrendingUp,
-  ChevronDown,
-} from "lucide-react-native";
+import { X, Trophy, Lock, Zap, Star } from "lucide-react-native";
 import { Colors } from "@/constants/colors";
 import { useAchievements } from "@/providers/AchievementsProvider";
 
@@ -27,126 +18,149 @@ interface AchievementsModalProps {
   onClose: () => void;
 }
 
-type FilterCategory = "all" | "daily" | "weekly" | "monthly" | "timeless";
-type FilterDifficulty = "all" | "easy" | "medium" | "hard" | "expert";
-type FilterStatus = "all" | "unlocked" | "locked";
+type FilterTab = "all" | "unlocked" | "locked";
+
+const ICON_MAP: Record<string, string> = {
+  Sun: "☀️", Zap: "⚡", Flame: "🔥", Target: "🎯", Calendar: "📅",
+  Award: "🏅", BookOpen: "📚", TrendingUp: "📈", Crown: "👑", Star: "⭐",
+  CheckCircle: "✅", Play: "▶️", Trophy: "🏆", Heart: "❤️", Sparkles: "✨",
+  Sunrise: "🌅", Moon: "🌙", RotateCcw: "🔄", Clock: "⏰",
+};
+
+const DIFFICULTY_CONFIG: Record<string, { label: string; color: string; bg: string }> = {
+  easy: { label: "Easy", color: Colors.success, bg: `${Colors.success}18` },
+  medium: { label: "Medium", color: Colors.warning, bg: `${Colors.warning}18` },
+  hard: { label: "Hard", color: Colors.danger, bg: `${Colors.danger}18` },
+  expert: { label: "Expert", color: Colors.purple, bg: `${Colors.purple}18` },
+};
+
+const LEVEL_EMOJIS = ["", "🌱", "⚡", "🌟", "👑", "🏆", "🔥"];
 
 export const AchievementsModal: React.FC<AchievementsModalProps> = ({ isVisible, onClose }) => {
   const { achievements, stats } = useAchievements();
-  const [categoryFilter, setCategoryFilter] = useState<FilterCategory>("all");
-  const [difficultyFilter, setDifficultyFilter] = useState<FilterDifficulty>("all");
-  const [statusFilter, setStatusFilter] = useState<FilterStatus>("all");
-  const [showFilters, setShowFilters] = useState(false);
+  const [activeTab, setActiveTab] = useState<FilterTab>("all");
 
-  // Filter achievements
-  const filteredAchievements = achievements.filter((achievement) => {
-    if (categoryFilter !== "all" && achievement.category !== categoryFilter) return false;
-    if (difficultyFilter !== "all" && achievement.difficulty !== difficultyFilter) return false;
-    if (statusFilter === "unlocked" && !achievement.unlocked) return false;
-    if (statusFilter === "locked" && achievement.unlocked) return false;
-    return true;
-  });
+  const unlocked = achievements.filter((a) => a.unlocked);
+  const locked = achievements.filter((a) => !a.unlocked);
 
-  const getDifficultyColor = (difficulty: string): string => {
-    const colors: Record<string, string> = {
-      easy: Colors.success,
-      medium: Colors.warning,
-      hard: Colors.danger,
-      expert: Colors.purple,
-    };
-    return colors[difficulty] || Colors.textSecondary;
-  };
+  const nextUp = [...locked]
+    .filter((a) => a.progress > 0)
+    .sort((a, b) => b.progress - a.progress)
+    .slice(0, 3);
 
-  const getDifficultyBgColor = (difficulty: string): string => {
-    const color = getDifficultyColor(difficulty);
-    return `${color}15`;
-  };
+  const filtered =
+    activeTab === "unlocked" ? unlocked :
+    activeTab === "locked" ? locked :
+    achievements;
 
-  const getCategoryIcon = (category: string) => {
-    const icons: Record<string, React.ReactNode> = {
-      daily: <Zap size={14} color={Colors.warning} />,
-      weekly: <Award size={14} color={Colors.blue} />,
-      monthly: <Trophy size={14} color={Colors.gold} />,
-      timeless: <Target size={14} color={Colors.success} />,
-    };
-    return icons[category];
-  };
+  const levelPct = Math.round(
+    (stats.currentLevel.currentPoints / stats.currentLevel.nextLevelPoints) * 100
+  );
 
   const renderAchievementCard = ({ item }: { item: typeof achievements[0] }) => {
-    const earnedPoints = item.basePoints * item.difficultyMultiplier;
-    const diffColor = getDifficultyColor(item.difficulty);
+    const diff = DIFFICULTY_CONFIG[item.difficulty] || DIFFICULTY_CONFIG.easy;
+    const emoji = ICON_MAP[item.icon] ?? "🏅";
+    const earned = item.basePoints * item.difficultyMultiplier;
+    const remaining = item.condition?.target
+      ? Math.max(0, item.condition.target - Math.round((item.progress / 100) * item.condition.target))
+      : null;
 
-    return (
-      <TouchableOpacity
-        style={[
-          styles.achievementCard,
-          item.unlocked && { borderColor: Colors.gold, backgroundColor: `${Colors.gold}05` },
-          !item.unlocked && { opacity: 0.6 },
-        ]}
-        activeOpacity={0.8}
-      >
-        {/* Header with icon and points */}
-        <View style={styles.cardHeader}>
-          <View
-            style={[
-              styles.iconContainer,
-              { backgroundColor: getDifficultyBgColor(item.difficulty) },
-            ]}
-          >
-            <Text style={styles.iconPlaceholder}>🏆</Text>
-          </View>
-          <View style={styles.headerInfo}>
-            <Text style={styles.achievementName}>{item.name}</Text>
-            <View style={styles.badgesRow}>
-              <View style={styles.badge}>{getCategoryIcon(item.category)}</View>
-              <View style={[styles.badge, { backgroundColor: getDifficultyBgColor(item.difficulty) }]}>
-                <Text style={[styles.badgeText, { color: diffColor }]}>
-                  {item.difficulty.charAt(0).toUpperCase()}
-                </Text>
-              </View>
-              {item.unlocked && (
-                <View style={[styles.badge, { backgroundColor: `${Colors.success}20` }]}>
-                  <Text style={[styles.badgeText, { color: Colors.success }]}>✓</Text>
-                </View>
-              )}
+    if (item.unlocked) {
+      return (
+        <View style={styles.unlockedCard}>
+          <View style={[styles.glowRing, { shadowColor: Colors.gold }]}>
+            <View style={styles.unlockedIconBg}>
+              <Text style={styles.achievementEmoji}>{emoji}</Text>
             </View>
           </View>
-          <Text style={[styles.points, item.unlocked && { color: Colors.gold }]}>
-            {earnedPoints}
-          </Text>
-        </View>
-
-        {/* Description */}
-        <Text style={styles.description}>{item.description}</Text>
-
-        {/* Progress bar */}
-        <View style={styles.progressSection}>
-          <View style={styles.progressBar}>
-            <View
-              style={[
-                styles.progressFill,
-                {
-                  width: `${Math.min(item.progress, 100)}%`,
-                  backgroundColor: item.unlocked ? Colors.gold : diffColor,
-                },
-              ]}
-            />
+          <View style={styles.cardBody}>
+            <View style={styles.cardTopRow}>
+              <Text style={styles.unlockedName}>{item.name}</Text>
+              <View style={styles.pointsBadgeGold}>
+                <Star size={10} color={Colors.gold} />
+                <Text style={styles.pointsBadgeTextGold}>{earned}</Text>
+              </View>
+            </View>
+            <Text style={styles.cardDescription}>{item.description}</Text>
+            <View style={styles.metaRow}>
+              <View style={[styles.diffBadge, { backgroundColor: diff.bg }]}>
+                <Text style={[styles.diffText, { color: diff.color }]}>{diff.label}</Text>
+              </View>
+              <View style={styles.unlockedBadge}>
+                <Text style={styles.unlockedBadgeText}>✓ Earned</Text>
+              </View>
+            </View>
           </View>
-          <Text style={styles.progressText}>
-            {Math.round(item.progress)}%
-          </Text>
         </View>
+      );
+    }
 
-        {/* Unlock status */}
-        {!item.unlocked && item.secret && (
-          <Text style={styles.secretText}>🔒 Secret Achievement</Text>
-        )}
-        {item.unlocked && item.unlockedAt && (
-          <Text style={styles.unlockedText}>
-            Unlocked {new Date(item.unlockedAt).toLocaleDateString()}
+    const isClose = item.progress >= 50;
+    const isSecretLocked = item.secret && item.progress === 0;
+
+    return (
+      <View style={[styles.lockedCard, isClose && styles.lockedCardClose]}>
+        <View style={[styles.lockedIconBg, isClose && styles.lockedIconBgClose]}>
+          {isSecretLocked ? (
+            <Lock size={22} color={Colors.textMuted} />
+          ) : (
+            <Text style={[styles.achievementEmoji, { opacity: 0.5 }]}>{emoji}</Text>
+          )}
+        </View>
+        <View style={styles.cardBody}>
+          <View style={styles.cardTopRow}>
+            <Text style={[styles.lockedName, isClose && styles.lockedNameClose]}>
+              {isSecretLocked ? "???" : item.name}
+            </Text>
+            <View style={[styles.pointsBadge, isClose && styles.pointsBadgeClose]}>
+              <Text style={[styles.pointsBadgeText, isClose && styles.pointsBadgeTextClose]}>
+                {earned} pts
+              </Text>
+            </View>
+          </View>
+          <Text style={styles.lockedDescription}>
+            {isSecretLocked ? "Secret achievement — keep playing to unlock" : item.description}
           </Text>
-        )}
-      </TouchableOpacity>
+
+          {item.progress > 0 && (
+            <>
+              <View style={styles.progressTrack}>
+                <View
+                  style={[
+                    styles.progressFill,
+                    {
+                      width: `${item.progress}%`,
+                      backgroundColor: isClose ? Colors.gold : diff.color,
+                    },
+                  ]}
+                />
+              </View>
+              <View style={styles.progressLabelRow}>
+                <Text style={[styles.progressLabel, isClose && { color: Colors.gold }]}>
+                  {Math.round(item.progress)}% complete
+                </Text>
+                {remaining !== null && (
+                  <Text style={[styles.progressRemaining, isClose && { color: Colors.gold }]}>
+                    {remaining} more to go
+                  </Text>
+                )}
+              </View>
+            </>
+          )}
+
+          <View style={styles.metaRow}>
+            <View style={[styles.diffBadge, { backgroundColor: diff.bg, opacity: 0.7 }]}>
+              <Text style={[styles.diffText, { color: diff.color }]}>{diff.label}</Text>
+            </View>
+            {isClose && (
+              <View style={styles.urgencyBadge}>
+                <Zap size={10} color={Colors.warning} />
+                <Text style={styles.urgencyText}>Almost there!</Text>
+              </View>
+            )}
+          </View>
+        </View>
+      </View>
     );
   };
 
@@ -155,448 +169,273 @@ export const AchievementsModal: React.FC<AchievementsModalProps> = ({ isVisible,
       <SafeAreaView style={styles.container} edges={["top"]}>
         {/* Header */}
         <View style={styles.header}>
-          <View style={styles.headerTitleSection}>
-            <Trophy size={24} color={Colors.gold} />
+          <View style={styles.headerLeft}>
+            <Trophy size={22} color={Colors.gold} />
             <Text style={styles.headerTitle}>Achievements</Text>
           </View>
-          <TouchableOpacity onPress={onClose} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
-            <X size={24} color={Colors.textPrimary} />
+          <TouchableOpacity onPress={onClose} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
+            <X size={22} color={Colors.textPrimary} />
           </TouchableOpacity>
         </View>
 
-        {/* Stats Section */}
-        <View style={styles.statsSection}>
-          <View style={styles.statCard}>
-            <Text style={styles.statValue}>{stats.totalPoints}</Text>
-            <Text style={styles.statLabel}>Total Points</Text>
-          </View>
-          <View style={styles.statCard}>
-            <Text style={styles.statValue}>{stats.currentLevel.level}</Text>
-            <Text style={styles.statLabel}>Level</Text>
-          </View>
-          <View style={styles.statCard}>
-            <Text style={styles.statValue}>{stats.totalUnlocked}</Text>
-            <Text style={styles.statLabel}>Unlocked</Text>
-          </View>
-        </View>
-
-        {/* Level Progress */}
-        <View style={styles.levelSection}>
-          <View style={styles.levelHeader}>
-            <Text style={styles.levelName}>{stats.currentLevel.name}</Text>
-            <Text style={styles.levelPoints}>
-              {stats.currentLevel.currentPoints} / {stats.currentLevel.nextLevelPoints}
-            </Text>
-          </View>
-          <View style={styles.levelProgressBar}>
-            <View
-              style={[
-                styles.levelProgressFill,
-                {
-                  width: `${
-                    (stats.currentLevel.currentPoints / stats.currentLevel.nextLevelPoints) * 100
-                  }%`,
-                },
-              ]}
-            />
-          </View>
-        </View>
-
-        {/* Filter Section */}
-        <View style={styles.filterSection}>
-          <TouchableOpacity
-            style={styles.filterButton}
-            onPress={() => setShowFilters(!showFilters)}
-            activeOpacity={0.8}
-          >
-            <Filter size={18} color={Colors.textPrimary} />
-            <Text style={styles.filterButtonText}>Filters</Text>
-            <ChevronDown
-              size={18}
-              color={Colors.textSecondary}
-              style={{ transform: [{ rotate: showFilters ? "180deg" : "0deg" }] }}
-            />
-          </TouchableOpacity>
-
-          {showFilters && (
-            <View style={styles.filterOptions}>
-              {/* Category Filter */}
-              <View style={styles.filterGroup}>
-                <Text style={styles.filterLabel}>Category</Text>
-                <View style={styles.filterChips}>
-                  {(["all", "daily", "weekly", "monthly", "timeless"] as FilterCategory[]).map((cat) => (
-                    <TouchableOpacity
-                      key={cat}
-                      style={[
-                        styles.filterChip,
-                        categoryFilter === cat && styles.filterChipActive,
-                      ]}
-                      onPress={() => setCategoryFilter(cat)}
-                      activeOpacity={0.8}
-                    >
-                      <Text
-                        style={[
-                          styles.filterChipText,
-                          categoryFilter === cat && styles.filterChipTextActive,
-                        ]}
-                      >
-                        {cat.charAt(0).toUpperCase() + cat.slice(1)}
-                      </Text>
-                    </TouchableOpacity>
-                  ))}
-                </View>
+        <ScrollView showsVerticalScrollIndicator={false}>
+          {/* Level Banner */}
+          <View style={styles.levelBanner}>
+            <View style={styles.levelLeft}>
+              <Text style={styles.levelEmoji}>{LEVEL_EMOJIS[stats.currentLevel.level] ?? "🏆"}</Text>
+              <View>
+                <Text style={styles.levelTitle}>{stats.currentLevel.name}</Text>
+                <Text style={styles.levelSub}>Level {stats.currentLevel.level}</Text>
               </View>
+            </View>
+            <View style={styles.levelRight}>
+              <Text style={styles.levelPct}>{levelPct}%</Text>
+              <Text style={styles.levelNextLabel}>to next level</Text>
+            </View>
+          </View>
+          <View style={styles.levelBarTrack}>
+            <View style={[styles.levelBarFill, { width: `${levelPct}%` }]} />
+          </View>
+          <Text style={styles.levelBarCaption}>
+            {stats.currentLevel.currentPoints} / {stats.currentLevel.nextLevelPoints} pts
+          </Text>
 
-              {/* Difficulty Filter */}
-              <View style={styles.filterGroup}>
-                <Text style={styles.filterLabel}>Difficulty</Text>
-                <View style={styles.filterChips}>
-                  {(["all", "easy", "medium", "hard", "expert"] as FilterDifficulty[]).map((diff) => (
-                    <TouchableOpacity
-                      key={diff}
-                      style={[
-                        styles.filterChip,
-                        difficultyFilter === diff && styles.filterChipActive,
-                      ]}
-                      onPress={() => setDifficultyFilter(diff)}
-                      activeOpacity={0.8}
-                    >
-                      <Text
-                        style={[
-                          styles.filterChipText,
-                          difficultyFilter === diff && styles.filterChipTextActive,
-                        ]}
-                      >
-                        {diff.charAt(0).toUpperCase() + diff.slice(1)}
-                      </Text>
-                    </TouchableOpacity>
-                  ))}
-                </View>
-              </View>
+          {/* Stats Row */}
+          <View style={styles.statsRow}>
+            <View style={styles.statBox}>
+              <Text style={styles.statNumber}>{stats.totalPoints}</Text>
+              <Text style={styles.statLabel}>Total Points</Text>
+            </View>
+            <View style={[styles.statBox, styles.statBoxMid]}>
+              <Text style={styles.statNumber}>{stats.totalUnlocked}</Text>
+              <Text style={styles.statLabel}>Unlocked</Text>
+            </View>
+            <View style={styles.statBox}>
+              <Text style={styles.statNumber}>{achievements.length - stats.totalUnlocked}</Text>
+              <Text style={styles.statLabel}>Remaining</Text>
+            </View>
+          </View>
 
-              {/* Status Filter */}
-              <View style={styles.filterGroup}>
-                <Text style={styles.filterLabel}>Status</Text>
-                <View style={styles.filterChips}>
-                  {(["all", "unlocked", "locked"] as FilterStatus[]).map((status) => (
-                    <TouchableOpacity
-                      key={status}
-                      style={[
-                        styles.filterChip,
-                        statusFilter === status && styles.filterChipActive,
-                      ]}
-                      onPress={() => setStatusFilter(status)}
-                      activeOpacity={0.8}
-                    >
-                      <Text
-                        style={[
-                          styles.filterChipText,
-                          statusFilter === status && styles.filterChipTextActive,
-                        ]}
-                      >
-                        {status.charAt(0).toUpperCase() + status.slice(1)}
-                      </Text>
-                    </TouchableOpacity>
-                  ))}
-                </View>
+          {/* Next Up Section */}
+          {nextUp.length > 0 && activeTab !== "unlocked" && (
+            <View style={styles.nextUpSection}>
+              <View style={styles.nextUpHeader}>
+                <Zap size={16} color={Colors.warning} />
+                <Text style={styles.nextUpTitle}>Close to Unlocking</Text>
               </View>
+              {nextUp.map((a) => {
+                const emoji = ICON_MAP[a.icon] ?? "🏅";
+                return (
+                  <View key={a.id} style={styles.nextUpCard}>
+                    <Text style={styles.nextUpEmoji}>{emoji}</Text>
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.nextUpName}>{a.name}</Text>
+                      <View style={styles.nextUpProgressTrack}>
+                        <View style={[styles.nextUpProgressFill, { width: `${a.progress}%` }]} />
+                      </View>
+                    </View>
+                    <Text style={styles.nextUpPct}>{Math.round(a.progress)}%</Text>
+                  </View>
+                );
+              })}
             </View>
           )}
-        </View>
 
-        {/* Achievements List */}
-        <FlatList
-          data={filteredAchievements}
-          renderItem={renderAchievementCard}
-          keyExtractor={(item) => item.id}
-          scrollEnabled={true}
-          contentContainerStyle={styles.listContent}
-          ListEmptyComponent={
-            <View style={styles.emptyState}>
-              <Text style={styles.emptyText}>No achievements match your filters</Text>
-            </View>
-          }
-        />
+          {/* Filter Tabs */}
+          <View style={styles.tabRow}>
+            {(["all", "unlocked", "locked"] as FilterTab[]).map((t) => {
+              const count = t === "all" ? achievements.length : t === "unlocked" ? unlocked.length : locked.length;
+              return (
+                <TouchableOpacity
+                  key={t}
+                  style={[styles.tab, activeTab === t && styles.tabActive]}
+                  onPress={() => setActiveTab(t)}
+                  activeOpacity={0.8}
+                >
+                  <Text style={[styles.tabText, activeTab === t && styles.tabTextActive]}>
+                    {t.charAt(0).toUpperCase() + t.slice(1)} ({count})
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
 
-        {/* Footer with summary */}
-        <View style={styles.footer}>
-          <Text style={styles.summ}>
-            {filteredAchievements.filter((a) => a.unlocked).length} / {filteredAchievements.length}{" "}
-            Unlocked
-          </Text>
-        </View>
+          {/* Achievement List */}
+          <View style={styles.listContainer}>
+            {filtered.map((item) => (
+              <View key={item.id}>
+                {renderAchievementCard({ item })}
+              </View>
+            ))}
+            {filtered.length === 0 && (
+              <View style={styles.emptyState}>
+                <Text style={styles.emptyEmoji}>🔒</Text>
+                <Text style={styles.emptyText}>Nothing here yet — keep completing tasks!</Text>
+              </View>
+            )}
+          </View>
+        </ScrollView>
       </SafeAreaView>
     </Modal>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: Colors.bgPrimary,
-  },
+  container: { flex: 1, backgroundColor: Colors.bgPrimary },
   header: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.border,
+    flexDirection: "row", justifyContent: "space-between", alignItems: "center",
+    paddingHorizontal: 20, paddingVertical: 14,
+    borderBottomWidth: 1, borderBottomColor: Colors.border,
   },
-  headerTitleSection: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
+  headerLeft: { flexDirection: "row", alignItems: "center", gap: 10 },
+  headerTitle: { fontSize: 22, fontWeight: "800", color: Colors.textPrimary },
+
+  levelBanner: {
+    flexDirection: "row", justifyContent: "space-between", alignItems: "center",
+    paddingHorizontal: 20, paddingTop: 20, paddingBottom: 12,
   },
-  headerTitle: {
-    fontSize: 24,
-    fontWeight: "700",
-    color: Colors.textPrimary,
+  levelLeft: { flexDirection: "row", alignItems: "center", gap: 14 },
+  levelEmoji: { fontSize: 40 },
+  levelTitle: { fontSize: 20, fontWeight: "800", color: Colors.textPrimary },
+  levelSub: { fontSize: 13, color: Colors.textSecondary, marginTop: 2 },
+  levelRight: { alignItems: "flex-end" },
+  levelPct: { fontSize: 28, fontWeight: "800", color: Colors.gold },
+  levelNextLabel: { fontSize: 11, color: Colors.textSecondary },
+  levelBarTrack: {
+    marginHorizontal: 20, height: 10, backgroundColor: Colors.bgTertiary,
+    borderRadius: 5, overflow: "hidden",
   },
-  statsSection: {
-    flexDirection: "row",
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-    gap: 12,
+  levelBarFill: {
+    height: "100%", backgroundColor: Colors.gold, borderRadius: 5,
+    shadowColor: Colors.gold, shadowOffset: { width: 0, height: 0 }, shadowOpacity: 0.5, shadowRadius: 6,
   },
-  statCard: {
-    flex: 1,
-    backgroundColor: Colors.bgSecondary,
-    borderRadius: 12,
-    padding: 12,
-    alignItems: "center",
-    borderWidth: 1,
-    borderColor: Colors.border,
+  levelBarCaption: {
+    textAlign: "right", marginHorizontal: 20, marginTop: 6,
+    fontSize: 12, color: Colors.textSecondary,
   },
-  statValue: {
-    fontSize: 22,
-    fontWeight: "700",
-    color: Colors.gold,
-    marginBottom: 4,
-  },
-  statLabel: {
-    fontSize: 12,
-    color: Colors.textSecondary,
-  },
-  levelSection: {
-    paddingHorizontal: 20,
-    paddingVertical: 12,
-    backgroundColor: Colors.bgSecondary,
-    marginHorizontal: 20,
-    marginBottom: 16,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: Colors.border,
-  },
-  levelHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 10,
-  },
-  levelName: {
-    fontSize: 16,
-    fontWeight: "700",
-    color: Colors.textPrimary,
-  },
-  levelPoints: {
-    fontSize: 12,
-    color: Colors.textSecondary,
-  },
-  levelProgressBar: {
-    height: 8,
-    backgroundColor: Colors.bgTertiary,
-    borderRadius: 4,
+
+  statsRow: {
+    flexDirection: "row", marginHorizontal: 20, marginTop: 16,
+    backgroundColor: Colors.bgSecondary, borderRadius: 16, borderWidth: 1, borderColor: Colors.border,
     overflow: "hidden",
   },
-  levelProgressFill: {
-    height: "100%",
-    backgroundColor: Colors.gold,
-    borderRadius: 4,
+  statBox: { flex: 1, alignItems: "center", paddingVertical: 16 },
+  statBoxMid: { borderLeftWidth: 1, borderRightWidth: 1, borderColor: Colors.border },
+  statNumber: { fontSize: 22, fontWeight: "800", color: Colors.gold },
+  statLabel: { fontSize: 11, color: Colors.textSecondary, marginTop: 4 },
+
+  nextUpSection: {
+    marginHorizontal: 20, marginTop: 20,
+    backgroundColor: `${Colors.warning}10`, borderRadius: 16,
+    borderWidth: 1, borderColor: `${Colors.warning}30`, padding: 16,
   },
-  filterSection: {
-    paddingHorizontal: 20,
-    marginBottom: 12,
+  nextUpHeader: { flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 12 },
+  nextUpTitle: { fontSize: 14, fontWeight: "700", color: Colors.warning },
+  nextUpCard: {
+    flexDirection: "row", alignItems: "center", gap: 12, marginBottom: 10,
   },
-  filterButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    backgroundColor: Colors.bgSecondary,
-    borderRadius: 12,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    gap: 8,
+  nextUpEmoji: { fontSize: 24 },
+  nextUpName: { fontSize: 13, fontWeight: "600", color: Colors.textPrimary, marginBottom: 6 },
+  nextUpProgressTrack: {
+    height: 6, backgroundColor: Colors.bgTertiary, borderRadius: 3, overflow: "hidden",
   },
-  filterButtonText: {
-    flex: 1,
-    fontSize: 15,
-    fontWeight: "600",
-    color: Colors.textPrimary,
+  nextUpProgressFill: {
+    height: "100%", backgroundColor: Colors.warning, borderRadius: 3,
   },
-  filterOptions: {
-    backgroundColor: Colors.bgSecondary,
-    borderRadius: 12,
-    padding: 16,
-    marginTop: 10,
-    borderWidth: 1,
-    borderColor: Colors.border,
+  nextUpPct: { fontSize: 13, fontWeight: "700", color: Colors.warning, width: 36, textAlign: "right" },
+
+  tabRow: {
+    flexDirection: "row", marginHorizontal: 20, marginTop: 20, marginBottom: 16,
+    backgroundColor: Colors.bgSecondary, borderRadius: 12, padding: 4,
+    borderWidth: 1, borderColor: Colors.border,
   },
-  filterGroup: {
-    marginBottom: 16,
+  tab: {
+    flex: 1, paddingVertical: 9, borderRadius: 10, alignItems: "center",
   },
-  filterLabel: {
-    fontSize: 13,
-    fontWeight: "600",
-    color: Colors.textSecondary,
-    marginBottom: 8,
+  tabActive: { backgroundColor: Colors.gold },
+  tabText: { fontSize: 13, fontWeight: "600", color: Colors.textSecondary },
+  tabTextActive: { color: Colors.bgPrimary },
+
+  listContainer: { paddingHorizontal: 20, paddingBottom: 40 },
+
+  unlockedCard: {
+    flexDirection: "row", alignItems: "flex-start", gap: 14,
+    backgroundColor: `${Colors.gold}08`, borderRadius: 18,
+    borderWidth: 2, borderColor: `${Colors.gold}40`,
+    padding: 14, marginBottom: 12,
+    shadowColor: Colors.gold, shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.15, shadowRadius: 8, elevation: 4,
   },
-  filterChips: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 8,
+  glowRing: {
+    shadowColor: Colors.gold, shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.6, shadowRadius: 8,
   },
-  filterChip: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 8,
-    backgroundColor: Colors.bgTertiary,
-    borderWidth: 1,
-    borderColor: Colors.border,
+  unlockedIconBg: {
+    width: 52, height: 52, borderRadius: 14,
+    backgroundColor: `${Colors.gold}20`, justifyContent: "center", alignItems: "center",
+    borderWidth: 1.5, borderColor: `${Colors.gold}60`,
   },
-  filterChipActive: {
-    backgroundColor: Colors.gold,
-    borderColor: Colors.gold,
+  lockedCard: {
+    flexDirection: "row", alignItems: "flex-start", gap: 14,
+    backgroundColor: Colors.bgSecondary, borderRadius: 18,
+    borderWidth: 1, borderColor: Colors.border,
+    padding: 14, marginBottom: 12, opacity: 0.75,
   },
-  filterChipText: {
-    fontSize: 12,
-    fontWeight: "600",
-    color: Colors.textSecondary,
+  lockedCardClose: {
+    opacity: 1, borderColor: `${Colors.warning}40`,
+    backgroundColor: `${Colors.warning}06`,
   },
-  filterChipTextActive: {
-    color: Colors.bgPrimary,
+  lockedIconBg: {
+    width: 52, height: 52, borderRadius: 14,
+    backgroundColor: Colors.bgTertiary, justifyContent: "center", alignItems: "center",
   },
-  listContent: {
-    paddingHorizontal: 20,
-    paddingBottom: 24,
+  lockedIconBgClose: {
+    backgroundColor: `${Colors.warning}15`, borderWidth: 1, borderColor: `${Colors.warning}40`,
   },
-  achievementCard: {
-    backgroundColor: Colors.bgSecondary,
-    borderRadius: 14,
-    padding: 14,
-    marginBottom: 12,
-    borderWidth: 2,
-    borderColor: Colors.border,
+  achievementEmoji: { fontSize: 26 },
+  cardBody: { flex: 1 },
+  cardTopRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 4 },
+  unlockedName: { fontSize: 15, fontWeight: "700", color: Colors.textPrimary, flex: 1, marginRight: 8 },
+  lockedName: { fontSize: 15, fontWeight: "600", color: Colors.textSecondary, flex: 1, marginRight: 8 },
+  lockedNameClose: { color: Colors.textPrimary },
+  cardDescription: { fontSize: 12.5, color: Colors.textSecondary, lineHeight: 18, marginBottom: 8 },
+  lockedDescription: { fontSize: 12.5, color: Colors.textMuted, lineHeight: 18, marginBottom: 8 },
+
+  progressTrack: {
+    height: 6, backgroundColor: Colors.bgTertiary, borderRadius: 3, overflow: "hidden", marginBottom: 4,
   },
-  cardHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "flex-start",
-    marginBottom: 10,
+  progressFill: { height: "100%", borderRadius: 3 },
+  progressLabelRow: { flexDirection: "row", justifyContent: "space-between", marginBottom: 8 },
+  progressLabel: { fontSize: 11, color: Colors.textSecondary },
+  progressRemaining: { fontSize: 11, color: Colors.textSecondary },
+
+  metaRow: { flexDirection: "row", alignItems: "center", gap: 8 },
+  diffBadge: {
+    paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6,
   },
-  iconContainer: {
-    width: 48,
-    height: 48,
-    borderRadius: 10,
-    justifyContent: "center",
-    alignItems: "center",
+  diffText: { fontSize: 11, fontWeight: "600" },
+  pointsBadgeGold: {
+    flexDirection: "row", alignItems: "center", gap: 3,
+    backgroundColor: `${Colors.gold}20`, paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8,
   },
-  iconPlaceholder: {
-    fontSize: 24,
+  pointsBadgeTextGold: { fontSize: 11, fontWeight: "700", color: Colors.gold },
+  pointsBadge: {
+    backgroundColor: Colors.bgTertiary, paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8,
   },
-  headerInfo: {
-    flex: 1,
-    marginLeft: 12,
+  pointsBadgeClose: { backgroundColor: `${Colors.warning}18` },
+  pointsBadgeText: { fontSize: 11, fontWeight: "600", color: Colors.textMuted },
+  pointsBadgeTextClose: { color: Colors.warning },
+  unlockedBadge: {
+    backgroundColor: `${Colors.success}18`, paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6,
   },
-  achievementName: {
-    fontSize: 15,
-    fontWeight: "700",
-    color: Colors.textPrimary,
-    marginBottom: 6,
+  unlockedBadgeText: { fontSize: 11, fontWeight: "600", color: Colors.success },
+  urgencyBadge: {
+    flexDirection: "row", alignItems: "center", gap: 4,
+    backgroundColor: `${Colors.warning}18`, paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6,
   },
-  badgesRow: {
-    flexDirection: "row",
-    gap: 6,
-    flexWrap: "wrap",
-  },
-  badge: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 6,
-    backgroundColor: Colors.bgTertiary,
-  },
-  badgeText: {
-    fontSize: 11,
-    fontWeight: "600",
-    color: Colors.textSecondary,
-    marginLeft: 2,
-  },
-  points: {
-    fontSize: 18,
-    fontWeight: "700",
-    color: Colors.warning,
-    marginLeft: 8,
-  },
-  description: {
-    fontSize: 13,
-    color: Colors.textSecondary,
-    marginBottom: 12,
-    lineHeight: 18,
-  },
-  progressSection: {
-    marginBottom: 10,
-  },
-  progressBar: {
-    height: 6,
-    backgroundColor: Colors.bgTertiary,
-    borderRadius: 3,
-    overflow: "hidden",
-    marginBottom: 6,
-  },
-  progressFill: {
-    height: "100%",
-    borderRadius: 3,
-  },
-  progressText: {
-    fontSize: 12,
-    color: Colors.textSecondary,
-    textAlign: "right",
-  },
-  secretText: {
-    fontSize: 11,
-    color: Colors.warning,
-    fontWeight: "600",
-  },
-  unlockedText: {
-    fontSize: 11,
-    color: Colors.success,
-    fontWeight: "500",
-  },
-  emptyState: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    paddingVertical: 40,
-  },
-  emptyText: {
-    fontSize: 14,
-    color: Colors.textSecondary,
-  },
-  footer: {
-    paddingHorizontal: 20,
-    paddingVertical: 12,
-    borderTopWidth: 1,
-    borderTopColor: Colors.border,
-    backgroundColor: Colors.bgSecondary,
-  },
-  summ: {
-    fontSize: 13,
-    color: Colors.textSecondary,
-    fontWeight: "600",
-  },
+  urgencyText: { fontSize: 11, fontWeight: "600", color: Colors.warning },
+
+  emptyState: { alignItems: "center", paddingVertical: 48 },
+  emptyEmoji: { fontSize: 48, marginBottom: 12 },
+  emptyText: { fontSize: 14, color: Colors.textSecondary, textAlign: "center" },
 });

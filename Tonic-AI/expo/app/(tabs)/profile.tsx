@@ -40,6 +40,7 @@ import {
 import { useRouter } from "expo-router";
 
 import { Colors } from "@/constants/colors";
+import { useTheme } from "@/providers/ThemeProvider";
 import { useAppState } from "@/providers/AppStateProvider";
 import { useTasks } from "@/providers/TasksProvider";
 import { useAchievements } from "@/providers/AchievementsProvider";
@@ -115,10 +116,10 @@ export default function ProfileScreen() {
   const { tasks, getStats, getCompletedTasks } = useTasks();
   const { stats: achievementStats } = useAchievements();
   const { isConnected: isTonConnected, recordAchievementOnChain, isSendingTx } = useTonConnect();
+  const { isDark, toggleTheme } = useTheme();
   const [isRecordingOnChain, setIsRecordingOnChain] = useState(false);
   const [lastTxHash, setLastTxHash] = useState<string | null>(null);
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
-  const [darkModeEnabled, setDarkModeEnabled] = useState(true);
   const [isAchievementsModalVisible, setIsAchievementsModalVisible] = useState(false);
   const [stats, setStats] = useState({
     tasksCompleted: 0,
@@ -157,11 +158,9 @@ export default function ProfileScreen() {
     );
   };
 
-  const handleDarkModeToggle = useCallback((value: boolean) => {
-    setDarkModeEnabled(value);
-    console.log(`🌙 Dark mode ${value ? "enabled" : "disabled"}`);
-    // TODO: Implement dark mode context/provider for app-wide theming
-  }, []);
+  const handleDarkModeToggle = useCallback(() => {
+    void toggleTheme();
+  }, [toggleTheme]);
 
   const handleClearData = () => {
     Alert.alert(
@@ -556,14 +555,15 @@ export default function ProfileScreen() {
             <MenuItem
               icon={Moon}
               title="Dark Mode"
-              subtitle="Use dark theme"
+              subtitle="Toggle light / dark theme"
               color={Colors.purple}
+              onPress={handleDarkModeToggle}
               rightElement={
                 <Switch
-                  value={darkModeEnabled}
+                  value={isDark}
                   onValueChange={handleDarkModeToggle}
                   trackColor={{ false: Colors.bgTertiary, true: `${Colors.gold}50` }}
-                  thumbColor={darkModeEnabled ? Colors.gold : Colors.textMuted}
+                  thumbColor={isDark ? Colors.gold : Colors.textMuted}
                 />
               }
             />

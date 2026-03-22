@@ -35,7 +35,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="agent"
         options={{
-          title: "AI Agent",
+          title: "Tonic",
           tabBarIcon: ({ color, focused }: { color: string; focused: boolean }) => (
             <View style={[styles.agentTabIcon, focused && styles.agentTabIconActive]}>
               <Bot size={22} color={focused ? Colors.bgPrimary : color} />

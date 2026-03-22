@@ -2,10 +2,11 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Stack, useRootNavigationState, useRouter } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import { useEffect, useState } from "react";
+import { View } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { useAppState } from "@/providers/AppStateProvider";
 
-import { ThemeProvider } from "@/providers/ThemeProvider";
+import { ThemeProvider, useTheme } from "@/providers/ThemeProvider";
 import { AppStateProvider } from "@/providers/AppStateProvider";
 import { TasksProvider } from "@/providers/TasksProvider";
 import { AchievementsProvider } from "@/providers/AchievementsProvider";
@@ -54,39 +55,40 @@ function RootLayoutNav() {
   );
 }
 
-// Wrapper component that handles conditional routing
 function RootLayoutWrapper() {
   const router = useRouter();
   const navigationState = useRootNavigationState();
   const { isOnboarded, isLoading } = useAppState();
   const [loadingTimeout, setLoadingTimeout] = useState(false);
 
-  // Safety timeout: if loading takes more than 10 seconds, assume it failed and proceed
   useEffect(() => {
     if (!isLoading) return;
-
     const timeout = setTimeout(() => {
       console.warn("Loading timeout exceeded - forcing app initialization");
       setLoadingTimeout(true);
     }, 10000);
-
     return () => clearTimeout(timeout);
   }, [isLoading]);
 
   useEffect(() => {
     if (!navigationState?.key) return;
-
-    // Consider loading done if either isLoading is false OR timeout occurred
     const shouldProceed = !isLoading || loadingTimeout;
     if (!shouldProceed) return;
-
-    // Route to onboarding if not onboarded
     if (!isOnboarded) {
       router.replace("/onboarding");
     }
   }, [isOnboarded, isLoading, loadingTimeout, navigationState?.key, router]);
 
   return <RootLayoutNav />;
+}
+
+function ThemedRoot() {
+  const { colors } = useTheme();
+  return (
+    <GestureHandlerRootView style={{ flex: 1, backgroundColor: colors.bgPrimary }}>
+      <RootLayoutWrapper />
+    </GestureHandlerRootView>
+  );
 }
 
 export default function RootLayout() {
@@ -101,9 +103,7 @@ export default function RootLayout() {
           <TasksProvider>
             <AchievementsProvider>
               <ThemeProvider>
-                <GestureHandlerRootView style={{ flex: 1 }}>
-                  <RootLayoutWrapper />
-                </GestureHandlerRootView>
+                <ThemedRoot />
               </ThemeProvider>
             </AchievementsProvider>
           </TasksProvider>
