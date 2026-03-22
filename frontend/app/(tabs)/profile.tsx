@@ -114,7 +114,7 @@ export default function ProfileScreen() {
   const router = useRouter();
   const { user, signOut, setUser } = useAppState();
   const { tasks, getStats, getCompletedTasks } = useTasks();
-  const { stats: achievementStats } = useAchievements();
+  const { stats: achievementStats, claimPoints } = useAchievements();
   const { isConnected: isTonConnected, recordAchievementOnChain, isSendingTx } = useTonConnect();
   const { isDark, toggleTheme, colors } = useTheme();
   const styles = useMemo(() => makeStyles(colors), [colors]);
@@ -264,71 +264,98 @@ export default function ProfileScreen() {
     );
   }, [isTonConnected, stats, recordAchievementOnChain, user]);
 
-  const handleClaimPoints = useCallback(async () => {
-    const claimablePoints = achievementStats.totalPoints;
-    const { level, name: levelName } = achievementStats.currentLevel;
+  const handleClaimPoints = useCallback(
+    (forceWallet = false) => {
+      const pending = achievementStats.pendingPoints;
+      const { level, name: levelName } = achievementStats.currentLevel;
 
-    if (!isTonConnected) {
-      Alert.alert(
-        "Wallet Required",
-        `Connect your TON wallet to claim your ${claimablePoints} points on-chain. You only pay the tiny gas fee — no other cost.`,
-        [{ text: "OK" }]
-      );
-      return;
-    }
+      if (pending <= 0) {
+        Alert.alert("No Pending Points", "Unlock achievements to earn claimable points.");
+        return;
+      }
 
-    if (claimablePoints === 0) {
-      Alert.alert("No Points Yet", "Complete tasks and unlock achievements to earn points you can claim on-chain.");
-      return;
-    }
+      if (forceWallet && !isTonConnected) {
+        Alert.alert(
+          "Wallet Required",
+          "Connect your TON wallet first to claim with the 2× on-chain boost.",
+          [{ text: "OK" }]
+        );
+        return;
+      }
 
-    Alert.alert(
-      "Claim Points On-Chain",
-      `Claim ${claimablePoints} pts (Lv ${level} · ${levelName}) onto TON blockchain.\n\n🔥 2× Boost: Claiming on-chain unlocks the Chain Pioneer achievement and doubles your recorded score — a permanent, verifiable proof of productivity.\n\nOnly gas fee applies — no extra cost.`,
-      [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Claim Now",
-          onPress: async () => {
-            setIsRecordingOnChain(true);
-            try {
-              const result = await recordAchievementOnChain({
-                title: `Points Claim: ${claimablePoints} pts`,
-                tasksCompleted: stats.tasksCompleted,
-                streak: stats.currentStreak,
-              });
-              if (result) {
-                setLastTxHash(result.boc);
-                if (user?.id) {
-                  await fetch(`${API_BASE_URL}/api/claim-points`, {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({
-                      userId: user.id,
-                      walletAddress: user.walletAddress,
-                      points: claimablePoints,
-                      level,
-                      levelName,
-                      tonTxHash: result.boc,
-                    }),
-                  }).catch(() => {});
+      if (forceWallet) {
+        // TON 2× claim — record on-chain then credit 2× points
+        Alert.alert(
+          "Claim via TON (2×)",
+          `You have ${pending} pending pts.\n\n⛓️ Claiming on TON blockchain doubles them to ${pending * 2} pts — permanently verifiable on tonscan.org.\n\nOnly gas fee applies.`,
+          [
+            { text: "Cancel", style: "cancel" },
+            {
+              text: "Claim 2× on TON",
+              onPress: async () => {
+                setIsRecordingOnChain(true);
+                try {
+                  const result = await recordAchievementOnChain({
+                    title: `Points Claim: ${pending} pts (2×)`,
+                    tasksCompleted: stats.tasksCompleted,
+                    streak: stats.currentStreak,
+                  });
+                  if (result) {
+                    setLastTxHash(result.boc);
+                    await claimPoints(true);
+                    if (user?.id) {
+                      await fetch(`${API_BASE_URL}/api/claim-points`, {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({
+                          userId: user.id,
+                          walletAddress: user.walletAddress,
+                          points: pending * 2,
+                          level,
+                          levelName,
+                          tonTxHash: result.boc,
+                        }),
+                      }).catch(() => {});
+                    }
+                    Alert.alert(
+                      "Points Claimed on TON! 🎉",
+                      `${pending * 2} pts (2× bonus) recorded on TON blockchain. Your score is now ${achievementStats.claimedPoints + pending * 2} pts.`,
+                      [{ text: "Let's Go!" }]
+                    );
+                  }
+                } catch {
+                  Alert.alert("Transaction Failed", "Could not claim on-chain. Please try again.");
+                } finally {
+                  setIsRecordingOnChain(false);
                 }
+              },
+            },
+          ]
+        );
+      } else {
+        // Standard 1× claim — no wallet needed
+        Alert.alert(
+          "Claim Points (1×)",
+          `Claim ${pending} pending points to your score.\n\n💡 Tip: Connect a TON wallet to claim with a 2× multiplier — double the points!`,
+          [
+            { text: "Cancel", style: "cancel" },
+            {
+              text: "Claim Now",
+              onPress: async () => {
+                await claimPoints(false);
                 Alert.alert(
-                  "Points Claimed!",
-                  `${claimablePoints} achievement points are now recorded on the TON blockchain under your wallet. Verifiable forever on tonscan.org.`,
-                  [{ text: "Let's Go!" }]
+                  "Points Claimed! 🎉",
+                  `${pending} pts added to your score.`,
+                  [{ text: "Nice!" }]
                 );
-              }
-            } catch {
-              Alert.alert("Transaction Failed", "Could not claim on-chain. Please try again.");
-            } finally {
-              setIsRecordingOnChain(false);
-            }
-          },
-        },
-      ]
-    );
-  }, [isTonConnected, achievementStats, stats, recordAchievementOnChain, user]);
+              },
+            },
+          ]
+        );
+      }
+    },
+    [isTonConnected, achievementStats, stats, recordAchievementOnChain, claimPoints, user]
+  );
 
   const completedTasks = getCompletedTasks();
   const completionRate = tasks.length > 0
@@ -445,7 +472,8 @@ export default function ProfileScreen() {
                 <View>
                   <Text style={styles.achievementsButtonTitle}>Check Your Achievements</Text>
                   <Text style={styles.achievementsButtonSubtitle}>
-                    {achievementStats.totalUnlocked} unlocked • {achievementStats.totalPoints} points
+                    {achievementStats.totalUnlocked} unlocked • {achievementStats.claimedPoints} pts claimed
+                    {achievementStats.pendingPoints > 0 ? ` • ${achievementStats.pendingPoints} pending` : ""}
                   </Text>
                 </View>
               </View>
@@ -471,26 +499,39 @@ export default function ProfileScreen() {
             </View>
           </TouchableOpacity>
 
-          {/* Claim on TON — 2× bonus points */}
-          <TouchableOpacity
-            style={[styles.claimChainRow, isRecordingOnChain && { opacity: 0.6 }]}
-            onPress={handleClaimPoints}
-            activeOpacity={0.82}
-            disabled={isRecordingOnChain || isSendingTx}
-          >
-            <Text style={styles.claimChainEmoji}>⛓️</Text>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.claimChainTitle}>
-                {isRecordingOnChain ? "Claiming on TON..." : "Claim points on TON blockchain"}
-              </Text>
-              <Text style={styles.claimChainSub}>
-                {achievementStats.totalPoints} pts available · Unlock Chain Pioneer achievement
-              </Text>
+          {/* Pending Points Claim Banner */}
+          {achievementStats.pendingPoints > 0 && (
+            <View style={[styles.claimChainRow, { gap: 10 }]}>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.claimChainTitle}>
+                  🎁 {achievementStats.pendingPoints} pts ready to claim
+                </Text>
+                <Text style={styles.claimChainSub}>
+                  Claim now (1×) or connect TON wallet for a 2× boost
+                </Text>
+              </View>
+              <View style={{ flexDirection: "row", gap: 8 }}>
+                <TouchableOpacity
+                  style={[styles.claimChainBadge, { backgroundColor: `${Colors.blue}20`, borderColor: `${Colors.blue}40`, borderWidth: 1, paddingHorizontal: 10, paddingVertical: 6, borderRadius: 10 }]}
+                  onPress={() => handleClaimPoints(false)}
+                  disabled={isRecordingOnChain || isSendingTx}
+                  activeOpacity={0.8}
+                >
+                  <Text style={[styles.claimChainBadgeText, { color: Colors.blue }]}>1×</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.claimChainBadge, { paddingHorizontal: 10, paddingVertical: 6, borderRadius: 10 }]}
+                  onPress={() => handleClaimPoints(true)}
+                  disabled={isRecordingOnChain || isSendingTx}
+                  activeOpacity={0.8}
+                >
+                  <Text style={styles.claimChainBadgeText}>
+                    {isRecordingOnChain ? "..." : "2× ⛓️"}
+                  </Text>
+                </TouchableOpacity>
+              </View>
             </View>
-            <View style={styles.claimChainBadge}>
-              <Text style={styles.claimChainBadgeText}>2×</Text>
-            </View>
-          </TouchableOpacity>
+          )}
 
           {/* TON Blockchain Section */}
           <View style={styles.section}>

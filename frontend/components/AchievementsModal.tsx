@@ -207,12 +207,12 @@ export const AchievementsModal: React.FC<AchievementsModalProps> = ({ isVisible,
           {/* Stats Row */}
           <View style={styles.statsRow}>
             <View style={styles.statBox}>
-              <Text style={styles.statNumber}>{stats.totalPoints}</Text>
-              <Text style={styles.statLabel}>Total Points</Text>
+              <Text style={styles.statNumber}>{stats.claimedPoints}</Text>
+              <Text style={styles.statLabel}>Claimed Pts</Text>
             </View>
             <View style={[styles.statBox, styles.statBoxMid]}>
-              <Text style={styles.statNumber}>{stats.totalUnlocked}</Text>
-              <Text style={styles.statLabel}>Unlocked</Text>
+              <Text style={styles.statNumber}>{stats.pendingPoints > 0 ? `+${stats.pendingPoints}` : stats.totalUnlocked}</Text>
+              <Text style={styles.statLabel}>{stats.pendingPoints > 0 ? "Pending" : "Unlocked"}</Text>
             </View>
             <View style={styles.statBox}>
               <Text style={styles.statNumber}>{achievements.length - stats.totalUnlocked}</Text>

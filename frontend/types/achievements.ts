@@ -1,5 +1,3 @@
-// Achievement system types with scalable, extensible design
-
 export type AchievementCategory = "daily" | "weekly" | "monthly" | "timeless";
 export type AchievementDifficulty = "easy" | "medium" | "hard" | "expert";
 
@@ -9,20 +7,20 @@ export interface Achievement {
   description: string;
   category: AchievementCategory;
   difficulty: AchievementDifficulty;
-  icon: string; // Icon name from lucide-react
-  basePoints: number; // Points before difficulty multiplier
-  difficultyMultiplier: number; // 1x for easy, 1.5x for medium, 2x for hard, 3x for expert
+  icon: string;
+  basePoints: number;
+  difficultyMultiplier: number;
   condition: AchievementCondition;
   unlocked: boolean;
-  unlockedAt?: string; // ISO timestamp
-  progress: number; // 0-100 percentage
-  secret: boolean; // Hidden until unlocked
+  unlockedAt?: string;
+  progress: number;
+  secret: boolean;
 }
 
 export interface AchievementCondition {
   type: "task_count" | "streak" | "completion_rate" | "points" | "usage_time" | "custom";
   target: number;
-  metric?: string; // e.g., "daily", "weekly", "allTime"
+  metric?: string;
 }
 
 export interface AchievementLevel {
@@ -38,6 +36,8 @@ export interface AchievementLevel {
 
 export interface AchievementStats {
   totalPoints: number;
+  claimedPoints: number;
+  pendingPoints: number;
   currentLevel: AchievementLevel;
   totalUnlocked: number;
   categoryCounts: {
@@ -57,5 +57,6 @@ export interface AchievementStats {
 export interface AchievementState {
   achievements: Achievement[];
   stats: AchievementStats;
+  claimedPoints: number;
   lastUpdated: string;
 }
