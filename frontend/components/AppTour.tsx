@@ -15,7 +15,7 @@ import { ChevronRight, X } from "lucide-react-native";
 import { Colors } from "@/constants/colors";
 
 const { width: W, height: H } = Dimensions.get("window");
-const TOUR_KEY = "@tonic_tour_v4_seen";
+const TOUR_KEY = "@tonic_tour_v5_seen";
 
 interface Spotlight {
   x: number;
@@ -29,13 +29,16 @@ interface Spotlight {
 interface TourStep {
   id: string;
   tab: string | null;
-  isModal?: boolean;
   emoji: string;
   accent: string;
   title: string;
   tip: string;
   getSpot: (W: number, H: number, topInset: number) => Spotlight;
 }
+
+// 4 tabs: Dashboard (0), Tasks (1), Insights (2), Profile (3)
+// Tab center x = W/8 + tabIndex * W/4
+const TAB_CX = (W: number, i: number) => W / 8 + i * (W / 4);
 
 const STEPS: TourStep[] = [
   {
@@ -44,12 +47,12 @@ const STEPS: TourStep[] = [
     emoji: "📊",
     accent: Colors.blue,
     title: "Your daily hub",
-    tip: "Progress, streak & AI highlights — all here",
+    tip: "Streak, score & today's task overview — all at a glance",
     getSpot: (W, H, top) => ({
       x: 12,
       y: top,
       w: W - 24,
-      h: H * 0.52,
+      h: H * 0.50,
       round: 18,
       tipBelow: true,
     }),
@@ -60,31 +63,14 @@ const STEPS: TourStep[] = [
     emoji: "➕",
     accent: Colors.gold,
     title: "Add a task",
-    tip: "Tap + to create your first task — let's try it now!",
+    tip: "Tap the + button in the top-right to create a new task",
     getSpot: (W, _H, top) => ({
-      x: W - 64,
+      x: W - 58,
       y: top + 8,
-      w: 50,
-      h: 50,
+      w: 44,
+      h: 44,
       round: 14,
       tipBelow: true,
-    }),
-  },
-  {
-    id: "task_form",
-    tab: "/modal",
-    isModal: true,
-    emoji: "📝",
-    accent: Colors.gold,
-    title: "Create a task",
-    tip: "Give it a title, priority & due date — takes 5 seconds",
-    getSpot: (W, H, top) => ({
-      x: 16,
-      y: top + 20,
-      w: W - 32,
-      h: H * 0.62,
-      round: 20,
-      tipBelow: false,
     }),
   },
   {
@@ -93,13 +79,13 @@ const STEPS: TourStep[] = [
     emoji: "🤖",
     accent: Colors.gold,
     title: "Your AI agent",
-    tip: "Chat, plan your day, or create tasks by voice",
+    tip: "Tap the gold bot button — chat, plan your day, or add tasks by voice",
     getSpot: (W, H) => ({
-      x: W - 84,
-      y: H - 158,
-      w: 60,
-      h: 60,
-      round: 30,
+      x: W - 80,
+      y: H - 154,
+      w: 56,
+      h: 56,
+      round: 28,
       tipBelow: false,
     }),
   },
@@ -109,11 +95,11 @@ const STEPS: TourStep[] = [
     emoji: "✨",
     accent: Colors.purple,
     title: "AI Insights",
-    tip: "GPT-5 analyzes your patterns every day",
+    tip: "GPT-5 analyzes your work patterns — real insights, no fluff",
     getSpot: (W, H) => ({
-      x: W * 0.5 - 38,
-      y: H - 84,
-      w: 76,
+      x: TAB_CX(W, 2) - 32,
+      y: H - 80,
+      w: 64,
       h: 80,
       round: 10,
       tipBelow: false,
@@ -125,11 +111,11 @@ const STEPS: TourStep[] = [
     emoji: "⛓️",
     accent: Colors.success,
     title: "Earn on TON",
-    tip: "Complete tasks → claim rewards on-chain",
+    tip: "Complete tasks → unlock achievements → claim points on the blockchain",
     getSpot: (W, H) => ({
-      x: W * 0.75 - 38,
-      y: H - 84,
-      w: 76,
+      x: TAB_CX(W, 3) - 32,
+      y: H - 80,
+      w: 64,
       h: 80,
       round: 10,
       tipBelow: false,
@@ -358,21 +344,9 @@ export function AppTour({ onDone }: { onDone: () => void }) {
       }).start(() => onDone());
       return;
     }
-    const currentStep = STEPS[stepIdx];
     const nextStep = STEPS[nextIdx];
-    if (nextStep.tab && nextStep.tab !== currentStep.tab) {
-      try {
-        if (nextStep.isModal) {
-          router.push(nextStep.tab as any);
-        } else if (currentStep.isModal) {
-          router.back();
-          setTimeout(() => {
-            try { router.replace(nextStep.tab as any); } catch {}
-          }, 150);
-        } else {
-          router.replace(nextStep.tab as any);
-        }
-      } catch {}
+    if (nextStep.tab && nextStep.tab !== STEPS[stepIdx].tab) {
+      try { router.replace(nextStep.tab as any); } catch {}
     }
     setStepIdx(nextIdx);
   }, [stepIdx, router, onDone]);
