@@ -6,242 +6,338 @@ import {
   Dimensions,
   TouchableOpacity,
   Animated,
-  Platform,
-  TextInput,
+  Easing,
 } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useRouter } from "expo-router";
-import { Plus, ChevronRight, X } from "lucide-react-native";
+import { ChevronRight, X } from "lucide-react-native";
 import { Colors } from "@/constants/colors";
 
-const { width: W } = Dimensions.get("window");
-const TOUR_KEY = "@tonic_tour_v2_seen";
+const { width: W, height: H } = Dimensions.get("window");
+const TOUR_KEY = "@tonic_tour_v3_seen";
 
-/* ── Step definitions ── */
+interface Spotlight {
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+  round?: number;
+  tipBelow: boolean;
+}
+
 interface TourStep {
   id: string;
   tab: string | null;
   emoji: string;
   accent: string;
   title: string;
-  desc: string;
-  action?: "add_task" | "open_agent";
-  actionLabel?: string;
+  tip: string;
+  getSpot: (W: number, H: number, topInset: number) => Spotlight;
 }
 
 const STEPS: TourStep[] = [
   {
     id: "dashboard",
     tab: "/(tabs)/",
-    emoji: "🏠",
+    emoji: "📊",
     accent: Colors.blue,
-    title: "Your Dashboard",
-    desc: "See today's progress, streak, and AI highlights — all in one place.",
+    title: "Your daily hub",
+    tip: "Progress, streak & AI highlights — all here",
+    getSpot: (W, H, top) => ({
+      x: 12,
+      y: top,
+      w: W - 24,
+      h: H * 0.52,
+      round: 18,
+      tipBelow: true,
+    }),
   },
   {
     id: "add_task",
     tab: "/(tabs)/",
     emoji: "➕",
     accent: Colors.gold,
-    title: "Add your first task",
-    desc: "Hit the + button at top-right — or tap below to create one now.",
-    action: "add_task",
-    actionLabel: "Create a task →",
-  },
-  {
-    id: "tasks",
-    tab: "/(tabs)/tasks",
-    emoji: "✅",
-    accent: Colors.success,
-    title: "Task list",
-    desc: "All tasks sorted by priority. Swipe to complete, long-press for options.",
+    title: "Add a task",
+    tip: "Tap + to create and track a new task",
+    getSpot: (W, _H, top) => ({
+      x: W - 64,
+      y: top + 8,
+      w: 50,
+      h: 50,
+      round: 14,
+      tipBelow: true,
+    }),
   },
   {
     id: "agent",
     tab: "/(tabs)/tasks",
     emoji: "🤖",
-    accent: Colors.purple,
-    title: "Tonic Agent",
-    desc: "Your AI assistant lives in the ⚡ button — bottom right, always there.",
-    action: "open_agent",
-    actionLabel: "Chat with AI →",
+    accent: Colors.gold,
+    title: "Your AI agent",
+    tip: "Chat, plan your day, or create tasks by voice",
+    getSpot: (W, H) => ({
+      x: W - 84,
+      y: H - 158,
+      w: 60,
+      h: 60,
+      round: 30,
+      tipBelow: false,
+    }),
   },
   {
     id: "insights",
     tab: "/(tabs)/insights",
-    emoji: "📊",
-    accent: Colors.warning,
-    title: "Insights",
-    desc: "AI analyzes your habits and gives honest feedback on your productivity.",
+    emoji: "✨",
+    accent: Colors.purple,
+    title: "AI Insights",
+    tip: "GPT-5 analyzes your patterns every day",
+    getSpot: (W, H) => ({
+      x: W * 0.5 - 38,
+      y: H - 84,
+      w: 76,
+      h: 80,
+      round: 10,
+      tipBelow: false,
+    }),
   },
   {
     id: "profile",
     tab: "/(tabs)/profile",
     emoji: "⛓️",
-    accent: Colors.gold,
-    title: "Earn & Claim",
-    desc: "Complete tasks → earn points → claim them on TON blockchain forever.",
+    accent: Colors.success,
+    title: "Earn on TON",
+    tip: "Complete tasks → claim rewards on-chain",
+    getSpot: (W, H) => ({
+      x: W * 0.75 - 38,
+      y: H - 84,
+      w: 76,
+      h: 80,
+      round: 10,
+      tipBelow: false,
+    }),
   },
 ];
 
-/* ── Welcome splash (step 0) ── */
-function WelcomeSplash({ onStart, onSkip }: { onStart: () => void; onSkip: () => void }) {
-  const fade = useRef(new Animated.Value(0)).current;
-  const scale = useRef(new Animated.Value(0.88)).current;
+const PAD = 10;
+
+function SpotlightFrame({
+  spot,
+  accent,
+}: {
+  spot: Spotlight;
+  accent: string;
+}) {
+  const sx = spot.x - PAD;
+  const sy = spot.y - PAD;
+  const sw = spot.w + PAD * 2;
+  const sh = spot.h + PAD * 2;
+  const round = (spot.round ?? 12) + PAD;
+  const dark = "rgba(0,0,0,0.82)";
+  const glowAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
-    Animated.parallel([
-      Animated.timing(fade, { toValue: 1, duration: 500, useNativeDriver: true }),
-      Animated.spring(scale, { toValue: 1, friction: 7, tension: 50, useNativeDriver: true }),
-    ]).start();
-  }, [fade, scale]);
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(glowAnim, {
+          toValue: 1,
+          duration: 1100,
+          useNativeDriver: false,
+          easing: Easing.inOut(Easing.sin),
+        }),
+        Animated.timing(glowAnim, {
+          toValue: 0,
+          duration: 1100,
+          useNativeDriver: false,
+          easing: Easing.inOut(Easing.sin),
+        }),
+      ])
+    ).start();
+  }, []);
+
+  const borderColor = glowAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: [accent + "88", accent + "ff"],
+  });
+  const shadowRadius = glowAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: [6, 20],
+  });
 
   return (
-    <Animated.View style={[splash.overlay, { opacity: fade }]}>
-      <Animated.View style={[splash.card, { transform: [{ scale }] }]}>
-        <TouchableOpacity style={splash.skipBtn} onPress={onSkip} activeOpacity={0.7}>
-          <X size={16} color={Colors.textMuted} />
-        </TouchableOpacity>
-
-        <Text style={splash.emoji}>⚡</Text>
-        <Text style={splash.title}>Welcome to Tonic</Text>
-        <Text style={splash.sub}>Take a 30-second tour to see how everything works.</Text>
-
-        <View style={splash.bullets}>
-          {["Dashboard & daily progress", "Add & organize tasks", "AI agent & insights", "TON blockchain rewards"].map((b, i) => (
-            <View key={i} style={splash.bullet}>
-              <View style={splash.bulletDot} />
-              <Text style={splash.bulletText}>{b}</Text>
-            </View>
-          ))}
-        </View>
-
-        <TouchableOpacity style={splash.startBtn} onPress={onStart} activeOpacity={0.85}>
-          <Text style={splash.startText}>Start Tour</Text>
-          <ChevronRight size={18} color={Colors.bgPrimary} />
-        </TouchableOpacity>
-      </Animated.View>
-    </Animated.View>
+    <View style={StyleSheet.absoluteFill} pointerEvents="none">
+      {/* Top dark bar */}
+      <View
+        style={{ position: "absolute", top: 0, left: 0, right: 0, height: sy, backgroundColor: dark }}
+      />
+      {/* Bottom dark bar */}
+      <View
+        style={{ position: "absolute", top: sy + sh, left: 0, right: 0, bottom: 0, backgroundColor: dark }}
+      />
+      {/* Left dark bar */}
+      <View
+        style={{ position: "absolute", top: sy, left: 0, width: sx, height: sh, backgroundColor: dark }}
+      />
+      {/* Right dark bar */}
+      <View
+        style={{ position: "absolute", top: sy, left: sx + sw, right: 0, height: sh, backgroundColor: dark }}
+      />
+      {/* Glowing border */}
+      <Animated.View
+        style={{
+          position: "absolute",
+          top: sy,
+          left: sx,
+          width: sw,
+          height: sh,
+          borderRadius: round,
+          borderWidth: 2,
+          borderColor,
+          shadowColor: accent,
+          shadowRadius,
+          shadowOpacity: 0.9,
+          shadowOffset: { width: 0, height: 0 },
+        }}
+      />
+    </View>
   );
 }
 
-/* ── Floating bottom coach card ── */
-function CoachCard({
+function Tooltip({
   step,
+  spot,
   stepIdx,
   total,
   onNext,
   onSkip,
-  onAction,
 }: {
   step: TourStep;
+  spot: Spotlight;
   stepIdx: number;
   total: number;
   onNext: () => void;
   onSkip: () => void;
-  onAction: () => void;
 }) {
-  const slideUp = useRef(new Animated.Value(120)).current;
   const fade = useRef(new Animated.Value(0)).current;
+  const slideY = useRef(new Animated.Value(spot.tipBelow ? 14 : -14)).current;
 
   useEffect(() => {
-    slideUp.setValue(120);
     fade.setValue(0);
+    slideY.setValue(spot.tipBelow ? 14 : -14);
     Animated.parallel([
-      Animated.spring(slideUp, { toValue: 0, friction: 8, tension: 60, useNativeDriver: true }),
-      Animated.timing(fade, { toValue: 1, duration: 300, useNativeDriver: true }),
+      Animated.timing(fade, {
+        toValue: 1,
+        duration: 280,
+        useNativeDriver: false,
+        easing: Easing.out(Easing.cubic),
+      }),
+      Animated.timing(slideY, {
+        toValue: 0,
+        duration: 280,
+        useNativeDriver: false,
+        easing: Easing.out(Easing.cubic),
+      }),
     ]).start();
-  }, [stepIdx, slideUp, fade]);
+  }, [stepIdx]);
 
-  const progress = (stepIdx + 1) / total;
+  const sx = spot.x - PAD;
+  const sy = spot.y - PAD;
+  const sw = spot.w + PAD * 2;
+  const sh = spot.h + PAD * 2;
+  const CARD_H = 120;
+  const MARGIN = 14;
+
+  let top: number;
+  if (spot.tipBelow) {
+    top = sy + sh + MARGIN;
+  } else {
+    top = Math.max(16, sy - CARD_H - MARGIN);
+  }
+
+  const cardLeft = Math.max(16, Math.min(sx + sw / 2 - (W - 32) / 2, W - 16 - (W - 32)));
 
   return (
-    <>
-      {/* Dim overlay — NOT blocking tap-through in the top area */}
-      <Animated.View style={[coach.dimOverlay, { opacity: fade }]} pointerEvents="none" />
-
-      <Animated.View
-        style={[coach.card, { transform: [{ translateY: slideUp }], opacity: fade }]}
-      >
-        {/* Progress bar */}
-        <View style={coach.progressTrack}>
-          <View style={[coach.progressFill, { width: `${progress * 100}%` as any, backgroundColor: step.accent }]} />
+    <Animated.View
+      style={[
+        styles.tooltip,
+        {
+          top,
+          left: cardLeft,
+          right: 16 - cardLeft < 0 ? 16 : undefined,
+          width: W - 32,
+          opacity: fade,
+          transform: [{ translateY: slideY }],
+        },
+      ]}
+    >
+      {/* Header row */}
+      <View style={styles.ttHeader}>
+        <View style={[styles.ttEmojiBox, { backgroundColor: step.accent + "18", borderColor: step.accent + "44" }]}>
+          <Text style={styles.ttEmoji}>{step.emoji}</Text>
         </View>
-
-        {/* Header row */}
-        <View style={coach.header}>
-          <View style={[coach.emojiWrap, { backgroundColor: `${step.accent}18`, borderColor: `${step.accent}40` }]}>
-            <Text style={coach.emoji}>{step.emoji}</Text>
-          </View>
-          <View style={coach.headerText}>
-            <Text style={coach.title}>{step.title}</Text>
-            <Text style={coach.stepCount}>{stepIdx + 1} / {total}</Text>
-          </View>
-          <TouchableOpacity onPress={onSkip} style={coach.closeBtn} activeOpacity={0.7}>
-            <X size={15} color={Colors.textMuted} />
-          </TouchableOpacity>
+        <View style={{ flex: 1 }}>
+          <Text style={styles.ttTitle}>{step.title}</Text>
+          <Text style={styles.ttTip}>{step.tip}</Text>
         </View>
+        <TouchableOpacity onPress={onSkip} style={styles.ttClose} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+          <X size={13} color={Colors.textMuted} />
+        </TouchableOpacity>
+      </View>
 
-        <Text style={coach.desc}>{step.desc}</Text>
-
-        {/* Buttons */}
-        <View style={coach.buttons}>
-          {step.action && (
-            <TouchableOpacity
-              style={[coach.actionBtn, { backgroundColor: `${step.accent}18`, borderColor: `${step.accent}50` }]}
-              onPress={onAction}
-              activeOpacity={0.8}
-            >
-              <Text style={[coach.actionText, { color: step.accent }]}>{step.actionLabel}</Text>
-            </TouchableOpacity>
-          )}
-          <TouchableOpacity
-            style={[coach.nextBtn, { backgroundColor: step.accent }]}
-            onPress={onNext}
-            activeOpacity={0.85}
-          >
-            <Text style={coach.nextText}>{stepIdx === total - 1 ? "Done 🎉" : "Next"}</Text>
-            {stepIdx < total - 1 && <ChevronRight size={16} color={Colors.bgPrimary} />}
-          </TouchableOpacity>
-        </View>
-
-        {/* Dot indicators */}
-        <View style={coach.dots}>
+      {/* Progress + Next */}
+      <View style={styles.ttFooter}>
+        <View style={styles.ttDots}>
           {Array.from({ length: total }).map((_, i) => (
             <View
               key={i}
               style={[
-                coach.dot,
+                styles.ttDot,
                 i === stepIdx
-                  ? [coach.dotActive, { backgroundColor: step.accent, width: 18 }]
-                  : coach.dotInactive,
+                  ? { width: 16, backgroundColor: step.accent }
+                  : { width: 6, backgroundColor: Colors.border },
               ]}
             />
           ))}
         </View>
-      </Animated.View>
-    </>
+        <TouchableOpacity
+          style={[styles.ttNext, { backgroundColor: step.accent }]}
+          onPress={onNext}
+          activeOpacity={0.85}
+        >
+          <Text style={styles.ttNextText}>{stepIdx === total - 1 ? "Done" : "Next"}</Text>
+          {stepIdx < total - 1 && <ChevronRight size={14} color={Colors.bgPrimary} />}
+        </TouchableOpacity>
+      </View>
+    </Animated.View>
   );
 }
 
-/* ── Main exported component ── */
 export function AppTour({ onDone }: { onDone: () => void }) {
   const router = useRouter();
-  const [phase, setPhase] = useState<"welcome" | "tour" | "done">("welcome");
+  const insets = useSafeAreaInsets();
   const [stepIdx, setStepIdx] = useState(0);
+  const overlayFade = useRef(new Animated.Value(0)).current;
 
-  const startTour = useCallback(() => {
-    setPhase("tour");
-    const firstStep = STEPS[0];
-    if (firstStep.tab) {
-      try { router.replace(firstStep.tab as any); } catch {}
+  useEffect(() => {
+    const step = STEPS[0];
+    if (step.tab) {
+      try { router.replace(step.tab as any); } catch {}
     }
-  }, [router]);
+    Animated.timing(overlayFade, {
+      toValue: 1,
+      duration: 350,
+      useNativeDriver: false,
+    }).start();
+  }, []);
 
   const handleNext = useCallback(() => {
     const nextIdx = stepIdx + 1;
     if (nextIdx >= STEPS.length) {
-      onDone();
+      Animated.timing(overlayFade, {
+        toValue: 0,
+        duration: 250,
+        useNativeDriver: false,
+      }).start(() => onDone());
       return;
     }
     const nextStep = STEPS[nextIdx];
@@ -251,36 +347,32 @@ export function AppTour({ onDone }: { onDone: () => void }) {
     setStepIdx(nextIdx);
   }, [stepIdx, router, onDone]);
 
-  const handleAction = useCallback(() => {
-    const step = STEPS[stepIdx];
-    if (step.action === "add_task") {
-      try { router.push("/modal" as any); } catch {}
-    } else if (step.action === "open_agent") {
-      try { router.replace("/(tabs)/agent" as any); } catch {}
-    }
-  }, [stepIdx, router]);
+  const handleSkip = useCallback(() => {
+    Animated.timing(overlayFade, {
+      toValue: 0,
+      duration: 200,
+      useNativeDriver: false,
+    }).start(() => onDone());
+  }, [onDone]);
 
-  if (phase === "welcome") {
-    return <WelcomeSplash onStart={startTour} onSkip={onDone} />;
-  }
+  const step = STEPS[stepIdx];
+  const spot = step.getSpot(W, H, insets.top);
 
-  if (phase === "tour") {
-    return (
-      <CoachCard
-        step={STEPS[stepIdx]}
+  return (
+    <Animated.View style={[StyleSheet.absoluteFill, { opacity: overlayFade, zIndex: 999 }]} pointerEvents="box-none">
+      <SpotlightFrame spot={spot} accent={step.accent} />
+      <Tooltip
+        step={step}
+        spot={spot}
         stepIdx={stepIdx}
         total={STEPS.length}
         onNext={handleNext}
-        onSkip={onDone}
-        onAction={handleAction}
+        onSkip={handleSkip}
       />
-    );
-  }
-
-  return null;
+    </Animated.View>
+  );
 }
 
-/* ── Storage helpers ── */
 export async function checkTourSeen(): Promise<boolean> {
   try {
     return (await AsyncStorage.getItem(TOUR_KEY)) === "true";
@@ -295,223 +387,83 @@ export async function markTourSeen(): Promise<void> {
   } catch {}
 }
 
-/* ── Styles ── */
-const splash = StyleSheet.create({
-  overlay: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(0,0,0,0.90)",
-    zIndex: 9999,
-    justifyContent: "center",
-    alignItems: "center",
-    paddingHorizontal: 20,
-  },
-  card: {
-    width: "100%",
-    backgroundColor: Colors.bgSecondary,
-    borderRadius: 28,
-    padding: 28,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    gap: 4,
-    ...Platform.select({
-      ios: { shadowColor: "#000", shadowOffset: { width: 0, height: 12 }, shadowOpacity: 0.5, shadowRadius: 24 },
-      android: { elevation: 16 },
-    }),
-  },
-  skipBtn: {
+const styles = StyleSheet.create({
+  tooltip: {
     position: "absolute",
-    top: 16,
-    right: 16,
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    backgroundColor: Colors.bgTertiary,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  emoji: {
-    fontSize: 52,
-    marginBottom: 8,
-  },
-  title: {
-    fontSize: 26,
-    fontWeight: "800",
-    color: Colors.textPrimary,
-    letterSpacing: -0.5,
-    marginBottom: 6,
-  },
-  sub: {
-    fontSize: 15,
-    color: Colors.textSecondary,
-    marginBottom: 20,
-    lineHeight: 22,
-  },
-  bullets: {
-    gap: 12,
-    marginBottom: 28,
-  },
-  bullet: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-  },
-  bulletDot: {
-    width: 7,
-    height: 7,
-    borderRadius: 4,
-    backgroundColor: Colors.gold,
-  },
-  bulletText: {
-    fontSize: 14,
-    color: Colors.textPrimary,
-    fontWeight: "500",
-  },
-  startBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: Colors.gold,
+    backgroundColor: Colors.bgSecondary,
     borderRadius: 18,
-    paddingVertical: 16,
-    gap: 6,
-    shadowColor: Colors.gold,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.35,
-    shadowRadius: 10,
-    elevation: 6,
-  },
-  startText: {
-    fontSize: 17,
-    fontWeight: "800",
-    color: Colors.bgPrimary,
-  },
-});
-
-const coach = StyleSheet.create({
-  dimOverlay: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(0,0,0,0.45)",
-    zIndex: 990,
-    bottom: 200,
-  },
-  card: {
-    position: "absolute",
-    bottom: 92,
-    left: 16,
-    right: 16,
-    backgroundColor: Colors.bgSecondary,
-    borderRadius: 22,
-    paddingHorizontal: 20,
-    paddingBottom: 18,
-    paddingTop: 0,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
     borderWidth: 1,
     borderColor: Colors.border,
-    zIndex: 999,
-    overflow: "hidden",
-    ...Platform.select({
-      ios: { shadowColor: "#000", shadowOffset: { width: 0, height: -4 }, shadowOpacity: 0.3, shadowRadius: 16 },
-      android: { elevation: 14 },
-    }),
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.5,
+    shadowRadius: 20,
+    elevation: 16,
+    gap: 12,
+    zIndex: 1000,
   },
-  progressTrack: {
-    height: 3,
-    backgroundColor: Colors.bgTertiary,
-    marginHorizontal: -20,
-    marginBottom: 16,
-  },
-  progressFill: {
-    height: "100%",
-    borderRadius: 2,
-  },
-  header: {
+  ttHeader: {
     flexDirection: "row",
     alignItems: "center",
     gap: 12,
-    marginBottom: 10,
   },
-  emojiWrap: {
-    width: 44,
-    height: 44,
-    borderRadius: 14,
+  ttEmojiBox: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
     borderWidth: 1,
     justifyContent: "center",
     alignItems: "center",
   },
-  emoji: {
-    fontSize: 22,
+  ttEmoji: {
+    fontSize: 20,
   },
-  headerText: {
-    flex: 1,
-  },
-  title: {
-    fontSize: 16,
+  ttTitle: {
+    fontSize: 15,
     fontWeight: "800",
     color: Colors.textPrimary,
+    marginBottom: 2,
   },
-  stepCount: {
-    fontSize: 11,
-    color: Colors.textMuted,
-    marginTop: 1,
-    fontWeight: "600",
+  ttTip: {
+    fontSize: 12,
+    color: Colors.textSecondary,
+    lineHeight: 17,
   },
-  closeBtn: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
+  ttClose: {
+    width: 26,
+    height: 26,
+    borderRadius: 13,
     backgroundColor: Colors.bgTertiary,
     justifyContent: "center",
     alignItems: "center",
   },
-  desc: {
-    fontSize: 14,
-    color: Colors.textSecondary,
-    lineHeight: 20,
-    marginBottom: 14,
-  },
-  buttons: {
-    flexDirection: "row",
-    gap: 10,
-    marginBottom: 14,
-  },
-  actionBtn: {
-    flex: 1,
-    borderWidth: 1,
-    borderRadius: 14,
-    paddingVertical: 12,
-    alignItems: "center",
-  },
-  actionText: {
-    fontSize: 13,
-    fontWeight: "700",
-  },
-  nextBtn: {
-    flex: 1,
-    borderRadius: 14,
-    paddingVertical: 12,
+  ttFooter: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "center",
-    gap: 4,
+    justifyContent: "space-between",
   },
-  nextText: {
-    fontSize: 14,
-    fontWeight: "800",
-    color: Colors.bgPrimary,
-  },
-  dots: {
+  ttDots: {
     flexDirection: "row",
     gap: 5,
-    justifyContent: "center",
+    alignItems: "center",
   },
-  dot: {
+  ttDot: {
     height: 6,
     borderRadius: 3,
   },
-  dotActive: {
-    opacity: 1,
+  ttNext: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    paddingHorizontal: 16,
+    paddingVertical: 9,
+    borderRadius: 12,
   },
-  dotInactive: {
-    width: 6,
-    backgroundColor: Colors.border,
+  ttNextText: {
+    fontSize: 13,
+    fontWeight: "800",
+    color: Colors.bgPrimary,
   },
 });

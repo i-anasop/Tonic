@@ -256,7 +256,7 @@ function IconOrb({
     outputRange: ["0deg", "360deg"],
   });
 
-  const ORB = 104;
+  const ORB = 136;
 
   return (
     <Animated.View
@@ -643,7 +643,7 @@ export default function OnboardingScreen() {
                       placeholderTextColor={Colors.textMuted}
                       value={guestName}
                       onChangeText={setGuestName}
-                      style={styles.input}
+                      style={[styles.input, { outlineWidth: 0 } as any]}
                       autoFocus
                       onSubmitEditing={handleGuestSubmit}
                     />
@@ -819,9 +819,9 @@ const styles = StyleSheet.create({
   orbWrap: {
     alignItems: "center",
     justifyContent: "center",
-    marginBottom: 36,
-    width: 220,
-    height: 220,
+    marginBottom: 28,
+    width: 290,
+    height: 290,
   },
   ring: {
     position: "absolute",
@@ -851,28 +851,28 @@ const styles = StyleSheet.create({
     paddingHorizontal: 4,
   },
   subtitle: {
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: "700",
     letterSpacing: 1.8,
     textTransform: "uppercase",
-    marginBottom: 10,
+    marginBottom: 8,
     opacity: 0.9,
   },
   title: {
-    fontSize: 36,
+    fontSize: 30,
     fontWeight: "800",
     color: Colors.textPrimary,
     textAlign: "center",
-    lineHeight: 44,
-    marginBottom: 14,
+    lineHeight: 38,
+    marginBottom: 10,
     letterSpacing: -0.5,
   },
   description: {
-    fontSize: 15.5,
+    fontSize: 14,
     color: Colors.textSecondary,
     textAlign: "center",
-    lineHeight: 24,
-    paddingHorizontal: 6,
+    lineHeight: 21,
+    paddingHorizontal: 10,
   },
   chipsRow: {
     flexDirection: "row",

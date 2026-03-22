@@ -8,7 +8,6 @@ import {
   TouchableOpacity,
   Dimensions,
   RefreshControl,
-  Alert,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import {
@@ -20,7 +19,6 @@ import {
   Plus,
   ChevronRight,
   AlertCircle,
-  RotateCcw,
 } from "lucide-react-native";
 import { useRouter } from "expo-router";
 
@@ -241,7 +239,7 @@ function InsightCard({ insight }: { insight: AIInsight }) {
 
 export default function DashboardScreen() {
   const router = useRouter();
-  const { user, isOnboarded, isLoading, resetApp } = useAppState();
+  const { user, isOnboarded, isLoading } = useAppState();
   const { tasks, insights, toggleTaskStatus, getStats, getTodayTasks } = useTasks();
   const [stats, setStats] = React.useState({
     tasksCompleted: 0,
@@ -283,22 +281,6 @@ export default function DashboardScreen() {
     await loadStats();
     setRefreshing(false);
   }, [loadStats]);
-
-  const handleReset = () => {
-    Alert.alert("Reset App", "Clear all data and return to onboarding?", [
-      { text: "Cancel", onPress: () => {}, style: "cancel" },
-      {
-        text: "Reset",
-        onPress: async () => {
-          await resetApp();
-          setTimeout(() => {
-            router.replace("/onboarding");
-          }, 500);
-        },
-        style: "destructive",
-      },
-    ]);
-  };
 
   const getGreeting = () => {
     const hour = new Date().getHours();
@@ -342,13 +324,6 @@ export default function DashboardScreen() {
             <Text style={styles.userName}>{user.name}</Text>
           </View>
           <View style={styles.headerButtons}>
-            <TouchableOpacity
-              style={styles.resetButton}
-              activeOpacity={0.8}
-              onPress={handleReset}
-            >
-              <RotateCcw size={16} color={Colors.textSecondary} />
-            </TouchableOpacity>
             <TouchableOpacity style={styles.addButton} activeOpacity={0.8} onPress={handleAddTask}>
               <Plus size={20} color={Colors.bgPrimary} />
             </TouchableOpacity>
@@ -473,16 +448,6 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     gap: 12,
     alignItems: "center",
-  },
-  resetButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 14,
-    backgroundColor: Colors.bgSecondary,
-    justifyContent: "center",
-    alignItems: "center",
-    borderWidth: 1,
-    borderColor: Colors.border,
   },
   addButton: {
     width: 44,
