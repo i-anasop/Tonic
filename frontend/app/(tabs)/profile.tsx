@@ -9,6 +9,7 @@ import {
   Alert,
   Image,
   ActivityIndicator,
+  TextInput,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import {
@@ -105,7 +106,7 @@ export default function ProfileScreen() {
   const { user, signOut, setUser } = useAppState();
   const { tasks, getStats, getCompletedTasks } = useTasks();
   const { stats: achievementStats, claimPoints } = useAchievements();
-  const { isConnected: isTonConnected, recordAchievementOnChain, isSendingTx } = useTonConnect();
+  const { isConnected: isTonConnected, connectWallet: connectTonWallet, recordAchievementOnChain, isSendingTx } = useTonConnect();
   const { isDark, toggleTheme, colors } = useTheme();
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const [isRecordingOnChain, setIsRecordingOnChain] = useState(false);
@@ -114,6 +115,8 @@ export default function ProfileScreen() {
   const [isAchievementsModalVisible, setIsAchievementsModalVisible] = useState(false);
   const [stats, setStats] = useState({ tasksCompleted: 0, currentStreak: 0, productivityScore: 0 });
   const [onChainRecords, setOnChainRecords] = useState<any[]>([]);
+  const [isEditingName, setIsEditingName] = useState(false);
+  const [editNameValue, setEditNameValue] = useState("");
 
   useEffect(() => {
     if (!user?.id) return;
@@ -129,6 +132,23 @@ export default function ProfileScreen() {
   }, [getStats]);
 
   useEffect(() => { void loadStats(); }, [loadStats, tasks]);
+
+  const handleEditName = useCallback(() => {
+    setEditNameValue(user?.name ?? "");
+    setIsEditingName(true);
+  }, [user?.name]);
+
+  const handleSaveName = useCallback(() => {
+    const trimmed = editNameValue.trim();
+    if (!trimmed || !user) return;
+    setUser({ ...user, name: trimmed });
+    setIsEditingName(false);
+  }, [editNameValue, user, setUser]);
+
+  const handleCancelEdit = useCallback(() => {
+    setIsEditingName(false);
+    setEditNameValue("");
+  }, []);
 
   const handleSignOut = () => {
     Alert.alert("Sign Out", "Are you sure you want to sign out? Your data will be preserved.", [
@@ -261,24 +281,51 @@ export default function ProfileScreen() {
               </TouchableOpacity>
 
               <View style={styles.nameArea}>
-                <Text style={styles.userName}>{user.name}</Text>
-                <Text style={styles.levelName}>{achievementStats.currentLevel.name}</Text>
-                {user.walletAddress ? (
-                  <View style={styles.walletChip}>
-                    <Wallet size={12} color={Colors.gold} />
-                    <Text style={styles.walletText}>{formatWalletAddress(user.walletAddress)}</Text>
-                  </View>
+                {isEditingName ? (
+                  <>
+                    <TextInput
+                      style={styles.nameInput}
+                      value={editNameValue}
+                      onChangeText={setEditNameValue}
+                      autoFocus
+                      maxLength={40}
+                      returnKeyType="done"
+                      onSubmitEditing={handleSaveName}
+                      placeholderTextColor={colors.textMuted}
+                    />
+                    <View style={styles.editActions}>
+                      <TouchableOpacity style={styles.saveBtn} onPress={handleSaveName} activeOpacity={0.8}>
+                        <Text style={styles.saveBtnText}>Save</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity style={styles.cancelBtn} onPress={handleCancelEdit} activeOpacity={0.8}>
+                        <Text style={styles.cancelBtnText}>Cancel</Text>
+                      </TouchableOpacity>
+                    </View>
+                  </>
                 ) : (
-                  <View style={styles.guestChip}>
-                    <User size={12} color={colors.textMuted} />
-                    <Text style={styles.guestText}>Guest</Text>
-                  </View>
+                  <>
+                    <Text style={styles.userName}>{user.name}</Text>
+                    <Text style={styles.levelName}>{achievementStats.currentLevel.name}</Text>
+                    {user.walletAddress ? (
+                      <View style={styles.walletChip}>
+                        <Wallet size={12} color={Colors.gold} />
+                        <Text style={styles.walletText}>{formatWalletAddress(user.walletAddress)}</Text>
+                      </View>
+                    ) : (
+                      <View style={styles.guestChip}>
+                        <User size={12} color={colors.textMuted} />
+                        <Text style={styles.guestText}>Guest</Text>
+                      </View>
+                    )}
+                  </>
                 )}
               </View>
 
-              <TouchableOpacity style={styles.editBtn} activeOpacity={0.8}>
-                <Edit3 size={17} color={colors.textSecondary} />
-              </TouchableOpacity>
+              {!isEditingName && (
+                <TouchableOpacity style={styles.editBtn} activeOpacity={0.8} onPress={handleEditName}>
+                  <Edit3 size={17} color={colors.textSecondary} />
+                </TouchableOpacity>
+              )}
             </View>
 
             {/* Level progress bar */}
@@ -442,7 +489,7 @@ export default function ProfileScreen() {
                 <>
                   <MenuItem
                     icon={Wallet} title="Connect TON Wallet" subtitle="Unlock blockchain features & rewards" color={Colors.gold}
-                    onPress={() => Alert.alert("Connect TON Wallet", "Connect your TON wallet to unlock exclusive features, earn rewards, and track your productivity on the blockchain!", [{ text: "Later", style: "cancel" }, { text: "Connect Now", onPress: () => router.push("/onboarding") }])}
+                    onPress={() => void connectTonWallet()}
                   />
                   <View style={styles.divider} />
                 </>
@@ -513,6 +560,12 @@ const makeStyles = (colors: AppColors) => StyleSheet.create({
   guestChip: { flexDirection: "row", alignItems: "center", gap: 5, marginTop: 4, alignSelf: "flex-start", backgroundColor: colors.bgTertiary, paddingHorizontal: 8, paddingVertical: 3, borderRadius: 10 },
   guestText: { fontSize: 11, color: colors.textMuted, fontWeight: "500" },
   editBtn: { width: 38, height: 38, borderRadius: 12, backgroundColor: colors.bgTertiary, justifyContent: "center", alignItems: "center", alignSelf: "flex-start" },
+  nameInput: { fontSize: 20, fontWeight: "700" as const, color: colors.textPrimary, borderBottomWidth: 2, borderBottomColor: Colors.gold, paddingBottom: 4, paddingHorizontal: 2, marginBottom: 8, minWidth: 100 },
+  editActions: { flexDirection: "row", gap: 8, marginTop: 4 },
+  saveBtn: { paddingHorizontal: 14, paddingVertical: 6, borderRadius: 8, backgroundColor: Colors.gold },
+  saveBtnText: { fontSize: 12, fontWeight: "700" as const, color: "#0D1117" },
+  cancelBtn: { paddingHorizontal: 14, paddingVertical: 6, borderRadius: 8, backgroundColor: colors.bgTertiary },
+  cancelBtnText: { fontSize: 12, fontWeight: "600" as const, color: colors.textSecondary },
 
   progressSection: { marginBottom: 18 },
   progressHeader: { flexDirection: "row", justifyContent: "space-between", marginBottom: 6 },
