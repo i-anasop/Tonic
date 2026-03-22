@@ -1,4 +1,4 @@
-import { useState, useMemo, useRef, useCallback } from "react";
+import { useState, useMemo, useRef, useCallback, useEffect } from "react";
 import {
   ScrollView,
   StyleSheet,
@@ -14,7 +14,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import {
   Plus,
   Search,
-  CheckCircle2,
+  CircleCheck,
   Clock,
   Target,
   Sparkles,
@@ -22,7 +22,11 @@ import {
   TrendingUp,
   Trash2,
   Edit3,
-  SlidersHorizontal,
+  Ellipsis,
+  CalendarDays,
+  ListChecks,
+  Flag,
+  Flame,
 } from "lucide-react-native";
 import { useRouter } from "expo-router";
 
@@ -36,193 +40,260 @@ const { width: SCREEN_WIDTH } = Dimensions.get("window");
 type FilterTab = "all" | "today" | "upcoming" | "completed";
 
 const categoryConfig: Record<TaskCategory, { icon: typeof Target; color: string; label: string }> = {
-  work: { icon: Target, color: Colors.blue, label: "Work" },
-  personal: { icon: Sparkles, color: Colors.purple, label: "Personal" },
-  health: { icon: Zap, color: Colors.success, label: "Health" },
-  learning: { icon: TrendingUp, color: Colors.gold, label: "Learn" },
+  work:     { icon: Target,     color: Colors.blue,    label: "Work" },
+  personal: { icon: Sparkles,   color: Colors.purple,  label: "Personal" },
+  health:   { icon: Flame,      color: Colors.success, label: "Health" },
+  learning: { icon: TrendingUp, color: Colors.gold,    label: "Learn" },
 };
 
 const priorityConfig: Record<string, { color: string; label: string }> = {
-  high: { color: Colors.danger, label: "High" },
+  high:   { color: Colors.danger,  label: "High" },
   medium: { color: Colors.warning, label: "Med" },
-  low: { color: Colors.success, label: "Low" },
+  low:    { color: Colors.success, label: "Low" },
 };
 
-function TaskCard({
-  task,
-  onToggle,
-  onDelete,
-  onEdit,
-}: {
-  task: Task;
-  onToggle: (id: string) => void;
-  onDelete: (id: string) => void;
-  onEdit: (id: string) => void;
+// ── Summary Stats Strip ──────────────────────────────────────────────────────
+function SummaryStrip({ tasks }: { tasks: Task[] }) {
+  const { colors } = useTheme();
+  const active = tasks.filter((t) => t.status !== "completed").length;
+  const today = new Date().toDateString();
+  const todayCount = tasks.filter((t) => new Date(t.dueDate).toDateString() === today && t.status !== "completed").length;
+  const now = new Date(); now.setHours(0,0,0,0);
+  const overdueCount = tasks.filter((t) => t.status !== "completed" && new Date(t.dueDate) < now).length;
+  const completed = tasks.filter((t) => t.status === "completed").length;
+  const total = tasks.length;
+  const pct = total > 0 ? completed / total : 0;
+  const barAnim = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    Animated.timing(barAnim, { toValue: pct, duration: 900, useNativeDriver: false }).start();
+  }, [pct]);
+  const barWidth = barAnim.interpolate({ inputRange: [0, 1], outputRange: ["0%", "100%"] });
+
+  const stats = [
+    { label: "Active",  value: active,       color: colors.textPrimary, bg: colors.bgTertiary },
+    { label: "Today",   value: todayCount,   color: Colors.blue,        bg: `${Colors.blue}15` },
+    { label: "Overdue", value: overdueCount, color: overdueCount > 0 ? Colors.danger : colors.textMuted, bg: overdueCount > 0 ? `${Colors.danger}12` : colors.bgTertiary },
+    { label: "Done",    value: completed,    color: Colors.success,     bg: `${Colors.success}12` },
+  ];
+
+  return (
+    <View style={{ paddingHorizontal: 16, marginBottom: 14 }}>
+      <View style={{ flexDirection: "row", gap: 8, marginBottom: 10 }}>
+        {stats.map(({ label, value, color, bg }) => (
+          <View key={label} style={{ flex: 1, backgroundColor: bg, borderRadius: 14, paddingVertical: 10, alignItems: "center", gap: 2 }}>
+            <Text style={{ fontSize: 18, fontWeight: "800", color, letterSpacing: -0.5 }}>{value}</Text>
+            <Text style={{ fontSize: 10, fontWeight: "600", color: colors.textMuted }}>{label}</Text>
+          </View>
+        ))}
+      </View>
+      {/* Overall progress bar */}
+      <View style={{ height: 4, backgroundColor: colors.bgTertiary, borderRadius: 4 }}>
+        <Animated.View style={{ height: 4, width: barWidth, backgroundColor: Colors.success, borderRadius: 4 }} />
+      </View>
+      {total > 0 && (
+        <Text style={{ fontSize: 10, color: colors.textMuted, marginTop: 4, textAlign: "right" }}>
+          {completed}/{total} completed · {Math.round(pct * 100)}%
+        </Text>
+      )}
+    </View>
+  );
+}
+
+// ── Task Card ────────────────────────────────────────────────────────────────
+function TaskCard({ task, onToggle, onDelete, onEdit }: {
+  task: Task; onToggle: (id: string) => void; onDelete: (id: string) => void; onEdit: (id: string) => void;
 }) {
   const [showActions, setShowActions] = useState(false);
   const { colors } = useTheme();
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const slideAnim = useRef(new Animated.Value(0)).current;
+  const actionAnim = useRef(new Animated.Value(0)).current;
   const category = categoryConfig[task.category];
   const CategoryIcon = category.icon;
   const priority = priorityConfig[task.priority];
 
+  const isDone = task.status === "completed";
+  const now = new Date(); now.setHours(0,0,0,0);
+  const isOverdue = !isDone && new Date(task.dueDate) < now;
+
   const handleToggle = useCallback(() => {
-    Animated.timing(slideAnim, {
-      toValue: 1,
-      duration: 260,
-      useNativeDriver: true,
-    }).start(() => {
+    if (isDone) { onToggle(task.id); return; }
+    Animated.timing(slideAnim, { toValue: 1, duration: 280, useNativeDriver: true }).start(() => {
       onToggle(task.id);
       slideAnim.setValue(0);
     });
-  }, [task.id, task.status, onToggle, slideAnim]);
+  }, [task.id, isDone, onToggle, slideAnim]);
+
+  const toggleActions = useCallback(() => {
+    const next = !showActions;
+    setShowActions(next);
+    Animated.spring(actionAnim, { toValue: next ? 1 : 0, friction: 7, tension: 80, useNativeDriver: true }).start();
+  }, [showActions, actionAnim]);
 
   const translateX = slideAnim.interpolate({ inputRange: [0, 1], outputRange: [0, SCREEN_WIDTH] });
-  const opacity = slideAnim.interpolate({ inputRange: [0, 0.5, 1], outputRange: [1, 0.5, 0] });
+  const opacity = slideAnim.interpolate({ inputRange: [0, 0.6, 1], outputRange: [1, 0.4, 0] });
+  const actionOpacity = actionAnim.interpolate({ inputRange: [0, 1], outputRange: [0, 1] });
+  const actionTranslateY = actionAnim.interpolate({ inputRange: [0, 1], outputRange: [-6, 0] });
 
   const formatDate = (date: Date) => {
-    const today = new Date();
-    const tomorrow = new Date(today.getTime() + 86400000);
-    const taskDate = date instanceof Date ? date : new Date(date);
-    if (taskDate.toDateString() === today.toDateString()) return "Today";
-    if (taskDate.toDateString() === tomorrow.toDateString()) return "Tomorrow";
-    return taskDate.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+    const todayStr = new Date().toDateString();
+    const tomorrowStr = new Date(Date.now() + 86400000).toDateString();
+    const d = date instanceof Date ? date : new Date(date);
+    if (d.toDateString() === todayStr) return "Today";
+    if (d.toDateString() === tomorrowStr) return "Tomorrow";
+    return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
   };
 
-  const isOverdue = task.dueDate < new Date() && task.status !== "completed";
-  const isDone = task.status === "completed";
+  const cardBg = isDone
+    ? colors.bgSecondary
+    : isOverdue
+    ? `${Colors.danger}08`
+    : colors.bgSecondary;
+
+  const cardBorder = showActions
+    ? `${Colors.gold}55`
+    : isOverdue && !isDone
+    ? `${Colors.danger}30`
+    : colors.border;
 
   return (
-    <Animated.View style={{ transform: [{ translateX }], opacity }}>
-      <TouchableOpacity
-        style={[styles.taskCard, isDone && styles.taskCardDone, showActions && styles.taskCardActive]}
-        activeOpacity={0.9}
-        onPress={() => setShowActions(!showActions)}
-        testID={`task-card-${task.id}`}
-      >
+    <Animated.View style={{ transform: [{ translateX }], opacity, marginBottom: 10 }}>
+      <View style={[styles.taskCard, { backgroundColor: cardBg, borderColor: cardBorder }, isDone && styles.taskCardDone]}>
         {/* Left priority bar */}
-        <View style={[styles.priorityBar, { backgroundColor: isDone ? colors.border : priority.color }]} />
+        <View style={[styles.priorityBar, { backgroundColor: isDone ? colors.border : isOverdue ? Colors.danger : priority.color }]} />
 
         {/* Checkbox */}
-        <TouchableOpacity
-          style={styles.checkboxWrap}
-          onPress={handleToggle}
-          activeOpacity={0.7}
-          testID={`task-checkbox-${task.id}`}
-        >
+        <TouchableOpacity style={styles.checkboxWrap} onPress={handleToggle} activeOpacity={0.7} testID={`task-checkbox-${task.id}`}>
           {isDone ? (
-            <CheckCircle2 size={22} color={Colors.success} />
+            <CircleCheck size={24} color={Colors.success} />
           ) : (
-            <View style={[styles.checkbox, { borderColor: priority.color }]} />
+            <View style={[styles.checkbox, { borderColor: isOverdue ? Colors.danger : priority.color }]}>
+              <View style={[styles.checkboxInner, { backgroundColor: isOverdue ? `${Colors.danger}15` : `${priority.color}15` }]} />
+            </View>
           )}
         </TouchableOpacity>
 
         {/* Content */}
         <View style={styles.taskContent}>
-          <Text
-            style={[styles.taskTitle, isDone && styles.taskTitleDone]}
-            numberOfLines={1}
-          >
-            {task.title}
-          </Text>
+          <Text style={[styles.taskTitle, isDone && styles.taskTitleDone]} numberOfLines={1}>{task.title}</Text>
+          {!!task.description && !isDone && (
+            <Text style={styles.taskDesc} numberOfLines={1}>{task.description}</Text>
+          )}
           <View style={styles.taskMeta}>
-            <View style={[styles.catChip, { backgroundColor: `${category.color}15` }]}>
-              <CategoryIcon size={11} color={category.color} />
-              <Text style={[styles.catText, { color: category.color }]}>{category.label}</Text>
+            {/* Category chip */}
+            <View style={[styles.metaChip, { backgroundColor: `${category.color}15` }]}>
+              <CategoryIcon size={10} color={category.color} />
+              <Text style={[styles.metaChipText, { color: category.color }]}>{category.label}</Text>
             </View>
-            <View style={[styles.dateChip, isOverdue && styles.dateChipOverdue]}>
-              <Clock size={10} color={isOverdue ? Colors.danger : colors.textMuted} />
-              <Text style={[styles.dateText, isOverdue && { color: Colors.danger }]}>
-                {formatDate(task.dueDate)}
+            {/* Date chip */}
+            <View style={[styles.metaChip, { backgroundColor: isOverdue ? `${Colors.danger}15` : colors.bgTertiary }]}>
+              <CalendarDays size={10} color={isOverdue ? Colors.danger : colors.textMuted} />
+              <Text style={[styles.metaChipText, { color: isOverdue ? Colors.danger : colors.textMuted }]}>
+                {isOverdue ? `Due ${formatDate(task.dueDate)}` : formatDate(task.dueDate)}
               </Text>
             </View>
+            {/* Priority pill */}
+            {!isDone && (
+              <View style={[styles.metaChip, { backgroundColor: `${priority.color}12` }]}>
+                <Flag size={9} color={priority.color} />
+                <Text style={[styles.metaChipText, { color: priority.color }]}>{priority.label}</Text>
+              </View>
+            )}
+            {/* AI badge */}
             {task.aiSuggested && (
-              <View style={styles.aiBadge}>
-                <Sparkles size={10} color={Colors.gold} />
+              <View style={[styles.metaChip, { backgroundColor: `${Colors.gold}15` }]}>
+                <Sparkles size={9} color={Colors.gold} />
+                <Text style={[styles.metaChipText, { color: Colors.gold }]}>AI</Text>
               </View>
             )}
           </View>
         </View>
 
-        {/* Action buttons */}
-        {showActions && (
-          <View style={styles.actions}>
-            <TouchableOpacity
-              style={styles.actionBtn}
-              onPress={() => { setShowActions(false); onEdit(task.id); }}
-            >
-              <Edit3 size={16} color={colors.textSecondary} />
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.actionBtn, styles.actionBtnDanger]}
-              onPress={() => { setShowActions(false); onDelete(task.id); }}
-            >
-              <Trash2 size={16} color={Colors.danger} />
-            </TouchableOpacity>
-          </View>
-        )}
-      </TouchableOpacity>
+        {/* Three-dot action button */}
+        <TouchableOpacity style={styles.dotMenuBtn} onPress={toggleActions} activeOpacity={0.7} testID={`task-menu-${task.id}`}>
+          <Ellipsis size={17} color={showActions ? Colors.gold : colors.textMuted} />
+        </TouchableOpacity>
+      </View>
+
+      {/* Inline action row */}
+      {showActions && (
+        <Animated.View style={[styles.actionRow, { opacity: actionOpacity, transform: [{ translateY: actionTranslateY }] }]}>
+          <TouchableOpacity
+            style={styles.actionBtn}
+            onPress={() => { toggleActions(); onEdit(task.id); }}
+            activeOpacity={0.8}
+          >
+            <Edit3 size={14} color={colors.textSecondary} />
+            <Text style={styles.actionBtnText}>Edit</Text>
+          </TouchableOpacity>
+          <View style={styles.actionDivider} />
+          <TouchableOpacity
+            style={[styles.actionBtn, styles.actionBtnDanger]}
+            onPress={() => { toggleActions(); onDelete(task.id); }}
+            activeOpacity={0.8}
+          >
+            <Trash2 size={14} color={Colors.danger} />
+            <Text style={[styles.actionBtnText, { color: Colors.danger }]}>Delete</Text>
+          </TouchableOpacity>
+        </Animated.View>
+      )}
     </Animated.View>
   );
 }
 
-function FilterTab({
-  label,
-  count,
-  isActive,
-  onPress,
-}: {
-  label: string;
-  count: number;
-  isActive: boolean;
-  onPress: () => void;
-}) {
+// ── Filter Tab ───────────────────────────────────────────────────────────────
+function FilterTab({ label, count, isActive, onPress }: { label: string; count: number; isActive: boolean; onPress: () => void }) {
   const { colors } = useTheme();
-  const styles = useMemo(() => makeStyles(colors), [colors]);
   return (
-    <TouchableOpacity
-      style={[styles.filterTab, isActive && styles.filterTabActive]}
-      onPress={onPress}
-      activeOpacity={0.8}
-    >
-      <Text style={[styles.filterTabText, isActive && styles.filterTabTextActive]}>{label}</Text>
-      {count > 0 && (
-        <View style={[styles.filterBadge, isActive && styles.filterBadgeActive]}>
-          <Text style={[styles.filterBadgeText, isActive && styles.filterBadgeTextActive]}>{count}</Text>
-        </View>
-      )}
+    <TouchableOpacity style={{ alignItems: "center", paddingHorizontal: 4 }} onPress={onPress} activeOpacity={0.8}>
+      <View style={{ flexDirection: "row", alignItems: "center", gap: 6, paddingHorizontal: 12, paddingVertical: 8 }}>
+        <Text style={{ fontSize: 13, fontWeight: "700", color: isActive ? Colors.gold : colors.textMuted }}>{label}</Text>
+        {count > 0 && (
+          <View style={{ backgroundColor: isActive ? Colors.gold : colors.bgTertiary, paddingHorizontal: 6, paddingVertical: 1, borderRadius: 8, minWidth: 20, alignItems: "center" }}>
+            <Text style={{ fontSize: 10, fontWeight: "800", color: isActive ? "#0D1117" : colors.textMuted }}>{count}</Text>
+          </View>
+        )}
+      </View>
+      {/* Active underline */}
+      <View style={{ height: 2, width: "100%", backgroundColor: isActive ? Colors.gold : "transparent", borderRadius: 2 }} />
     </TouchableOpacity>
   );
 }
 
-function CatChip({
-  category,
-  isSelected,
-  onPress,
-}: {
-  category: TaskCategory | "all";
-  isSelected: boolean;
-  onPress: () => void;
-}) {
+// ── Category Chip ────────────────────────────────────────────────────────────
+function CatChip({ category, isSelected, onPress }: { category: TaskCategory | "all"; isSelected: boolean; onPress: () => void }) {
   const { colors } = useTheme();
-  const styles = useMemo(() => makeStyles(colors), [colors]);
   const label = category === "all" ? "All" : categoryConfig[category].label;
   const color = category === "all" ? Colors.gold : categoryConfig[category].color;
   const CatIcon = category === "all" ? null : categoryConfig[category].icon;
-
   return (
     <TouchableOpacity
-      style={[styles.catFilterChip, isSelected && { backgroundColor: color, borderColor: color }]}
+      style={{ flexDirection: "row", alignItems: "center", gap: 5, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20, backgroundColor: isSelected ? color : colors.bgSecondary, borderWidth: 1, borderColor: isSelected ? color : colors.border }}
       onPress={onPress}
       activeOpacity={0.8}
     >
       {CatIcon && <CatIcon size={11} color={isSelected ? "#fff" : color} />}
-      <Text style={[styles.catFilterText, { color: isSelected ? "#fff" : color }]}>{label}</Text>
+      <Text style={{ fontSize: 12, fontWeight: "600", color: isSelected ? "#fff" : color }}>{label}</Text>
     </TouchableOpacity>
   );
 }
 
+// ── Section Header ───────────────────────────────────────────────────────────
+function SectionHeader({ title, count, color }: { title: string; count: number; color: string }) {
+  const { colors } = useTheme();
+  return (
+    <View style={{ flexDirection: "row", alignItems: "center", gap: 10, marginBottom: 10, marginTop: 4 }}>
+      <View style={{ width: 3, height: 14, backgroundColor: color, borderRadius: 2 }} />
+      <Text style={{ fontSize: 12, fontWeight: "700", color: colors.textMuted, letterSpacing: 0.8, textTransform: "uppercase" }}>{title}</Text>
+      <View style={{ backgroundColor: `${color}20`, paddingHorizontal: 7, paddingVertical: 2, borderRadius: 8 }}>
+        <Text style={{ fontSize: 10, fontWeight: "700", color }}>{count}</Text>
+      </View>
+      <View style={{ flex: 1, height: 1, backgroundColor: colors.border }} />
+    </View>
+  );
+}
+
+// ── Main Screen ──────────────────────────────────────────────────────────────
 export default function TasksScreen() {
   const router = useRouter();
   const { tasks, toggleTaskStatus, deleteTask } = useTasks();
@@ -283,27 +354,20 @@ export default function TasksScreen() {
   const handleEdit = useCallback((id: string) => { router.push({ pathname: "/modal", params: { editTaskId: id } }); }, [router]);
   const handleAdd = useCallback(() => { router.push("/modal"); }, [router]);
 
-  const pending = tasks.filter((t) => t.status !== "completed").length;
+  const activeTasks = filteredTasks.filter((t) => t.status !== "completed");
+  const doneTasks = filteredTasks.filter((t) => t.status === "completed");
 
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
       {/* Header */}
       <View style={styles.header}>
         <View style={styles.headerLeft}>
+          <ListChecks size={22} color={Colors.gold} />
           <Text style={styles.headerTitle}>Tasks</Text>
-          {pending > 0 && (
-            <View style={styles.pendingBadge}>
-              <Text style={styles.pendingBadgeText}>{pending}</Text>
-            </View>
-          )}
         </View>
         <View style={styles.headerActions}>
-          <TouchableOpacity
-            style={styles.iconBtn}
-            onPress={() => setShowSearch(!showSearch)}
-            activeOpacity={0.8}
-          >
-            <Search size={19} color={showSearch ? Colors.gold : colors.textSecondary} />
+          <TouchableOpacity style={styles.iconBtn} onPress={() => { setShowSearch(!showSearch); if (showSearch) setSearchQuery(""); }} activeOpacity={0.8}>
+            <Search size={18} color={showSearch ? Colors.gold : colors.textSecondary} />
           </TouchableOpacity>
           <TouchableOpacity style={styles.addBtn} activeOpacity={0.8} onPress={handleAdd}>
             <Plus size={20} color="#0D1117" />
@@ -314,7 +378,7 @@ export default function TasksScreen() {
       {/* Search bar */}
       {showSearch && (
         <View style={styles.searchBar}>
-          <Search size={16} color={colors.textMuted} />
+          <Search size={15} color={colors.textMuted} />
           <TextInput
             style={[styles.searchInput, { outlineWidth: 0 } as any]}
             placeholder="Search tasks…"
@@ -325,70 +389,56 @@ export default function TasksScreen() {
             returnKeyType="search"
           />
           {searchQuery.length > 0 && (
-            <TouchableOpacity onPress={() => setSearchQuery("")}>
-              <View style={styles.clearBtn}>
-                <Text style={styles.clearText}>×</Text>
-              </View>
+            <TouchableOpacity onPress={() => setSearchQuery("")} style={styles.clearBtn}>
+              <Text style={styles.clearText}>×</Text>
             </TouchableOpacity>
           )}
         </View>
       )}
 
-      {/* Filter tabs */}
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        style={styles.filterRow}
-        contentContainerStyle={styles.filterContent}
-      >
-        <FilterTab label="All" count={counts.all} isActive={activeFilter === "all"} onPress={() => setActiveFilter("all")} />
-        <FilterTab label="Today" count={counts.today} isActive={activeFilter === "today"} onPress={() => setActiveFilter("today")} />
-        <FilterTab label="Upcoming" count={counts.upcoming} isActive={activeFilter === "upcoming"} onPress={() => setActiveFilter("upcoming")} />
-        <FilterTab label="Done" count={counts.completed} isActive={activeFilter === "completed"} onPress={() => setActiveFilter("completed")} />
-      </ScrollView>
+      {/* Summary Stats Strip */}
+      {!searchQuery && <SummaryStrip tasks={tasks} />}
+
+      {/* Filter tabs — underline style */}
+      <View style={styles.filterRowWrap}>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterContent}>
+          <FilterTab label="All" count={counts.all} isActive={activeFilter === "all"} onPress={() => setActiveFilter("all")} />
+          <FilterTab label="Today" count={counts.today} isActive={activeFilter === "today"} onPress={() => setActiveFilter("today")} />
+          <FilterTab label="Upcoming" count={counts.upcoming} isActive={activeFilter === "upcoming"} onPress={() => setActiveFilter("upcoming")} />
+          <FilterTab label="Done" count={counts.completed} isActive={activeFilter === "completed"} onPress={() => setActiveFilter("completed")} />
+        </ScrollView>
+        <View style={{ height: 1, backgroundColor: colors.border }} />
+      </View>
 
       {/* Category chips */}
-      <View style={styles.catRow}>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.catContent}>
-          <CatChip category="all" isSelected={selectedCategory === "all"} onPress={() => setSelectedCategory("all")} />
-          {(Object.keys(categoryConfig) as TaskCategory[]).map((cat) => (
-            <CatChip key={cat} category={cat} isSelected={selectedCategory === cat} onPress={() => setSelectedCategory(cat)} />
-          ))}
-        </ScrollView>
-      </View>
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flexShrink: 0, marginTop: 10 }} contentContainerStyle={{ paddingHorizontal: 16, gap: 8, paddingBottom: 10 }}>
+        <CatChip category="all" isSelected={selectedCategory === "all"} onPress={() => setSelectedCategory("all")} />
+        {(Object.keys(categoryConfig) as TaskCategory[]).map((cat) => (
+          <CatChip key={cat} category={cat} isSelected={selectedCategory === cat} onPress={() => setSelectedCategory(cat)} />
+        ))}
+      </ScrollView>
 
       {/* Task list */}
       <ScrollView style={styles.list} showsVerticalScrollIndicator={false} contentContainerStyle={styles.listContent}>
         {filteredTasks.length === 0 ? (
-          <View style={styles.empty}>
-            <View style={styles.emptyIcon}>
-              <CheckCircle2 size={36} color={colors.textMuted} />
-            </View>
-            <Text style={styles.emptyTitle}>
-              {searchQuery ? "No results" : activeFilter === "completed" ? "No completed tasks" : "All clear"}
-            </Text>
-            <Text style={styles.emptySubtitle}>
-              {searchQuery ? "Try different keywords" : "Add a task to get started"}
-            </Text>
-            {!searchQuery && (
-              <TouchableOpacity style={styles.emptyBtn} onPress={handleAdd} activeOpacity={0.8}>
-                <Plus size={16} color={Colors.gold} />
-                <Text style={styles.emptyBtnText}>New Task</Text>
-              </TouchableOpacity>
-            )}
-          </View>
+          <EmptyState
+            searchQuery={searchQuery}
+            activeFilter={activeFilter}
+            onAdd={handleAdd}
+            colors={colors}
+          />
         ) : (
           <>
-            {activeFilter !== "completed" && filteredTasks.some((t) => t.status !== "completed") && (
-              <Text style={styles.listSection}>Active</Text>
+            {activeTasks.length > 0 && activeFilter !== "completed" && (
+              <SectionHeader title="Active" count={activeTasks.length} color={Colors.blue} />
             )}
-            {filteredTasks.filter((t) => t.status !== "completed").map((task) => (
+            {activeTasks.map((task) => (
               <TaskCard key={task.id} task={task} onToggle={handleToggle} onDelete={handleDelete} onEdit={handleEdit} />
             ))}
-            {activeFilter !== "completed" && filteredTasks.some((t) => t.status === "completed") && (
-              <Text style={[styles.listSection, { marginTop: 20 }]}>Completed</Text>
+            {doneTasks.length > 0 && activeFilter !== "completed" && (
+              <SectionHeader title="Completed" count={doneTasks.length} color={Colors.success} />
             )}
-            {filteredTasks.filter((t) => t.status === "completed").map((task) => (
+            {(activeFilter === "completed" ? filteredTasks : doneTasks).map((task) => (
               <TaskCard key={task.id} task={task} onToggle={handleToggle} onDelete={handleDelete} onEdit={handleEdit} />
             ))}
           </>
@@ -398,79 +448,112 @@ export default function TasksScreen() {
   );
 }
 
+// ── Empty State ──────────────────────────────────────────────────────────────
+function EmptyState({ searchQuery, activeFilter, onAdd, colors }: { searchQuery: string; activeFilter: FilterTab; onAdd: () => void; colors: any }) {
+  const pulseAnim = useRef(new Animated.Value(0.95)).current;
+  useEffect(() => {
+    Animated.loop(Animated.sequence([
+      Animated.timing(pulseAnim, { toValue: 1.05, duration: 1000, useNativeDriver: true }),
+      Animated.timing(pulseAnim, { toValue: 0.95, duration: 1000, useNativeDriver: true }),
+    ])).start();
+  }, []);
+
+  const isSearch = !!searchQuery;
+  const isDone = activeFilter === "completed";
+
+  const title = isSearch ? "No results found" : isDone ? "Nothing completed yet" : "All clear!";
+  const subtitle = isSearch
+    ? `No tasks match "${searchQuery}"`
+    : isDone
+    ? "Complete your first task to see it here"
+    : "You're all caught up — add a new task to stay on track";
+
+  return (
+    <View style={{ paddingTop: 60, alignItems: "center", gap: 12 }}>
+      <Animated.View style={{ transform: [{ scale: pulseAnim }], width: 80, height: 80, borderRadius: 24, backgroundColor: `${Colors.gold}12`, justifyContent: "center", alignItems: "center", borderWidth: 1.5, borderStyle: "dashed", borderColor: `${Colors.gold}30` }}>
+        {isSearch ? <Search size={32} color={colors.textMuted} /> : isDone ? <CircleCheck size={32} color={Colors.success} /> : <Sparkles size={32} color={Colors.gold} />}
+      </Animated.View>
+      <Text style={{ fontSize: 18, fontWeight: "700", color: colors.textPrimary, textAlign: "center" }}>{title}</Text>
+      <Text style={{ fontSize: 13, color: colors.textMuted, textAlign: "center", lineHeight: 19, maxWidth: 240 }}>{subtitle}</Text>
+      {!isSearch && !isDone && (
+        <TouchableOpacity
+          style={{ flexDirection: "row", alignItems: "center", gap: 8, marginTop: 8, backgroundColor: Colors.gold, paddingHorizontal: 22, paddingVertical: 12, borderRadius: 22, shadowColor: Colors.gold, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 8, elevation: 6 }}
+          onPress={onAdd}
+          activeOpacity={0.85}
+        >
+          <Plus size={17} color="#0D1117" />
+          <Text style={{ fontSize: 14, fontWeight: "700", color: "#0D1117" }}>Add Task</Text>
+        </TouchableOpacity>
+      )}
+    </View>
+  );
+}
+
+// ── Styles ───────────────────────────────────────────────────────────────────
 const makeStyles = (colors: AppColors) => StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.bgPrimary },
 
-  header: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingHorizontal: 20, paddingTop: 14, paddingBottom: 10 },
+  header: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingHorizontal: 20, paddingTop: 14, paddingBottom: 12 },
   headerLeft: { flexDirection: "row", alignItems: "center", gap: 10 },
   headerTitle: { fontSize: 26, fontWeight: "800", color: colors.textPrimary, letterSpacing: -0.5 },
-  pendingBadge: { backgroundColor: `${Colors.gold}20`, paddingHorizontal: 8, paddingVertical: 3, borderRadius: 10 },
-  pendingBadgeText: { fontSize: 12, fontWeight: "700", color: Colors.gold },
   headerActions: { flexDirection: "row", gap: 10, alignItems: "center" },
   iconBtn: { width: 42, height: 42, borderRadius: 13, backgroundColor: colors.bgSecondary, justifyContent: "center", alignItems: "center", borderWidth: 1, borderColor: colors.border },
-  addBtn: {
-    width: 42, height: 42, borderRadius: 13, backgroundColor: Colors.gold,
-    justifyContent: "center", alignItems: "center",
-    shadowColor: Colors.gold, shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.35, shadowRadius: 6, elevation: 6,
-  },
+  addBtn: { width: 42, height: 42, borderRadius: 13, backgroundColor: Colors.gold, justifyContent: "center", alignItems: "center", shadowColor: Colors.gold, shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.35, shadowRadius: 6, elevation: 6 },
 
-  searchBar: { flexDirection: "row", alignItems: "center", backgroundColor: colors.bgSecondary, marginHorizontal: 20, marginBottom: 10, paddingHorizontal: 14, paddingVertical: 6, borderRadius: 14, borderWidth: 1, borderColor: Colors.gold, gap: 8 },
-  searchInput: { flex: 1, height: 36, color: colors.textPrimary, fontSize: 15 },
-  clearBtn: { width: 20, height: 20, borderRadius: 10, backgroundColor: colors.bgTertiary, justifyContent: "center", alignItems: "center" },
-  clearText: { color: colors.textMuted, fontSize: 14, lineHeight: 18 },
+  searchBar: { flexDirection: "row", alignItems: "center", backgroundColor: colors.bgSecondary, marginHorizontal: 16, marginBottom: 12, paddingHorizontal: 14, paddingVertical: 4, borderRadius: 14, borderWidth: 1.5, borderColor: Colors.gold, gap: 8 },
+  searchInput: { flex: 1, height: 38, color: colors.textPrimary, fontSize: 15 },
+  clearBtn: { width: 22, height: 22, borderRadius: 11, backgroundColor: colors.bgTertiary, justifyContent: "center", alignItems: "center" },
+  clearText: { color: colors.textMuted, fontSize: 15, lineHeight: 20 },
 
-  filterRow: { flexShrink: 0 },
-  filterContent: { paddingHorizontal: 20, paddingBottom: 4, gap: 8 },
-  filterTab: { flexDirection: "row", alignItems: "center", gap: 6, paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20, backgroundColor: colors.bgSecondary, borderWidth: 1, borderColor: colors.border },
-  filterTabActive: { backgroundColor: Colors.gold, borderColor: Colors.gold },
-  filterTabText: { fontSize: 13, fontWeight: "600", color: colors.textSecondary },
-  filterTabTextActive: { color: "#0D1117" },
-  filterBadge: { backgroundColor: colors.bgTertiary, paddingHorizontal: 6, paddingVertical: 1, borderRadius: 8 },
-  filterBadgeActive: { backgroundColor: "rgba(0,0,0,0.2)" },
-  filterBadgeText: { fontSize: 10, fontWeight: "700", color: colors.textMuted },
-  filterBadgeTextActive: { color: "#0D1117" },
-
-  catRow: { marginTop: 6 },
-  catContent: { paddingHorizontal: 20, gap: 8, paddingBottom: 10 },
-  catFilterChip: { flexDirection: "row", alignItems: "center", gap: 5, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 16, backgroundColor: colors.bgSecondary, borderWidth: 1, borderColor: colors.border },
-  catFilterText: { fontSize: 12, fontWeight: "600" },
+  filterRowWrap: { flexShrink: 0 },
+  filterContent: { paddingHorizontal: 16, gap: 4 },
 
   list: { flex: 1 },
-  listContent: { paddingHorizontal: 16, paddingBottom: 110 },
-  listSection: { fontSize: 12, fontWeight: "700", color: colors.textMuted, letterSpacing: 0.8, textTransform: "uppercase", marginBottom: 8, marginTop: 4, paddingLeft: 4 },
+  listContent: { paddingHorizontal: 16, paddingBottom: 110, paddingTop: 4 },
 
   taskCard: {
-    flexDirection: "row", alignItems: "center",
-    backgroundColor: colors.bgSecondary, borderRadius: 16, marginBottom: 10,
-    borderWidth: 1, borderColor: colors.border, overflow: "hidden",
-    shadowColor: "#000", shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.06, shadowRadius: 4, elevation: 2,
+    flexDirection: "row",
+    alignItems: "center",
+    borderRadius: 18,
+    borderWidth: 1.5,
+    overflow: "hidden",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 6,
+    elevation: 3,
   },
-  taskCardDone: { opacity: 0.55 },
-  taskCardActive: { borderColor: `${Colors.gold}50` },
+  taskCardDone: { opacity: 0.52 },
 
-  priorityBar: { width: 4, alignSelf: "stretch", minHeight: 62 },
+  priorityBar: { width: 4, alignSelf: "stretch", minHeight: 66 },
+
   checkboxWrap: { padding: 14 },
-  checkbox: { width: 22, height: 22, borderRadius: 7, borderWidth: 2 },
+  checkbox: { width: 24, height: 24, borderRadius: 8, borderWidth: 2, justifyContent: "center", alignItems: "center" },
+  checkboxInner: { width: 12, height: 12, borderRadius: 4 },
 
-  taskContent: { flex: 1, paddingVertical: 12, paddingRight: 12 },
-  taskTitle: { fontSize: 14, fontWeight: "600", color: colors.textPrimary, marginBottom: 6 },
-  taskTitleDone: { textDecorationLine: "line-through", color: colors.textMuted },
-  taskMeta: { flexDirection: "row", alignItems: "center", gap: 8, flexWrap: "wrap" },
-  catChip: { flexDirection: "row", alignItems: "center", gap: 4, paddingHorizontal: 7, paddingVertical: 3, borderRadius: 8 },
-  catText: { fontSize: 11, fontWeight: "600" },
-  dateChip: { flexDirection: "row", alignItems: "center", gap: 4 },
-  dateChipOverdue: {},
-  dateText: { fontSize: 11, color: colors.textMuted },
-  aiBadge: { width: 18, height: 18, borderRadius: 5, backgroundColor: `${Colors.gold}20`, justifyContent: "center", alignItems: "center" },
+  taskContent: { flex: 1, paddingVertical: 13, paddingRight: 8 },
+  taskTitle: { fontSize: 14, fontWeight: "700", color: colors.textPrimary, marginBottom: 3 },
+  taskTitleDone: { textDecorationLine: "line-through", color: colors.textMuted, fontWeight: "500" },
+  taskDesc: { fontSize: 12, color: colors.textSecondary, marginBottom: 6, lineHeight: 16, fontStyle: "italic" },
+  taskMeta: { flexDirection: "row", alignItems: "center", gap: 6, flexWrap: "wrap" },
+  metaChip: { flexDirection: "row", alignItems: "center", gap: 4, paddingHorizontal: 7, paddingVertical: 3, borderRadius: 8 },
+  metaChipText: { fontSize: 10, fontWeight: "600" },
 
-  actions: { flexDirection: "row", gap: 8, paddingRight: 12 },
-  actionBtn: { width: 36, height: 36, borderRadius: 10, backgroundColor: colors.bgTertiary, justifyContent: "center", alignItems: "center" },
-  actionBtnDanger: { backgroundColor: `${Colors.danger}12` },
+  dotMenuBtn: { width: 40, height: 40, justifyContent: "center", alignItems: "center", marginRight: 4 },
 
-  empty: { paddingTop: 80, alignItems: "center", gap: 8 },
-  emptyIcon: { width: 72, height: 72, borderRadius: 20, backgroundColor: colors.bgSecondary, justifyContent: "center", alignItems: "center", marginBottom: 8, borderWidth: 1, borderColor: colors.border },
-  emptyTitle: { fontSize: 17, fontWeight: "700", color: colors.textPrimary },
-  emptySubtitle: { fontSize: 13, color: colors.textMuted, textAlign: "center" },
-  emptyBtn: { flexDirection: "row", alignItems: "center", gap: 8, marginTop: 12, backgroundColor: `${Colors.gold}15`, paddingHorizontal: 18, paddingVertical: 10, borderRadius: 20 },
-  emptyBtnText: { fontSize: 14, fontWeight: "600", color: Colors.gold },
+  actionRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: colors.bgSecondary,
+    borderRadius: 14,
+    marginTop: -4,
+    marginBottom: 4,
+    borderWidth: 1,
+    borderColor: colors.border,
+    overflow: "hidden",
+  },
+  actionBtn: { flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 7, paddingVertical: 11 },
+  actionBtnText: { fontSize: 13, fontWeight: "600", color: colors.textSecondary },
+  actionBtnDanger: {},
+  actionDivider: { width: 1, height: 28, backgroundColor: colors.border },
 });
