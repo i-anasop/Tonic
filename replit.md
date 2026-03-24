@@ -96,6 +96,9 @@ workspace/
 - `generateFallbackInsights`: all fallback insight objects now include `metric`, `trend`, `action` fields
 - `agent.tsx`: removed unused `StreamingText` component (dead code)
 - `+not-found.tsx`: removed leftover `// template` comment
+- **DB schema migration**: `initDB()` now runs `ALTER TABLE ... ADD COLUMN IF NOT EXISTS` after `CREATE TABLE IF NOT EXISTS` to safely add new columns (`ai_suggested`, `stake_amount`, `stake_tx_hash`, etc.) to existing databases — fixes task creation failing with "column does not exist"
+- **Dynamic API URL**: `frontend/constants/api.ts` now uses `window.location.origin` at runtime instead of a hardcoded dev domain, making the app work correctly in both dev and production deployments
+- **TonConnect manifest domain**: Now resolves using `REPLIT_DOMAINS` (production), falling back to `REPLIT_DEV_DOMAIN`, then `req.get("host")` — works correctly in all environments
 
 ## Running the App
 - **Backend**: `node backend/index.mjs` (workflow: "Start application", port 3000)

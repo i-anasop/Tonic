@@ -67,11 +67,24 @@ async function initDB() {
       updated_at TIMESTAMP DEFAULT NOW()
     );
   `);
+
+  await db.query(`
+    ALTER TABLE tasks ADD COLUMN IF NOT EXISTS ai_suggested BOOLEAN DEFAULT FALSE;
+    ALTER TABLE tasks ADD COLUMN IF NOT EXISTS stake_amount NUMERIC;
+    ALTER TABLE tasks ADD COLUMN IF NOT EXISTS stake_tx_hash TEXT;
+    ALTER TABLE tasks ADD COLUMN IF NOT EXISTS completed_at TIMESTAMP;
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS ton_proof TEXT;
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS verified_at TIMESTAMP;
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT NOW();
+  `);
+
   console.log("Database initialized");
 }
 
 app.get("/tonconnect-manifest.json", (req, res) => {
-  const domain = process.env.REPLIT_DEV_DOMAIN || "localhost";
+  const productionDomains = process.env.REPLIT_DOMAINS;
+  const devDomain = process.env.REPLIT_DEV_DOMAIN;
+  const domain = (productionDomains ? productionDomains.split(",")[0].trim() : null) || devDomain || req.get("host") || "localhost";
   res.json({
     url: `https://${domain}`,
     name: "Tonic AI",
