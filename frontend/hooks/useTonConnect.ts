@@ -183,7 +183,7 @@ export const useTonConnect = (): UseTonConnectReturn => {
       try {
         const result = await sendTransaction({
           to: ACHIEVEMENT_CONTRACT,
-          amount: "50000000",
+          amount: "10000000",
           comment,
         });
         return result;

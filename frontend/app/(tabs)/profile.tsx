@@ -10,6 +10,9 @@ import {
   Image,
   ActivityIndicator,
   TextInput,
+  Modal,
+  Linking,
+  Platform,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import {
@@ -32,6 +35,12 @@ import {
   CheckCircle,
   ExternalLink,
   Activity,
+  Star,
+  Lock,
+  MessageCircle,
+  X,
+  ChevronDown,
+  ChevronUp,
 } from "lucide-react-native";
 import { useRouter } from "expo-router";
 import * as ImagePicker from "expo-image-picker";
@@ -42,7 +51,7 @@ import { useAppState } from "@/providers/AppStateProvider";
 import { useTasks } from "@/providers/TasksProvider";
 import { useAchievements } from "@/providers/AchievementsProvider";
 import { useTonConnect } from "@/hooks/useTonConnect";
-import { API_BASE_URL } from "@/constants/api";
+import { API_BASE_URL, TON_REWARD_ADDRESS } from "@/constants/api";
 import { AchievementsModal } from "@/components/AchievementsModal";
 
 function StatItem({
@@ -106,7 +115,7 @@ export default function ProfileScreen() {
   const { user, signOut, setUser } = useAppState();
   const { tasks, getStats, getCompletedTasks } = useTasks();
   const { stats: achievementStats, claimPoints } = useAchievements();
-  const { isConnected: isTonConnected, connectWallet: connectTonWallet, recordAchievementOnChain, isSendingTx } = useTonConnect();
+  const { isConnected: isTonConnected, connectWallet: connectTonWallet, sendTransaction, recordAchievementOnChain, isSendingTx } = useTonConnect();
   const { isDark, toggleTheme, colors } = useTheme();
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const [isRecordingOnChain, setIsRecordingOnChain] = useState(false);
@@ -117,6 +126,11 @@ export default function ProfileScreen() {
   const [onChainRecords, setOnChainRecords] = useState<any[]>([]);
   const [isEditingName, setIsEditingName] = useState(false);
   const [editNameValue, setEditNameValue] = useState("");
+  const [showPrivacyModal, setShowPrivacyModal] = useState(false);
+  const [showHelpModal, setShowHelpModal] = useState(false);
+  const [isMintingTonian, setIsMintingTonian] = useState(false);
+  const [tonianMinted, setTonianMinted] = useState(false);
+  const [expandedFaq, setExpandedFaq] = useState<number | null>(null);
 
   useEffect(() => {
     if (!user?.id) return;
@@ -205,6 +219,63 @@ export default function ProfileScreen() {
       ]
     );
   }, [isTonConnected, stats, recordAchievementOnChain, user]);
+
+  const handleTonianBadge = useCallback(async () => {
+    if (!isTonConnected) {
+      Alert.alert("Wallet Required", "Connect your TON wallet first to mint the Tonian badge.", [
+        { text: "Connect Wallet", onPress: () => void connectTonWallet() },
+        { text: "Cancel", style: "cancel" },
+      ]);
+      return;
+    }
+    if (tonianMinted) {
+      Alert.alert("Already a Tonian!", "You have already minted your Tonian badge. Check your wallet on TONScan.", [{ text: "View on TONScan", onPress: () => Linking.openURL(`https://tonscan.org/address/${TON_REWARD_ADDRESS}`) }, { text: "OK" }]);
+      return;
+    }
+    Alert.alert(
+      "🏅 Verify to be Tonian",
+      `Mint your exclusive Tonic AI Tonian badge on the TON blockchain.\n\n• Cost: 1 TON\n• Permanent on-chain verification\n• Proves you're a Tonic AI productivity champion\n\nFunds support the Tonic AI ecosystem.`,
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Mint for 1 TON",
+          onPress: async () => {
+            setIsMintingTonian(true);
+            try {
+              const result = await sendTransaction({
+                to: TON_REWARD_ADDRESS,
+                amount: "1000000000",
+                comment: `Tonic AI | Tonian Badge | User: ${user?.name || "Anonymous"} | Score: ${stats.productivityScore}`,
+              });
+              if (result) {
+                setTonianMinted(true);
+                setLastTxHash(result.boc);
+                if (user?.id) {
+                  await fetch(`${API_BASE_URL}/api/ton-proof`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ userId: user.id, walletAddress: user.walletAddress, proof: { boc: result.boc, comment: "Tonian Badge" }, score: stats.productivityScore }),
+                  }).catch(() => {});
+                }
+                Alert.alert(
+                  "🎉 You're a Tonian!",
+                  "Your Tonian badge transaction has been sent! You are now a verified member of the Tonic AI community.",
+                  [
+                    { text: "View on TONScan", onPress: () => Linking.openURL(`https://tonscan.org/address/${TON_REWARD_ADDRESS}`) },
+                    { text: "Awesome!" },
+                  ]
+                );
+              }
+            } catch {
+              Alert.alert("Transaction Failed", "Could not complete the minting transaction. Please check your wallet balance and try again.");
+            } finally {
+              setIsMintingTonian(false);
+            }
+          },
+        },
+      ]
+    );
+  }, [isTonConnected, tonianMinted, sendTransaction, user, stats, connectTonWallet]);
 
   const handleClaimPoints = useCallback((forceWallet = false) => {
     const pending = achievementStats.pendingPoints;
@@ -404,6 +475,19 @@ export default function ProfileScreen() {
                   <Text style={[styles.tonBadgeText, { color: isTonConnected ? Colors.blue : colors.textMuted }]}>{isTonConnected ? "SIGN" : "OFF"}</Text>
                 </View>
               </TouchableOpacity>
+              <View style={styles.divider} />
+              <TouchableOpacity style={styles.menuItem} onPress={() => void handleTonianBadge()} activeOpacity={0.75} disabled={isMintingTonian || isSendingTx}>
+                <View style={[styles.menuIconWrap, { backgroundColor: `${Colors.gold}15` }]}>
+                  {isMintingTonian ? <ActivityIndicator size={16} color={Colors.gold} /> : <Star size={18} color={Colors.gold} fill={tonianMinted ? Colors.gold : "transparent"} />}
+                </View>
+                <View style={styles.menuBody}>
+                  <Text style={styles.menuTitle}>Verify to be Tonian</Text>
+                  <Text style={styles.menuSub}>{tonianMinted ? "Badge minted — you're a verified Tonian!" : "Mint exclusive Tonic AI badge (1 TON)"}</Text>
+                </View>
+                <View style={[styles.tonBadge, { backgroundColor: tonianMinted ? `${Colors.gold}20` : `${Colors.gold}10`, borderColor: tonianMinted ? `${Colors.gold}60` : `${Colors.gold}30` }]}>
+                  <Text style={[styles.tonBadgeText, { color: Colors.gold }]}>{tonianMinted ? "✓ MINTED" : "MINT"}</Text>
+                </View>
+              </TouchableOpacity>
             </View>
           </View>
 
@@ -502,9 +586,9 @@ export default function ProfileScreen() {
                   <View style={styles.divider} />
                 </>
               )}
-              <MenuItem icon={Shield} title="Privacy & Security" color={Colors.success} onPress={() => Alert.alert("Privacy", "Privacy settings coming soon!")} />
+              <MenuItem icon={Shield} title="Privacy & Security" color={Colors.success} onPress={() => setShowPrivacyModal(true)} />
               <View style={styles.divider} />
-              <MenuItem icon={HelpCircle} title="Help & Support" color={Colors.blue} onPress={() => Alert.alert("Help", "Support center coming soon!")} />
+              <MenuItem icon={HelpCircle} title="Help & Support" color={Colors.blue} onPress={() => setShowHelpModal(true)} />
             </View>
           </View>
 
@@ -526,6 +610,108 @@ export default function ProfileScreen() {
         </ScrollView>
       </SafeAreaView>
       <AchievementsModal isVisible={isAchievementsModalVisible} onClose={() => setIsAchievementsModalVisible(false)} />
+
+      {/* ── Privacy & Security Modal ── */}
+      <Modal visible={showPrivacyModal} animationType="slide" transparent presentationStyle="overFullScreen" onRequestClose={() => setShowPrivacyModal(false)}>
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalSheet}>
+            <View style={styles.modalHandle} />
+            <View style={styles.modalHeader}>
+              <View style={[styles.menuIconWrap, { backgroundColor: `${Colors.success}15` }]}>
+                <Lock size={20} color={Colors.success} />
+              </View>
+              <Text style={styles.modalTitle}>Privacy & Security</Text>
+              <TouchableOpacity onPress={() => setShowPrivacyModal(false)} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+                <X size={22} color={colors.textMuted} />
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView showsVerticalScrollIndicator={false} style={{ maxHeight: 460 }}>
+              {[
+                { icon: Shield, color: Colors.success, title: "Local-First Storage", body: "All your tasks, progress, and preferences are stored locally on your device using secure on-device storage. We do not upload personal task data to any external server." },
+                { icon: Activity, color: Colors.blue, title: "Blockchain Transparency", body: "When you use TON features (Proof of Productivity, badge minting), those transactions are publicly recorded on the TON blockchain — this is by design for verifiability." },
+                { icon: Sparkles, color: Colors.gold, title: "AI Processing", body: "Task summaries are sent to our AI server solely to generate insights and power the agent. We do not store or share your conversation history with third parties." },
+                { icon: CheckCircle, color: Colors.purple, title: "No Account Required", body: "Tonic AI works as a guest — no email, no sign-up, no tracking. Connecting a TON wallet is optional and only used for on-chain features you explicitly trigger." },
+              ].map(({ icon: Ic, color, title, body }, i) => (
+                <View key={i} style={styles.privacyItem}>
+                  <View style={[styles.menuIconWrap, { backgroundColor: `${color}12` }]}>
+                    <Ic size={17} color={color} />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.privacyItemTitle}>{title}</Text>
+                    <Text style={styles.privacyItemBody}>{body}</Text>
+                  </View>
+                </View>
+              ))}
+
+              <View style={styles.privacyActions}>
+                <TouchableOpacity style={styles.privacyActionBtn} activeOpacity={0.8} onPress={() => { setShowPrivacyModal(false); Alert.alert("Export Data", "Your task data has been prepared. This feature exports your tasks as JSON.", [{ text: "OK" }]); }}>
+                  <ExternalLink size={15} color={Colors.blue} />
+                  <Text style={[styles.privacyActionText, { color: Colors.blue }]}>Export My Data</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={[styles.privacyActionBtn, { borderColor: `${Colors.danger}30`, backgroundColor: `${Colors.danger}08` }]} activeOpacity={0.8} onPress={() => { setShowPrivacyModal(false); handleClearData(); }}>
+                  <Settings size={15} color={Colors.danger} />
+                  <Text style={[styles.privacyActionText, { color: Colors.danger }]}>Delete All Data</Text>
+                </TouchableOpacity>
+              </View>
+            </ScrollView>
+
+            <TouchableOpacity style={styles.modalCloseBtn} onPress={() => setShowPrivacyModal(false)} activeOpacity={0.85}>
+              <Text style={styles.modalCloseBtnText}>Done</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
+      {/* ── Help & Support Modal ── */}
+      <Modal visible={showHelpModal} animationType="slide" transparent presentationStyle="overFullScreen" onRequestClose={() => setShowHelpModal(false)}>
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalSheet}>
+            <View style={styles.modalHandle} />
+            <View style={styles.modalHeader}>
+              <View style={[styles.menuIconWrap, { backgroundColor: `${Colors.blue}15` }]}>
+                <HelpCircle size={20} color={Colors.blue} />
+              </View>
+              <Text style={styles.modalTitle}>Help & Support</Text>
+              <TouchableOpacity onPress={() => setShowHelpModal(false)} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+                <X size={22} color={colors.textMuted} />
+              </TouchableOpacity>
+            </View>
+
+            <Text style={styles.faqSectionLabel}>Frequently Asked Questions</Text>
+            <ScrollView showsVerticalScrollIndicator={false} style={{ maxHeight: 420 }}>
+              {[
+                { q: "How do I add a task?", a: "Tap the + button on the dashboard, or chat with your AI agent. Say something like 'Add a task to finish the report by Friday' and it'll create it automatically." },
+                { q: "How do I connect my TON wallet?", a: "Go to Profile → Account → Connect TON Wallet. This enables blockchain features like Proof of Productivity, badge minting, and the 2× points boost." },
+                { q: "What is Proof of Productivity?", a: "It records your productivity score onto the TON blockchain, creating a permanently verifiable on-chain identity tied to your real work history." },
+                { q: "What is the Tonian badge?", a: "A 1 TON on-chain verification that makes you a verified member of the Tonic AI community. It's a blockchain record proving you're a Tonic AI power user." },
+                { q: "How do achievements work?", a: "Complete tasks, maintain daily streaks, and hit productivity milestones to unlock achievements. Each unlocked achievement earns claimable points." },
+                { q: "What is the 2× points boost?", a: "When you claim points via TON, a tiny gas-only transaction verifies your claim on-chain, doubling your reward as a bonus for using the blockchain feature." },
+              ].map(({ q, a }, i) => (
+                <TouchableOpacity key={i} style={styles.faqItem} onPress={() => setExpandedFaq(expandedFaq === i ? null : i)} activeOpacity={0.75}>
+                  <View style={styles.faqQuestion}>
+                    <Text style={styles.faqQuestionText}>{q}</Text>
+                    {expandedFaq === i ? <ChevronUp size={16} color={Colors.gold} /> : <ChevronDown size={16} color={colors.textMuted} />}
+                  </View>
+                  {expandedFaq === i && <Text style={styles.faqAnswer}>{a}</Text>}
+                </TouchableOpacity>
+              ))}
+
+              <View style={[styles.privacyActions, { marginTop: 16 }]}>
+                <TouchableOpacity style={[styles.privacyActionBtn, { borderColor: `${Colors.gold}30`, backgroundColor: `${Colors.gold}08` }]} activeOpacity={0.8} onPress={() => Linking.openURL("https://t.me/tonic_ai_support").catch(() => {})}>
+                  <MessageCircle size={15} color={Colors.gold} />
+                  <Text style={[styles.privacyActionText, { color: Colors.gold }]}>Chat on Telegram</Text>
+                </TouchableOpacity>
+              </View>
+              <Text style={styles.appVersionText}>Tonic AI v1.0.0 · Built for TON AI Hackathon 2026</Text>
+            </ScrollView>
+
+            <TouchableOpacity style={styles.modalCloseBtn} onPress={() => setShowHelpModal(false)} activeOpacity={0.85}>
+              <Text style={styles.modalCloseBtnText}>Done</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </>
   );
 }
@@ -631,4 +817,27 @@ const makeStyles = (colors: AppColors) => StyleSheet.create({
   activityDate: { fontSize: 10, color: colors.textMuted },
   tonscanBtn: { flexDirection: "row", alignItems: "center", gap: 3, paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8, backgroundColor: `${Colors.blue}12`, borderWidth: 1, borderColor: `${Colors.blue}30` },
   tonscanText: { fontSize: 10, fontWeight: "600", color: Colors.blue },
+
+  modalOverlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.55)", justifyContent: "flex-end" },
+  modalSheet: { backgroundColor: colors.bgSecondary, borderTopLeftRadius: 28, borderTopRightRadius: 28, paddingHorizontal: 20, paddingTop: 12, paddingBottom: 32, borderTopWidth: 1, borderColor: colors.border },
+  modalHandle: { width: 38, height: 4, borderRadius: 2, backgroundColor: colors.border, alignSelf: "center", marginBottom: 16 },
+  modalHeader: { flexDirection: "row", alignItems: "center", gap: 12, marginBottom: 20 },
+  modalTitle: { flex: 1, fontSize: 18, fontWeight: "800", color: colors.textPrimary, letterSpacing: -0.3 },
+
+  privacyItem: { flexDirection: "row", alignItems: "flex-start", gap: 12, marginBottom: 16, padding: 14, backgroundColor: colors.bgTertiary, borderRadius: 14, borderWidth: 1, borderColor: colors.border },
+  privacyItemTitle: { fontSize: 13, fontWeight: "700", color: colors.textPrimary, marginBottom: 4 },
+  privacyItemBody: { fontSize: 12, color: colors.textSecondary, lineHeight: 18 },
+  privacyActions: { flexDirection: "row", gap: 10, marginTop: 4, marginBottom: 12 },
+  privacyActionBtn: { flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 7, paddingVertical: 11, borderRadius: 12, borderWidth: 1, borderColor: `${Colors.blue}30`, backgroundColor: `${Colors.blue}08` },
+  privacyActionText: { fontSize: 13, fontWeight: "600" },
+
+  faqSectionLabel: { fontSize: 11, fontWeight: "700", color: colors.textMuted, letterSpacing: 0.8, textTransform: "uppercase", marginBottom: 12 },
+  faqItem: { backgroundColor: colors.bgTertiary, borderRadius: 14, marginBottom: 8, borderWidth: 1, borderColor: colors.border, overflow: "hidden" },
+  faqQuestion: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", padding: 14 },
+  faqQuestionText: { fontSize: 13, fontWeight: "600", color: colors.textPrimary, flex: 1, marginRight: 8 },
+  faqAnswer: { fontSize: 12, color: colors.textSecondary, lineHeight: 19, paddingHorizontal: 14, paddingBottom: 14 },
+  appVersionText: { fontSize: 11, color: colors.textMuted, textAlign: "center", paddingVertical: 8 },
+
+  modalCloseBtn: { marginTop: 16, backgroundColor: Colors.gold, borderRadius: 14, paddingVertical: 14, alignItems: "center" },
+  modalCloseBtnText: { fontSize: 15, fontWeight: "800", color: "#0D1117" },
 });

@@ -110,6 +110,18 @@ function ActionBubble({ action }: { action: AgentAction }) {
   return null;
 }
 
+// ── Blinking Cursor ──────────────────────────────────────────────────────────
+function BlinkingCursor() {
+  const opacity = useRef(new Animated.Value(1)).current;
+  useEffect(() => {
+    Animated.loop(Animated.sequence([
+      Animated.timing(opacity, { toValue: 0, duration: 450, useNativeDriver: true }),
+      Animated.timing(opacity, { toValue: 1, duration: 450, useNativeDriver: true }),
+    ])).start();
+  }, []);
+  return <Animated.Text style={{ opacity, color: Colors.gold, fontSize: 15, lineHeight: 21 }}>▍</Animated.Text>;
+}
+
 // ── Markdown renderer ────────────────────────────────────────────────────────
 function renderInline(text: string): React.ReactNode[] {
   const parts = text.split(/(\*\*[^*]+\*\*|\*[^*]+\*)/);
@@ -159,7 +171,7 @@ function MarkdownText({ text, style, animate }: { text: string; style?: object; 
 }
 
 // ── Message Bubble ───────────────────────────────────────────────────────────
-function MessageBubble({ message }: { message: AgentMessage }) {
+function MessageBubble({ message, isStreaming }: { message: AgentMessage; isStreaming?: boolean }) {
   const { colors } = useTheme();
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const isUser = message.role === "user";
@@ -199,7 +211,10 @@ function MessageBubble({ message }: { message: AgentMessage }) {
         {isUser ? (
           <Text style={styles.userText}>{message.content}</Text>
         ) : (
-          <MarkdownText text={message.content} style={styles.aiText} animate={message.isNew} />
+          <View style={{ gap: 0 }}>
+            <MarkdownText text={message.content} style={styles.aiText} animate={message.isNew} />
+            {isStreaming && message.content.length > 0 && <BlinkingCursor />}
+          </View>
         )}
         {message.action && <ActionBubble action={message.action} />}
       </View>
@@ -229,6 +244,7 @@ export default function AgentScreen() {
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [isListening, setIsListening] = useState(false);
+  const [streamingMsgId, setStreamingMsgId] = useState<string | null>(null);
   const scrollRef = useRef<ScrollView>(null);
   const abortRef = useRef<AbortController | null>(null);
 
@@ -301,6 +317,7 @@ export default function AgentScreen() {
       if (!res.ok || !res.body) throw new Error("Stream failed");
 
       // Swap loading → empty streaming message
+      setStreamingMsgId(aiMsgId);
       setMessages((prev) => prev.filter((m) => m.id !== "loading").concat({
         id: aiMsgId, role: "assistant", content: "", timestamp: new Date(),
       }));
@@ -350,6 +367,7 @@ export default function AgentScreen() {
       });
     } finally {
       setIsLoading(false);
+      setStreamingMsgId(null);
     }
   }, [isLoading, messages, tasks, user, getStats, applyAction]);
 
@@ -372,7 +390,7 @@ export default function AgentScreen() {
 
       {/* Messages */}
       <ScrollView ref={scrollRef} style={styles.msgs} contentContainerStyle={styles.msgsContent} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
-        {messages.map((msg) => <MessageBubble key={msg.id} message={msg} />)}
+        {messages.map((msg) => <MessageBubble key={msg.id} message={msg} isStreaming={streamingMsgId === msg.id} />)}
       </ScrollView>
 
       {/* Quick actions 2×2 grid */}

@@ -37,6 +37,7 @@ import { useTheme, type AppColors } from "@/providers/ThemeProvider";
 import { useAppState } from "@/providers/AppStateProvider";
 import { useTasks } from "@/providers/TasksProvider";
 import { useAchievements } from "@/providers/AchievementsProvider";
+import { useTonConnect } from "@/hooks/useTonConnect";
 import type { Task, AIInsight } from "@/types/tasks";
 
 // ── Progress Ring ────────────────────────────────────────────────────────────
@@ -70,10 +71,9 @@ function ProgressRing({ progress, size = 120, strokeWidth = 11 }: { progress: nu
 // ── Animated Stat Pill ───────────────────────────────────────────────────────
 function StatPill({ icon: Icon, value, label, color, animValue }: { icon: React.ElementType; value: string | number; label: string; color: string; animValue: Animated.Value }) {
   const { colors } = useTheme();
-  const scale = animValue.interpolate({ inputRange: [0, 1], outputRange: [0.7, 1] });
-  const opacity = animValue.interpolate({ inputRange: [0, 1], outputRange: [0, 1] });
+  const scale = animValue.interpolate({ inputRange: [0, 1], outputRange: [0.82, 1] });
   return (
-    <Animated.View style={{ flex: 1, alignItems: "center", gap: 3, opacity, transform: [{ scale }] }}>
+    <Animated.View style={{ flex: 1, alignItems: "center", gap: 3, transform: [{ scale }] }}>
       <View style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: `${color}18`, justifyContent: "center", alignItems: "center", marginBottom: 2 }}>
         <Icon size={17} color={color} />
       </View>
@@ -347,6 +347,7 @@ export default function DashboardScreen() {
   const router = useRouter();
   const { user, isOnboarded, isLoading } = useAppState();
   const { colors } = useTheme();
+  const { connectWallet } = useTonConnect();
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const { tasks, insights, toggleTaskStatus, getStats, getTodayTasks } = useTasks();
   const [stats, setStats] = React.useState({ tasksCompleted: 0, tasksCreated: 0, currentStreak: 0, productivityScore: 0, weeklyCompletion: [0, 0, 0, 0, 0, 0, 0] });
@@ -499,7 +500,7 @@ export default function DashboardScreen() {
         <CategoryBreakdown tasks={tasks} />
 
         {/* TON CTA */}
-        {showTonCTA && <TonConnectCTA onPress={() => router.push("/onboarding")} />}
+        {showTonCTA && <TonConnectCTA onPress={() => void connectWallet()} />}
 
         {/* Weekly Activity */}
         <View style={styles.section}>

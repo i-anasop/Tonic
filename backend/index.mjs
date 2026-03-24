@@ -495,14 +495,17 @@ RESPONSE RULES — follow every time, no exceptions:
 
       if (action) sendEvent({ action });
 
-      // Confirmation call (non-streaming for simplicity)
+      // Confirmation call — streamed for word-by-word delivery
       const aiMsg = { role: "assistant", content: assistantContent || null, tool_calls: [{ id: toolCallId, type: "function", function: { name: toolCallName, arguments: toolCallArgs } }] };
-      const confirmRes = await openai.chat.completions.create({
+      const confirmStream = await openai.chat.completions.create({
         model: "gpt-5.2",
         messages: [...allMessages, aiMsg, { role: "tool", content: JSON.stringify(toolResult), tool_call_id: toolCallId }],
+        stream: true,
       });
-      const confirmText = confirmRes.choices[0].message.content || "";
-      if (confirmText) sendEvent({ delta: confirmText });
+      for await (const chunk of confirmStream) {
+        const delta = chunk.choices[0]?.delta;
+        if (delta?.content) sendEvent({ delta: delta.content });
+      }
     }
 
     sendEvent({ done: true });
