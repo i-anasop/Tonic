@@ -614,6 +614,42 @@ export default function OnboardingScreen() {
           ))}
         </View>
 
+        {/* Wallet connected full-screen view — replaces content when wallet links */}
+        {showWalletNameInput ? (
+          <View style={{ flex: 1, justifyContent: "center", alignItems: "center", paddingHorizontal: 8 }}>
+            <Animated.View style={{ alignItems: "center", width: "100%" }}>
+              <View style={{ width: 72, height: 72, borderRadius: 22, backgroundColor: `${Colors.gold}20`, justifyContent: "center", alignItems: "center", marginBottom: 16, borderWidth: 1.5, borderColor: `${Colors.gold}50` }}>
+                <Wallet size={32} color={Colors.gold} />
+              </View>
+              <Text style={{ fontSize: 22, fontWeight: "800", color: Colors.textPrimary, marginBottom: 6, textAlign: "center" }}>Wallet Connected! 🎉</Text>
+              <Text style={{ fontSize: 14, color: Colors.textMuted, textAlign: "center", marginBottom: 28, lineHeight: 20 }}>One last step — what should we call you?</Text>
+              <View style={[styles.inputWrap, { width: "100%" }]}>
+                <User size={18} color={Colors.textMuted} />
+                <TextInput
+                  placeholder="Enter your name"
+                  placeholderTextColor={Colors.textMuted}
+                  value={walletName}
+                  onChangeText={setWalletName}
+                  style={[styles.input, { outlineWidth: 0 } as any]}
+                  autoFocus
+                  onSubmitEditing={handleWalletNameSubmit}
+                />
+              </View>
+              <Animated.View style={{ width: "100%", shadowColor: Colors.gold, shadowOffset: { width: 0, height: 0 }, shadowRadius: btnShadowRadius, shadowOpacity: btnShadowOpacity, elevation: 12, borderRadius: 18, marginTop: 16 }}>
+                <TouchableOpacity onPress={handleWalletNameSubmit} activeOpacity={0.85}>
+                  <LinearGradient colors={["#FFD700", "#B8860B"]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles.btnPrimary}>
+                    <Wallet size={17} color="#0D1117" />
+                    <Text style={styles.btnPrimaryText}>Launch Tonic AI →</Text>
+                  </LinearGradient>
+                </TouchableOpacity>
+              </Animated.View>
+              <TouchableOpacity onPress={handleWalletNameSubmit} style={{ marginTop: 14 }}>
+                <Text style={{ fontSize: 12, color: Colors.textMuted, textAlign: "center" }}>Skip — use "TON User"</Text>
+              </TouchableOpacity>
+            </Animated.View>
+          </View>
+        ) : (
+          <>
         {/* Main content */}
         <Animated.View
           style={[
@@ -652,54 +688,7 @@ export default function OnboardingScreen() {
         <View style={styles.bottom}>
           {isLast ? (
             <View style={styles.authArea}>
-              {showWalletNameInput ? (
-                <View style={styles.nameGroup}>
-                  <View style={{ marginBottom: 14, alignItems: "center" }}>
-                    <View style={{ width: 48, height: 48, borderRadius: 16, backgroundColor: `${Colors.gold}20`, justifyContent: "center", alignItems: "center", marginBottom: 10, borderWidth: 1, borderColor: `${Colors.gold}40` }}>
-                      <Wallet size={22} color={Colors.gold} />
-                    </View>
-                    <Text style={{ fontSize: 16, fontWeight: "700", color: Colors.textPrimary, marginBottom: 4 }}>Wallet Connected! 🎉</Text>
-                    <Text style={{ fontSize: 13, color: Colors.textMuted, textAlign: "center" }}>What should we call you?</Text>
-                  </View>
-                  <View style={styles.inputWrap}>
-                    <User size={18} color={Colors.textMuted} />
-                    <TextInput
-                      placeholder="Enter your name"
-                      placeholderTextColor={Colors.textMuted}
-                      value={walletName}
-                      onChangeText={setWalletName}
-                      style={[styles.input, { outlineWidth: 0 } as any]}
-                      autoFocus
-                      onSubmitEditing={handleWalletNameSubmit}
-                    />
-                  </View>
-                  <Animated.View
-                    style={{
-                      shadowColor: Colors.gold,
-                      shadowOffset: { width: 0, height: 0 },
-                      shadowRadius: btnShadowRadius,
-                      shadowOpacity: btnShadowOpacity,
-                      elevation: 12,
-                      borderRadius: 18,
-                    }}
-                  >
-                    <TouchableOpacity onPress={handleWalletNameSubmit} activeOpacity={0.85}>
-                      <LinearGradient
-                        colors={["#FFD700", "#B8860B"]}
-                        start={{ x: 0, y: 0 }}
-                        end={{ x: 1, y: 0 }}
-                        style={styles.btnPrimary}
-                      >
-                        <Wallet size={17} color="#0D1117" />
-                        <Text style={styles.btnPrimaryText}>Launch Tonic AI →</Text>
-                      </LinearGradient>
-                    </TouchableOpacity>
-                  </Animated.View>
-                  <TouchableOpacity onPress={handleWalletNameSubmit} style={{ marginTop: 10 }}>
-                    <Text style={{ fontSize: 12, color: Colors.textMuted, textAlign: "center" }}>Skip — use "TON User"</Text>
-                  </TouchableOpacity>
-                </View>
-              ) : showNameInput ? (
+              {showNameInput ? (
                 <View style={styles.nameGroup}>
                   <View style={styles.inputWrap}>
                     <User size={18} color={Colors.textMuted} />
@@ -815,6 +804,8 @@ export default function OnboardingScreen() {
             </View>
           )}
         </View>
+        </>
+        )}
       </SafeAreaView>
     </View>
   );
