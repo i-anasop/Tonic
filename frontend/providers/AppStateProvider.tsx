@@ -19,7 +19,7 @@ interface AppState {
   setUser: (user: User | null) => void;
   completeOnboarding: () => void;
   createGuestUser: (name: string) => void;
-  connectWallet: (address: string) => void;
+  connectWallet: (address: string, name?: string) => void;
   signOut: () => void;
   resetApp: () => Promise<void>;
 }
@@ -131,10 +131,10 @@ export const [AppStateProvider, useAppState] = createContextHook<AppState>(() =>
   );
 
   const connectWallet = useCallback(
-    (address: string) => {
+    (address: string, name?: string) => {
       const newUser: User = {
         id: `wallet_${address.slice(-12)}`,
-        name: "TON User",
+        name: name?.trim() || "TON User",
         walletAddress: address,
         isGuest: false,
         createdAt: new Date(),

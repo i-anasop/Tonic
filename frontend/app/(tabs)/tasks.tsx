@@ -9,6 +9,7 @@ import {
   Dimensions,
   TextInput,
   Alert,
+  useWindowDimensions,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import {
@@ -545,9 +546,14 @@ export default function TasksScreen() {
   const activeTasks = filteredTasks.filter((t) => t.status !== "completed");
   const doneTasks = filteredTasks.filter((t) => t.status === "completed");
 
+  const { width: screenWidth } = useWindowDimensions();
+  const isLarge = screenWidth >= 768;
+  const responsiveStyle = isLarge ? { maxWidth: 640, width: "100%" as const, alignSelf: "center" as const } : {};
+
   return (
     <View style={{ flex: 1, backgroundColor: colors.bgPrimary }}>
       <SafeAreaView style={{ flex: 1 }} edges={["top"]}>
+        <View style={responsiveStyle}>
         {/* Header */}
         <View style={styles.header}>
           <View style={styles.headerLeft}>
@@ -632,6 +638,7 @@ export default function TasksScreen() {
             </>
           )}
         </ScrollView>
+        </View>
       </SafeAreaView>
 
       {/* Filter Sheet — rendered outside SafeAreaView so it can cover full screen */}

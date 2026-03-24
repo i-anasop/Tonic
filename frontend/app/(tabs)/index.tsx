@@ -7,6 +7,8 @@ import {
   Animated,
   TouchableOpacity,
   RefreshControl,
+  Image,
+  useWindowDimensions,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import Svg, { Circle } from "react-native-svg";
@@ -422,15 +424,27 @@ export default function DashboardScreen() {
 
   const showTonCTA = !user.walletAddress;
 
+  const { width: screenWidth } = useWindowDimensions();
+  const isLarge = screenWidth >= 768;
+  const contentStyle = isLarge ? { maxWidth: 640, alignSelf: "center" as const, width: "100%" as const } : {};
+
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
-      <ScrollView style={styles.scroll} showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={Colors.gold} />}>
+      <ScrollView style={styles.scroll} showsVerticalScrollIndicator={false} contentContainerStyle={[styles.scrollContent, isLarge && { paddingHorizontal: 0 }]} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={Colors.gold} />}>
+        <View style={contentStyle}>
 
         {/* Header */}
         <View style={styles.header}>
-          <View>
-            <Text style={styles.greeting}>{getGreeting()}</Text>
-            <Text style={styles.userName}>{user.name}</Text>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+            <Image
+              source={require("@/assets/images/logo.png")}
+              style={{ width: 36, height: 36, borderRadius: 10 }}
+              resizeMode="contain"
+            />
+            <View>
+              <Text style={styles.greeting}>{getGreeting()}</Text>
+              <Text style={styles.userName}>{user.name}</Text>
+            </View>
           </View>
           <TouchableOpacity style={styles.addBtn} activeOpacity={0.8} onPress={() => router.push("/modal")}>
             <Plus size={20} color="#0D1117" />
@@ -541,6 +555,7 @@ export default function DashboardScreen() {
             <Text style={{ fontSize: 12, color: Colors.blue, fontWeight: "600", flex: 1 }}>Wallet connected — your achievements are verifiable on TON blockchain</Text>
           </View>
         )}
+        </View>
       </ScrollView>
     </SafeAreaView>
   );

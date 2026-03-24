@@ -9,6 +9,8 @@ import {
   TextInput,
   Alert,
   Easing,
+  Image,
+  useWindowDimensions,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
@@ -399,6 +401,9 @@ export default function OnboardingScreen() {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [guestName, setGuestName] = useState("");
   const [showNameInput, setShowNameInput] = useState(false);
+  const [walletName, setWalletName] = useState("");
+  const [showWalletNameInput, setShowWalletNameInput] = useState(false);
+  const [pendingWalletAddress, setPendingWalletAddress] = useState<string | null>(null);
 
   const { createGuestUser, connectWallet: saveWallet } = useAppState();
   const { connectWallet, walletAddress, isConnected, isInitialized } =
@@ -446,11 +451,18 @@ export default function OnboardingScreen() {
   }, []);
 
   useEffect(() => {
-    if (isConnected && walletAddress) {
-      saveWallet(walletAddress);
-      setTimeout(() => router.replace("/(tabs)"), 300);
+    if (isConnected && walletAddress && !showWalletNameInput) {
+      setPendingWalletAddress(walletAddress);
+      setShowWalletNameInput(true);
     }
   }, [isConnected, walletAddress]);
+
+  const handleWalletNameSubmit = () => {
+    if (pendingWalletAddress) {
+      saveWallet(pendingWalletAddress, walletName.trim() || undefined);
+      setTimeout(() => router.replace("/(tabs)"), 300);
+    }
+  };
 
   const slide = SLIDES[currentIndex];
   const isLast = currentIndex === SLIDES.length - 1;
@@ -535,6 +547,10 @@ export default function OnboardingScreen() {
     outputRange: [0.3, 0.7],
   });
 
+  const { width: screenW } = useWindowDimensions();
+  const isLarge = screenW >= 768;
+  const innerStyle = isLarge ? { maxWidth: 560, width: "100%" as const, alignSelf: "center" as const } : { flex: 1 };
+
   return (
     <View style={styles.root}>
       {/* Animated background orb */}
@@ -551,6 +567,7 @@ export default function OnboardingScreen() {
       <ParticleField color={slide.accent} />
 
       <SafeAreaView style={styles.safe} edges={["top", "bottom"]}>
+        <View style={innerStyle}>
         {/* Header badge */}
         <Animated.View
           style={[
@@ -561,9 +578,16 @@ export default function OnboardingScreen() {
             },
           ]}
         >
-          <View style={styles.badge}>
-            <Sparkles size={11} color={Colors.gold} />
-            <Text style={styles.badgeText}>Built on TON</Text>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+            <Image
+              source={require("@/assets/images/logo.png")}
+              style={{ width: 28, height: 28, borderRadius: 8 }}
+              resizeMode="contain"
+            />
+            <View style={styles.badge}>
+              <Sparkles size={11} color={Colors.gold} />
+              <Text style={styles.badgeText}>Built on TON</Text>
+            </View>
           </View>
 
           {!isLast && (
@@ -634,7 +658,54 @@ export default function OnboardingScreen() {
         <View style={styles.bottom}>
           {isLast ? (
             <View style={styles.authArea}>
-              {showNameInput ? (
+              {showWalletNameInput ? (
+                <View style={styles.nameGroup}>
+                  <View style={{ marginBottom: 14, alignItems: "center" }}>
+                    <View style={{ width: 48, height: 48, borderRadius: 16, backgroundColor: `${Colors.gold}20`, justifyContent: "center", alignItems: "center", marginBottom: 10, borderWidth: 1, borderColor: `${Colors.gold}40` }}>
+                      <Wallet size={22} color={Colors.gold} />
+                    </View>
+                    <Text style={{ fontSize: 16, fontWeight: "700", color: Colors.textPrimary, marginBottom: 4 }}>Wallet Connected! 🎉</Text>
+                    <Text style={{ fontSize: 13, color: Colors.textMuted, textAlign: "center" }}>What should we call you?</Text>
+                  </View>
+                  <View style={styles.inputWrap}>
+                    <User size={18} color={Colors.textMuted} />
+                    <TextInput
+                      placeholder="Enter your name"
+                      placeholderTextColor={Colors.textMuted}
+                      value={walletName}
+                      onChangeText={setWalletName}
+                      style={[styles.input, { outlineWidth: 0 } as any]}
+                      autoFocus
+                      onSubmitEditing={handleWalletNameSubmit}
+                    />
+                  </View>
+                  <Animated.View
+                    style={{
+                      shadowColor: Colors.gold,
+                      shadowOffset: { width: 0, height: 0 },
+                      shadowRadius: btnShadowRadius,
+                      shadowOpacity: btnShadowOpacity,
+                      elevation: 12,
+                      borderRadius: 18,
+                    }}
+                  >
+                    <TouchableOpacity onPress={handleWalletNameSubmit} activeOpacity={0.85}>
+                      <LinearGradient
+                        colors={["#FFD700", "#B8860B"]}
+                        start={{ x: 0, y: 0 }}
+                        end={{ x: 1, y: 0 }}
+                        style={styles.btnPrimary}
+                      >
+                        <Wallet size={17} color="#0D1117" />
+                        <Text style={styles.btnPrimaryText}>Launch Tonic AI →</Text>
+                      </LinearGradient>
+                    </TouchableOpacity>
+                  </Animated.View>
+                  <TouchableOpacity onPress={handleWalletNameSubmit} style={{ marginTop: 10 }}>
+                    <Text style={{ fontSize: 12, color: Colors.textMuted, textAlign: "center" }}>Skip — use "TON User"</Text>
+                  </TouchableOpacity>
+                </View>
+              ) : showNameInput ? (
                 <View style={styles.nameGroup}>
                   <View style={styles.inputWrap}>
                     <User size={18} color={Colors.textMuted} />
@@ -747,6 +818,7 @@ export default function OnboardingScreen() {
               </Animated.View>
             </View>
           )}
+        </View>
         </View>
       </SafeAreaView>
     </View>
