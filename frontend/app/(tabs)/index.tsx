@@ -8,7 +8,6 @@ import {
   TouchableOpacity,
   RefreshControl,
   Image,
-  useWindowDimensions,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import Svg, { Circle } from "react-native-svg";
@@ -424,14 +423,10 @@ export default function DashboardScreen() {
 
   const showTonCTA = !user.walletAddress;
 
-  const { width: screenWidth } = useWindowDimensions();
-  const isLarge = screenWidth >= 768;
-  const contentStyle = isLarge ? { maxWidth: 640, alignSelf: "center" as const, width: "100%" as const } : {};
-
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
-      <ScrollView style={styles.scroll} showsVerticalScrollIndicator={false} contentContainerStyle={[styles.scrollContent, isLarge && { paddingHorizontal: 0 }]} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={Colors.gold} />}>
-        <View style={contentStyle}>
+      <ScrollView style={styles.scroll} showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={Colors.gold} />}>
+        <View>
 
         {/* Header */}
         <View style={styles.header}>

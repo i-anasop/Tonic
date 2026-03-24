@@ -10,7 +10,6 @@ import {
   Alert,
   Easing,
   Image,
-  useWindowDimensions,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
@@ -547,10 +546,6 @@ export default function OnboardingScreen() {
     outputRange: [0.3, 0.7],
   });
 
-  const { width: screenW } = useWindowDimensions();
-  const isLarge = screenW >= 768;
-  const innerStyle = isLarge ? { maxWidth: 560, width: "100%" as const, alignSelf: "center" as const } : { flex: 1 };
-
   return (
     <View style={styles.root}>
       {/* Animated background orb */}
@@ -567,7 +562,6 @@ export default function OnboardingScreen() {
       <ParticleField color={slide.accent} />
 
       <SafeAreaView style={styles.safe} edges={["top", "bottom"]}>
-        <View style={innerStyle}>
         {/* Header badge */}
         <Animated.View
           style={[
@@ -818,7 +812,6 @@ export default function OnboardingScreen() {
               </Animated.View>
             </View>
           )}
-        </View>
         </View>
       </SafeAreaView>
     </View>

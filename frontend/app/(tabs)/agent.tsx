@@ -10,7 +10,6 @@ import {
   Platform,
   ActivityIndicator,
   Animated,
-  useWindowDimensions,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Bot, Send, Mic, MicOff, Plus, BarChart2, Calendar, Zap, CheckCircle, CalendarClock } from "lucide-react-native";
@@ -372,15 +371,8 @@ export default function AgentScreen() {
     }
   }, [isLoading, messages, tasks, user, getStats, applyAction]);
 
-  const { width: screenWidth } = useWindowDimensions();
-  const isLarge = screenWidth >= 768;
-  const innerStyle = isLarge
-    ? { flex: 1, maxWidth: 720, width: "100%" as const, alignSelf: "center" as const }
-    : { flex: 1 };
-
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
-      <View style={innerStyle}>
       {/* Header */}
       <View style={styles.header}>
         <View style={styles.headerLeft}>
@@ -437,7 +429,6 @@ export default function AgentScreen() {
           </TouchableOpacity>
         </View>
       </KeyboardAvoidingView>
-      </View>
     </SafeAreaView>
   );
 }

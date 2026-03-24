@@ -4,7 +4,7 @@ import pg from "pg";
 import OpenAI from "openai";
 import { fileURLToPath } from "url";
 import path from "path";
-import { existsSync } from "fs";
+import { existsSync, readFileSync } from "fs";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const WEB_DIST = path.join(__dirname, "../frontend/dist");
@@ -736,13 +736,62 @@ app.get("/api/users/:userId/records", async (req, res) => {
   }
 });
 
+const PORTRAIT_CSS = `
+  <style id="portrait-mobile">
+    html, body {
+      margin: 0; padding: 0;
+      background-color: #060810;
+      background-image:
+        radial-gradient(ellipse 80% 50% at 50% -20%, rgba(255,215,0,0.06) 0%, transparent 60%),
+        radial-gradient(ellipse 60% 40% at 80% 100%, rgba(100,160,255,0.04) 0%, transparent 50%);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100%;
+    }
+    body { overflow: hidden; }
+    #root {
+      display: flex;
+      flex: 1;
+      height: 100%;
+      width: 100%;
+      max-width: 430px;
+      overflow: hidden;
+      position: relative;
+    }
+    @media (min-width: 431px) {
+      #root {
+        height: 100vh;
+        max-height: 900px;
+        box-shadow:
+          0 0 0 1px rgba(255,215,0,0.13),
+          0 12px 80px rgba(0,0,0,0.75),
+          0 0 60px rgba(255,215,0,0.05);
+      }
+    }
+  </style>
+`;
+
 if (existsSync(WEB_DIST)) {
-  app.use(express.static(WEB_DIST));
+  const indexHtmlPath = path.join(WEB_DIST, "index.html");
+  let cachedHtml = null;
+
+  const getPortraitHtml = () => {
+    if (!cachedHtml) {
+      const raw = readFileSync(indexHtmlPath, "utf8");
+      cachedHtml = raw.replace("</head>", `${PORTRAIT_CSS}</head>`);
+    }
+    return cachedHtml;
+  };
+
+  app.use(express.static(WEB_DIST, { index: false }));
+
   app.get("/{*splat}", (req, res, next) => {
     if (req.path.startsWith("/api/") || req.path === "/tonconnect-manifest.json" || req.path === "/health") {
       return next();
     }
-    res.sendFile(path.join(WEB_DIST, "index.html"));
+    res.setHeader("Content-Type", "text/html");
+    res.send(getPortraitHtml());
   });
   console.log("Serving Expo web build from:", WEB_DIST);
 }

@@ -13,7 +13,6 @@ import {
   Modal,
   Linking,
   Platform,
-  useWindowDimensions,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import {
@@ -321,15 +320,10 @@ export default function ProfileScreen() {
 
   if (!user) return null;
 
-  const { width: screenWidth } = useWindowDimensions();
-  const isLarge = screenWidth >= 768;
-  const contentStyle = isLarge ? { maxWidth: 640, width: "100%" as const, alignSelf: "center" as const } : {};
-
   return (
     <>
       <SafeAreaView style={styles.container} edges={["top"]}>
-        <ScrollView style={styles.scroll} showsVerticalScrollIndicator={false} contentContainerStyle={[styles.scrollContent, isLarge && { paddingHorizontal: 0 }]}>
-          <View style={contentStyle}>
+        <ScrollView style={styles.scroll} showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
 
           {/* ── Header ── */}
           <View style={styles.pageHeader}>
@@ -599,7 +593,6 @@ export default function ProfileScreen() {
           <View style={styles.appInfo}>
             <Text style={styles.appVer}>Tonic AI v1.0.0</Text>
             <Text style={styles.appBuild}>Built for TON & Telegram · Hackathon 2026</Text>
-          </View>
           </View>
         </ScrollView>
       </SafeAreaView>
