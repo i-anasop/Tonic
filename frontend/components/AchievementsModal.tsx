@@ -1,15 +1,15 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect, useRef, useCallback } from "react";
 import {
   View,
   Text,
   StyleSheet,
-  Modal,
   ScrollView,
   TouchableOpacity,
-  FlatList,
+  Animated,
+  useWindowDimensions,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { X, Trophy, Lock, Zap, Star } from "lucide-react-native";
+import { X, Trophy, Lock, Zap, Star, Link } from "lucide-react-native";
 import { Colors } from "@/constants/colors";
 import { useTheme, type AppColors } from "@/providers/ThemeProvider";
 import { useAchievements } from "@/providers/AchievementsProvider";
@@ -42,7 +42,27 @@ export const AchievementsModal: React.FC<AchievementsModalProps> = ({ isVisible,
   const { achievements, stats, claimedAchievementIds, claimAchievement } = useAchievements();
   const { colors } = useTheme();
   const styles = useMemo(() => makeStyles(colors), [colors]);
+  const { height: H } = useWindowDimensions();
   const [activeTab, setActiveTab] = useState<FilterTab>("all");
+  const [mounted, setMounted] = useState(false);
+
+  const slideAnim = useRef(new Animated.Value(H)).current;
+  const backdropAnim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    if (isVisible) {
+      setMounted(true);
+      Animated.parallel([
+        Animated.spring(slideAnim, { toValue: 0, friction: 22, tension: 180, useNativeDriver: true }),
+        Animated.timing(backdropAnim, { toValue: 1, duration: 220, useNativeDriver: true }),
+      ]).start();
+    } else {
+      Animated.parallel([
+        Animated.timing(slideAnim, { toValue: H, duration: 260, useNativeDriver: true }),
+        Animated.timing(backdropAnim, { toValue: 0, duration: 220, useNativeDriver: true }),
+      ]).start(() => setMounted(false));
+    }
+  }, [isVisible, H]);
 
   const unlocked = achievements.filter((a) => a.unlocked);
   const locked = achievements.filter((a) => !a.unlocked);
@@ -61,7 +81,7 @@ export const AchievementsModal: React.FC<AchievementsModalProps> = ({ isVisible,
     (stats.currentLevel.currentPoints / stats.currentLevel.nextLevelPoints) * 100
   );
 
-  const renderAchievementCard = ({ item }: { item: typeof achievements[0] }) => {
+  const renderAchievementCard = useCallback(({ item }: { item: typeof achievements[0] }) => {
     const diff = DIFFICULTY_CONFIG[item.difficulty] || DIFFICULTY_CONFIG.easy;
     const emoji = ICON_MAP[item.icon] ?? "🏅";
     const earned = item.basePoints * item.difficultyMultiplier;
@@ -96,19 +116,33 @@ export const AchievementsModal: React.FC<AchievementsModalProps> = ({ isVisible,
                 <Text style={styles.unlockedBadgeText}>✓ Earned</Text>
               </View>
             </View>
+
             <View style={styles.claimRow}>
               {isClaimed ? (
                 <View style={styles.claimedBadge}>
                   <Text style={styles.claimedText}>✓ Claimed</Text>
                 </View>
               ) : (
-                <TouchableOpacity
-                  style={styles.claimBtn}
-                  onPress={() => void claimAchievement(item.id, false)}
-                  activeOpacity={0.8}
-                >
-                  <Text style={styles.claimBtnText}>Claim {earned} pts</Text>
-                </TouchableOpacity>
+                <View style={styles.claimButtons}>
+                  <TouchableOpacity
+                    style={styles.claimBtn}
+                    onPress={() => void claimAchievement(item.id, false)}
+                    activeOpacity={0.8}
+                  >
+                    <Zap size={11} color="#0D1117" />
+                    <Text style={styles.claimBtnText}>Claim {earned} pts</Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    style={styles.claimBtnOnchain}
+                    onPress={() => void claimAchievement(item.id, true)}
+                    activeOpacity={0.8}
+                  >
+                    <Link size={11} color={Colors.blue} />
+                    <Text style={styles.claimBtnOnchainText}>2x On-Chain</Text>
+                    <Text style={styles.claimBtnFee}>· txn fee</Text>
+                  </TouchableOpacity>
+                </View>
               )}
             </View>
           </View>
@@ -183,125 +217,150 @@ export const AchievementsModal: React.FC<AchievementsModalProps> = ({ isVisible,
         </View>
       </View>
     );
-  };
+  }, [claimedAchievementIds, claimAchievement, colors, styles]);
+
+  if (!mounted) return null;
 
   return (
-    <Modal visible={isVisible} animationType="slide" transparent={false}>
-      <SafeAreaView style={styles.container} edges={["top"]}>
-        {/* Header */}
-        <View style={styles.header}>
-          <View style={styles.headerLeft}>
-            <Trophy size={22} color={Colors.gold} />
-            <Text style={styles.headerTitle}>Achievements</Text>
+    <Animated.View style={[StyleSheet.absoluteFill, styles.backdrop, { opacity: backdropAnim }]} pointerEvents={isVisible ? "auto" : "none"}>
+      <TouchableOpacity style={StyleSheet.absoluteFill} activeOpacity={1} onPress={onClose} />
+      <Animated.View style={[styles.sheet, { transform: [{ translateY: slideAnim }] }]}>
+        <SafeAreaView style={styles.container} edges={["top", "bottom"]}>
+          {/* Header */}
+          <View style={styles.header}>
+            <View style={styles.headerLeft}>
+              <Trophy size={22} color={Colors.gold} />
+              <Text style={styles.headerTitle}>Achievements</Text>
+            </View>
+            <TouchableOpacity onPress={onClose} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
+              <X size={22} color={colors.textPrimary} />
+            </TouchableOpacity>
           </View>
-          <TouchableOpacity onPress={onClose} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
-            <X size={22} color={colors.textPrimary} />
-          </TouchableOpacity>
-        </View>
 
-        <ScrollView showsVerticalScrollIndicator={false}>
-          {/* Level Banner */}
-          <View style={styles.levelBanner}>
-            <View style={styles.levelLeft}>
-              <Text style={styles.levelEmoji}>{LEVEL_EMOJIS[stats.currentLevel.level] ?? "🏆"}</Text>
-              <View>
-                <Text style={styles.levelTitle}>{stats.currentLevel.name}</Text>
-                <Text style={styles.levelSub}>Level {stats.currentLevel.level}</Text>
+          <ScrollView showsVerticalScrollIndicator={false}>
+            {/* Level Banner */}
+            <View style={styles.levelBanner}>
+              <View style={styles.levelLeft}>
+                <Text style={styles.levelEmoji}>{LEVEL_EMOJIS[stats.currentLevel.level] ?? "🏆"}</Text>
+                <View>
+                  <Text style={styles.levelTitle}>{stats.currentLevel.name}</Text>
+                  <Text style={styles.levelSub}>Level {stats.currentLevel.level}</Text>
+                </View>
+              </View>
+              <View style={styles.levelRight}>
+                <Text style={styles.levelPct}>{levelPct}%</Text>
+                <Text style={styles.levelNextLabel}>to next level</Text>
               </View>
             </View>
-            <View style={styles.levelRight}>
-              <Text style={styles.levelPct}>{levelPct}%</Text>
-              <Text style={styles.levelNextLabel}>to next level</Text>
+            <View style={styles.levelBarTrack}>
+              <View style={[styles.levelBarFill, { width: `${levelPct}%` }]} />
             </View>
-          </View>
-          <View style={styles.levelBarTrack}>
-            <View style={[styles.levelBarFill, { width: `${levelPct}%` }]} />
-          </View>
-          <Text style={styles.levelBarCaption}>
-            {stats.currentLevel.currentPoints} / {stats.currentLevel.nextLevelPoints} pts
-          </Text>
+            <Text style={styles.levelBarCaption}>
+              {stats.currentLevel.currentPoints} / {stats.currentLevel.nextLevelPoints} pts
+            </Text>
 
-          {/* Stats Row */}
-          <View style={styles.statsRow}>
-            <View style={styles.statBox}>
-              <Text style={styles.statNumber}>{stats.claimedPoints}</Text>
-              <Text style={styles.statLabel}>Claimed Pts</Text>
+            {/* On-chain hint */}
+            <View style={styles.onchainHint}>
+              <Link size={13} color={Colors.blue} />
+              <Text style={styles.onchainHintText}>
+                Claim 2x On-Chain to permanently record achievements on TON. A small transaction fee applies.
+              </Text>
             </View>
-            <View style={[styles.statBox, styles.statBoxMid]}>
-              <Text style={styles.statNumber}>{stats.pendingPoints > 0 ? `+${stats.pendingPoints}` : stats.totalUnlocked}</Text>
-              <Text style={styles.statLabel}>{stats.pendingPoints > 0 ? "Pending" : "Unlocked"}</Text>
-            </View>
-            <View style={styles.statBox}>
-              <Text style={styles.statNumber}>{achievements.length - stats.totalUnlocked}</Text>
-              <Text style={styles.statLabel}>Remaining</Text>
-            </View>
-          </View>
 
-          {/* Next Up Section */}
-          {nextUp.length > 0 && activeTab !== "unlocked" && (
-            <View style={styles.nextUpSection}>
-              <View style={styles.nextUpHeader}>
-                <Zap size={16} color={Colors.warning} />
-                <Text style={styles.nextUpTitle}>Close to Unlocking</Text>
+            {/* Stats Row */}
+            <View style={styles.statsRow}>
+              <View style={styles.statBox}>
+                <Text style={styles.statNumber}>{stats.claimedPoints}</Text>
+                <Text style={styles.statLabel}>Claimed Pts</Text>
               </View>
-              {nextUp.map((a) => {
-                const emoji = ICON_MAP[a.icon] ?? "🏅";
-                return (
-                  <View key={a.id} style={styles.nextUpCard}>
-                    <Text style={styles.nextUpEmoji}>{emoji}</Text>
-                    <View style={{ flex: 1 }}>
-                      <Text style={styles.nextUpName}>{a.name}</Text>
-                      <View style={styles.nextUpProgressTrack}>
-                        <View style={[styles.nextUpProgressFill, { width: `${a.progress}%` }]} />
+              <View style={[styles.statBox, styles.statBoxMid]}>
+                <Text style={styles.statNumber}>{stats.pendingPoints > 0 ? `+${stats.pendingPoints}` : stats.totalUnlocked}</Text>
+                <Text style={styles.statLabel}>{stats.pendingPoints > 0 ? "Pending" : "Unlocked"}</Text>
+              </View>
+              <View style={styles.statBox}>
+                <Text style={styles.statNumber}>{achievements.length - stats.totalUnlocked}</Text>
+                <Text style={styles.statLabel}>Remaining</Text>
+              </View>
+            </View>
+
+            {/* Next Up Section */}
+            {nextUp.length > 0 && activeTab !== "unlocked" && (
+              <View style={styles.nextUpSection}>
+                <View style={styles.nextUpHeader}>
+                  <Zap size={16} color={Colors.warning} />
+                  <Text style={styles.nextUpTitle}>Close to Unlocking</Text>
+                </View>
+                {nextUp.map((a) => {
+                  const emoji = ICON_MAP[a.icon] ?? "🏅";
+                  return (
+                    <View key={a.id} style={styles.nextUpCard}>
+                      <Text style={styles.nextUpEmoji}>{emoji}</Text>
+                      <View style={{ flex: 1 }}>
+                        <Text style={styles.nextUpName}>{a.name}</Text>
+                        <View style={styles.nextUpProgressTrack}>
+                          <View style={[styles.nextUpProgressFill, { width: `${a.progress}%` }]} />
+                        </View>
                       </View>
+                      <Text style={styles.nextUpPct}>{Math.round(a.progress)}%</Text>
                     </View>
-                    <Text style={styles.nextUpPct}>{Math.round(a.progress)}%</Text>
-                  </View>
+                  );
+                })}
+              </View>
+            )}
+
+            {/* Filter Tabs */}
+            <View style={styles.tabRow}>
+              {(["all", "unlocked", "locked"] as FilterTab[]).map((t) => {
+                const count = t === "all" ? achievements.length : t === "unlocked" ? unlocked.length : locked.length;
+                return (
+                  <TouchableOpacity
+                    key={t}
+                    style={[styles.tab, activeTab === t && styles.tabActive]}
+                    onPress={() => setActiveTab(t)}
+                    activeOpacity={0.8}
+                  >
+                    <Text style={[styles.tabText, activeTab === t && styles.tabTextActive]}>
+                      {t.charAt(0).toUpperCase() + t.slice(1)} ({count})
+                    </Text>
+                  </TouchableOpacity>
                 );
               })}
             </View>
-          )}
 
-          {/* Filter Tabs */}
-          <View style={styles.tabRow}>
-            {(["all", "unlocked", "locked"] as FilterTab[]).map((t) => {
-              const count = t === "all" ? achievements.length : t === "unlocked" ? unlocked.length : locked.length;
-              return (
-                <TouchableOpacity
-                  key={t}
-                  style={[styles.tab, activeTab === t && styles.tabActive]}
-                  onPress={() => setActiveTab(t)}
-                  activeOpacity={0.8}
-                >
-                  <Text style={[styles.tabText, activeTab === t && styles.tabTextActive]}>
-                    {t.charAt(0).toUpperCase() + t.slice(1)} ({count})
-                  </Text>
-                </TouchableOpacity>
-              );
-            })}
-          </View>
-
-          {/* Achievement List */}
-          <View style={styles.listContainer}>
-            {filtered.map((item) => (
-              <View key={item.id}>
-                {renderAchievementCard({ item })}
-              </View>
-            ))}
-            {filtered.length === 0 && (
-              <View style={styles.emptyState}>
-                <Text style={styles.emptyEmoji}>🔒</Text>
-                <Text style={styles.emptyText}>Nothing here yet — keep completing tasks!</Text>
-              </View>
-            )}
-          </View>
-        </ScrollView>
-      </SafeAreaView>
-    </Modal>
+            {/* Achievement List */}
+            <View style={styles.listContainer}>
+              {filtered.map((item) => (
+                <View key={item.id}>
+                  {renderAchievementCard({ item })}
+                </View>
+              ))}
+              {filtered.length === 0 && (
+                <View style={styles.emptyState}>
+                  <Text style={styles.emptyEmoji}>🔒</Text>
+                  <Text style={styles.emptyText}>Nothing here yet — keep completing tasks!</Text>
+                </View>
+              )}
+            </View>
+          </ScrollView>
+        </SafeAreaView>
+      </Animated.View>
+    </Animated.View>
   );
 };
 
 const makeStyles = (colors: AppColors) => StyleSheet.create({
+  backdrop: {
+    backgroundColor: "rgba(0,0,0,0.55)",
+    zIndex: 999,
+  },
+  sheet: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    bottom: 0,
+    top: 0,
+    backgroundColor: colors.bgPrimary,
+  },
   container: { flex: 1, backgroundColor: colors.bgPrimary },
   header: {
     flexDirection: "row", justifyContent: "space-between", alignItems: "center",
@@ -333,6 +392,17 @@ const makeStyles = (colors: AppColors) => StyleSheet.create({
   levelBarCaption: {
     textAlign: "right", marginHorizontal: 20, marginTop: 6,
     fontSize: 12, color: colors.textSecondary,
+  },
+
+  onchainHint: {
+    flexDirection: "row", alignItems: "flex-start", gap: 8,
+    marginHorizontal: 20, marginTop: 14,
+    backgroundColor: `${Colors.blue}10`, borderRadius: 12,
+    borderWidth: 1, borderColor: `${Colors.blue}25`,
+    padding: 12,
+  },
+  onchainHintText: {
+    flex: 1, fontSize: 12, color: colors.textSecondary, lineHeight: 17,
   },
 
   statsRow: {
@@ -461,8 +531,23 @@ const makeStyles = (colors: AppColors) => StyleSheet.create({
   emptyText: { fontSize: 14, color: colors.textSecondary, textAlign: "center" },
 
   claimRow: { marginTop: 10 },
-  claimBtn: { flexDirection: "row", alignItems: "center", justifyContent: "center", backgroundColor: Colors.gold, paddingHorizontal: 16, paddingVertical: 8, borderRadius: 10, alignSelf: "flex-start", shadowColor: Colors.gold, shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.3, shadowRadius: 4, elevation: 4 },
+  claimButtons: { flexDirection: "row", gap: 8, flexWrap: "wrap" },
+  claimBtn: {
+    flexDirection: "row", alignItems: "center", gap: 5,
+    backgroundColor: Colors.gold, paddingHorizontal: 14, paddingVertical: 7,
+    borderRadius: 10, alignSelf: "flex-start",
+    shadowColor: Colors.gold, shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3, shadowRadius: 4, elevation: 4,
+  },
   claimBtnText: { fontSize: 12, fontWeight: "700", color: "#0D1117" },
+  claimBtnOnchain: {
+    flexDirection: "row", alignItems: "center", gap: 5,
+    backgroundColor: `${Colors.blue}15`, paddingHorizontal: 12, paddingVertical: 7,
+    borderRadius: 10, alignSelf: "flex-start",
+    borderWidth: 1, borderColor: `${Colors.blue}40`,
+  },
+  claimBtnOnchainText: { fontSize: 12, fontWeight: "700", color: Colors.blue },
+  claimBtnFee: { fontSize: 10, color: colors.textMuted, fontStyle: "italic" },
   claimedBadge: { paddingHorizontal: 10, paddingVertical: 5, borderRadius: 8, backgroundColor: `${Colors.success}18`, alignSelf: "flex-start" },
   claimedText: { fontSize: 11, fontWeight: "600", color: Colors.success },
 });
