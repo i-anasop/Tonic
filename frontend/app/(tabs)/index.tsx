@@ -135,17 +135,36 @@ function WeeklyChart({ data }: { data: number[] }) {
   const { colors } = useTheme();
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const maxValue = Math.max(...data, 1);
-  const days = ["M", "T", "W", "T", "F", "S", "S"];
-  const todayIdx = (new Date().getDay() + 6) % 7;
+
+  // Dynamic labels: data[0] = 6 days ago, data[6] = today (always)
+  const DAY_NAMES = ["Su", "M", "Tu", "W", "Th", "F", "Sa"];
+  const days = Array.from({ length: 7 }, (_, i) => {
+    const d = new Date();
+    d.setDate(d.getDate() - (6 - i));
+    return DAY_NAMES[d.getDay()];
+  });
+  const todayIdx = 6; // today is always the rightmost bar
+
+  // Animate bar heights
+  const animVals = useRef(data.map(() => new Animated.Value(0))).current;
+  useEffect(() => {
+    const targets = data.map((v) => Math.max((v / Math.max(...data, 1)) * 72, v > 0 ? 8 : 0));
+    Animated.stagger(
+      45,
+      targets.map((h, i) =>
+        Animated.spring(animVals[i], { toValue: h, friction: 7, tension: 60, useNativeDriver: false })
+      )
+    ).start();
+  }, [JSON.stringify(data)]);
+
   return (
     <View style={styles.chartWrap}>
       {data.map((value, i) => {
-        const h = Math.max((value / maxValue) * 72, value > 0 ? 8 : 0);
         const isToday = i === todayIdx;
         return (
           <View key={i} style={styles.barCol}>
             <View style={[styles.barTrack, { height: 72 }]}>
-              <View style={[styles.barFill, { height: h, backgroundColor: isToday ? Colors.gold : `${Colors.gold}35`, borderTopLeftRadius: 4, borderTopRightRadius: 4 }]} />
+              <Animated.View style={[styles.barFill, { height: animVals[i], backgroundColor: isToday ? Colors.gold : `${Colors.gold}35`, borderTopLeftRadius: 4, borderTopRightRadius: 4 }]} />
             </View>
             <Text style={[styles.barLabel, isToday && { color: Colors.gold, fontWeight: "700" }]}>{days[i]}</Text>
           </View>

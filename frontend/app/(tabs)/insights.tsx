@@ -35,6 +35,7 @@ import {
 import { Colors } from "@/constants/colors";
 import { useTheme, type AppColors } from "@/providers/ThemeProvider";
 import { useTasks } from "@/providers/TasksProvider";
+import { useAchievements } from "@/providers/AchievementsProvider";
 import type { AIInsight } from "@/types/tasks";
 import { API_BASE_URL } from "@/constants/api";
 
@@ -297,6 +298,135 @@ function SkeletonCard() {
   );
 }
 
+// ── Rank Roadmap ───────────────────────────────────────────────────────────────
+const RANK_PATH = [
+  { name: "Rookie",      level: 1,  color: "#9CA3AF", emoji: "🥋", pts: 0    },
+  { name: "Bronze",      level: 2,  color: "#CD7F32", emoji: "🥉", pts: 50   },
+  { name: "Silver",      level: 3,  color: "#C0C0C0", emoji: "🥈", pts: 120  },
+  { name: "Gold",        level: 4,  color: Colors.gold, emoji: "🥇", pts: 250 },
+  { name: "Platinum",    level: 5,  color: "#22D3EE", emoji: "💎", pts: 450  },
+  { name: "Diamond",     level: 6,  color: Colors.blue, emoji: "💠", pts: 700 },
+  { name: "Master",      level: 7,  color: Colors.purple, emoji: "⚔️", pts: 1050 },
+  { name: "Grandmaster", level: 8,  color: "#F97316", emoji: "👑", pts: 1500 },
+  { name: "Legend",      level: 9,  color: Colors.danger, emoji: "🔥", pts: 2100 },
+  { name: "Mythic",      level: 10, color: "#EC4899", emoji: "⚡", pts: 3000 },
+];
+
+const RANK_MOCK_USERS: Record<number, string> = {
+  9: "DeFi_Pro",
+  7: "CryptoNinja",
+  6: "BlockStar",
+  4: "TONQueen",
+  3: "GrindKing",
+};
+
+function RankRoadmap({ userLevel }: { userLevel: number }) {
+  const { colors } = useTheme();
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const slideAnim = useRef(new Animated.Value(24)).current;
+
+  useEffect(() => {
+    Animated.parallel([
+      Animated.timing(fadeAnim, { toValue: 1, duration: 500, useNativeDriver: true }),
+      Animated.spring(slideAnim, { toValue: 0, friction: 8, tension: 50, useNativeDriver: true }),
+    ]).start();
+  }, []);
+
+  return (
+    <Animated.View style={{ opacity: fadeAnim, transform: [{ translateY: slideAnim }], marginBottom: 14 }}>
+      <View style={{ backgroundColor: colors.bgSecondary, borderRadius: 22, borderWidth: 1, borderColor: colors.border, overflow: "hidden" }}>
+        {/* Header */}
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 10, padding: 16, paddingBottom: 12, borderBottomWidth: 1, borderBottomColor: colors.border }}>
+          <View style={{ width: 32, height: 32, borderRadius: 10, backgroundColor: `${Colors.gold}15`, justifyContent: "center", alignItems: "center" }}>
+            <Trophy size={16} color={Colors.gold} />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={{ fontSize: 14, fontWeight: "700", color: colors.textPrimary }}>Rank Roadmap</Text>
+            <Text style={{ fontSize: 10, color: colors.textMuted, marginTop: 1 }}>Rookie → Mythic · Earn pts to rank up</Text>
+          </View>
+          <View style={{ backgroundColor: `${Colors.gold}20`, paddingHorizontal: 10, paddingVertical: 5, borderRadius: 10, borderWidth: 1, borderColor: `${Colors.gold}35` }}>
+            <Text style={{ fontSize: 10, fontWeight: "700", color: Colors.gold }}>UNRANKED</Text>
+          </View>
+        </View>
+
+        {/* Horizontal scroll of rank nodes */}
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={{ paddingHorizontal: 16, paddingVertical: 18, flexDirection: "row", alignItems: "center" }}
+        >
+          {RANK_PATH.map((rank, i) => {
+            const achieved = userLevel >= rank.level;
+            const isCurrent = userLevel === rank.level;
+            const mockUser = RANK_MOCK_USERS[rank.level];
+            return (
+              <View key={rank.name} style={{ flexDirection: "row", alignItems: "center" }}>
+                <View style={{ alignItems: "center", gap: 5, minWidth: isCurrent ? 64 : 52 }}>
+                  {/* Mock user name above */}
+                  <View style={{ height: 22, justifyContent: "center", alignItems: "center" }}>
+                    {mockUser && (
+                      <View style={{ backgroundColor: `${rank.color}22`, borderRadius: 6, paddingHorizontal: 5, paddingVertical: 2, borderWidth: 1, borderColor: `${rank.color}40` }}>
+                        <Text style={{ fontSize: 8, fontWeight: "700", color: rank.color }}>{mockUser}</Text>
+                      </View>
+                    )}
+                  </View>
+
+                  {/* Rank bubble */}
+                  <View style={{
+                    width: isCurrent ? 58 : 44,
+                    height: isCurrent ? 58 : 44,
+                    borderRadius: 999,
+                    backgroundColor: achieved ? `${rank.color}22` : colors.bgTertiary,
+                    borderWidth: isCurrent ? 2.5 : 1.5,
+                    borderColor: achieved ? rank.color : colors.border,
+                    justifyContent: "center",
+                    alignItems: "center",
+                    shadowColor: isCurrent ? rank.color : "transparent",
+                    shadowOffset: { width: 0, height: 4 },
+                    shadowOpacity: 0.45,
+                    shadowRadius: 10,
+                    elevation: isCurrent ? 8 : 0,
+                  }}>
+                    <Text style={{ fontSize: isCurrent ? 24 : 18 }}>{rank.emoji}</Text>
+                  </View>
+
+                  {/* Rank name */}
+                  <Text style={{ fontSize: 9, fontWeight: isCurrent ? "800" : "600", color: achieved ? rank.color : colors.textMuted, textAlign: "center" }}>
+                    {rank.name}
+                  </Text>
+
+                  {/* YOU / Next badges */}
+                  {isCurrent ? (
+                    <View style={{ backgroundColor: rank.color, borderRadius: 6, paddingHorizontal: 6, paddingVertical: 2 }}>
+                      <Text style={{ fontSize: 8, fontWeight: "800", color: "#000" }}>YOU</Text>
+                    </View>
+                  ) : userLevel + 1 === rank.level ? (
+                    <Text style={{ fontSize: 8, color: Colors.gold, fontWeight: "600" }}>next ↑</Text>
+                  ) : (
+                    <Text style={{ fontSize: 8, color: "transparent" }}>.</Text>
+                  )}
+                </View>
+
+                {/* Connector */}
+                {i < RANK_PATH.length - 1 && (
+                  <View style={{ width: 20, height: 2.5, backgroundColor: userLevel > rank.level ? Colors.gold : colors.border, marginHorizontal: 3, borderRadius: 2 }} />
+                )}
+              </View>
+            );
+          })}
+        </ScrollView>
+
+        {/* Footer */}
+        <View style={{ paddingHorizontal: 16, paddingBottom: 14, alignItems: "center" }}>
+          <Text style={{ fontSize: 11, color: colors.textMuted, textAlign: "center" }}>
+            Complete achievements to earn pts and advance · Global rank unlocks at Bronze
+          </Text>
+        </View>
+      </View>
+    </Animated.View>
+  );
+}
+
 // ── Leaderboard Row ────────────────────────────────────────────────────────────
 interface LeaderboardEntry { id: string; name: string; wallet_address?: string; completed_tasks: number; total_tasks: number; completion_rate: number; }
 function LeaderboardRow({ entry, rank }: { entry: LeaderboardEntry; rank: number }) {
@@ -325,6 +455,7 @@ function LeaderboardRow({ entry, rank }: { entry: LeaderboardEntry; rank: number
 export default function InsightsScreen() {
   const [activeTab, setActiveTab] = useState<"insights" | "analytics">("insights");
   const { insights, tasks, getStats, isGeneratingInsights, generateInsights } = useTasks();
+  const { stats: achStats, claimPoints } = useAchievements();
   const { colors } = useTheme();
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const [stats, setStats] = useState({ tasksCompleted: 0, tasksCreated: 0, currentStreak: 0, productivityScore: 0, weeklyCompletion: [0,0,0,0,0,0,0] });
@@ -482,6 +613,29 @@ export default function InsightsScreen() {
           </>
         ) : (
           <>
+            {/* Achievement Points Claim */}
+            {achStats.pendingPoints > 0 && (
+              <View style={{ backgroundColor: `${Colors.gold}0E`, borderRadius: 20, padding: 16, marginBottom: 14, borderWidth: 1.5, borderColor: `${Colors.gold}35`, flexDirection: "row", alignItems: "center", gap: 14 }}>
+                <View style={{ width: 44, height: 44, borderRadius: 14, backgroundColor: `${Colors.gold}20`, justifyContent: "center", alignItems: "center" }}>
+                  <Star size={20} color={Colors.gold} fill={Colors.gold} />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={{ fontSize: 14, fontWeight: "800", color: Colors.gold }}>🎁 {achStats.pendingPoints} pts ready</Text>
+                  <Text style={{ fontSize: 11, color: colors.textMuted, marginTop: 2 }}>1× claim now · 2× with TON wallet</Text>
+                </View>
+                <TouchableOpacity
+                  style={{ backgroundColor: Colors.gold, borderRadius: 14, paddingHorizontal: 16, paddingVertical: 10 }}
+                  onPress={() => void claimPoints(false)}
+                  activeOpacity={0.85}
+                >
+                  <Text style={{ fontSize: 13, fontWeight: "800", color: "#0D1117" }}>Claim</Text>
+                </TouchableOpacity>
+              </View>
+            )}
+
+            {/* Rank Roadmap */}
+            <RankRoadmap userLevel={achStats.currentLevel.level} />
+
             {/* Score + completion */}
             <View style={styles.analyticsHero}>
               <View style={{ flex: 1, gap: 12 }}>

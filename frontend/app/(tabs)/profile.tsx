@@ -489,6 +489,17 @@ export default function ProfileScreen() {
               <View style={styles.statDivider} />
               <StatItem icon={Sparkles} value={stats.productivityScore} label="Score" color={Colors.purple} />
             </View>
+
+            {/* TONIC balance row in profile card */}
+            {tonicBalance !== null && (
+              <View style={{ marginTop: 14, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 10, backgroundColor: `${Colors.gold}10`, borderRadius: 16, paddingVertical: 12, paddingHorizontal: 16, borderWidth: 1.5, borderColor: `${Colors.gold}30` }}>
+                <Zap size={16} color={Colors.gold} fill={Colors.gold} />
+                <Text style={{ fontSize: 22, fontWeight: "900", color: Colors.gold, letterSpacing: -0.5 }}>{tonicBalance.toLocaleString()}</Text>
+                <Text style={{ fontSize: 13, fontWeight: "700", color: Colors.gold }}>TONIC</Text>
+                <View style={{ width: 1, height: 18, backgroundColor: `${Colors.gold}30`, marginHorizontal: 4 }} />
+                <Text style={{ fontSize: 12, color: colors.textMuted }}>≈ {(tonicBalance / 100000).toFixed(4)} TON</Text>
+              </View>
+            )}
           </View>
 
           {/* ── Achievements button ── */}
@@ -510,23 +521,6 @@ export default function ProfileScreen() {
             </View>
           </TouchableOpacity>
 
-          {/* ── Pending Points Banner ── */}
-          {achievementStats.pendingPoints > 0 && (
-            <View style={styles.claimCard}>
-              <View style={styles.claimLeft}>
-                <Text style={styles.claimTitle}>🎁 {achievementStats.pendingPoints} pts ready</Text>
-                <Text style={styles.claimSub}>Claim 1× now or connect TON for 2× boost</Text>
-              </View>
-              <View style={styles.claimBtns}>
-                <TouchableOpacity style={styles.claimBtn1x} onPress={() => handleClaimPoints(false)} disabled={isRecordingOnChain || isSendingTx} activeOpacity={0.8}>
-                  <Text style={styles.claimBtn1xText}>1×</Text>
-                </TouchableOpacity>
-                <TouchableOpacity style={styles.claimBtn2x} onPress={() => handleClaimPoints(true)} disabled={isRecordingOnChain || isSendingTx} activeOpacity={0.8}>
-                  {isRecordingOnChain ? <ActivityIndicator size={12} color="#0D1117" /> : <Text style={styles.claimBtn2xText}>2× ⛓️</Text>}
-                </TouchableOpacity>
-              </View>
-            </View>
-          )}
 
           {/* ── TON Blockchain ── */}
           <View style={styles.section}>

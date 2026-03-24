@@ -884,6 +884,14 @@ app.post("/api/claim-points", async (req, res) => {
   }
 });
 
+const MOCK_LEADERS = [
+  { id: "mock_1", name: "DeFi_Pro",    wallet_address: "UQBpro...x1", tonic_tokens: 28400, completed_tasks: 284, total_tasks: 296, completion_rate: 96, score: 31240 },
+  { id: "mock_2", name: "CryptoNinja", wallet_address: "UQBninja...x2", tonic_tokens: 21600, completed_tasks: 216, total_tasks: 224, completion_rate: 96, score: 23760 },
+  { id: "mock_3", name: "BlockStar",   wallet_address: "UQBstar...x3", tonic_tokens: 16500, completed_tasks: 165, total_tasks: 178, completion_rate: 93, score: 18150 },
+  { id: "mock_4", name: "TONQueen",    wallet_address: null,            tonic_tokens: 11200, completed_tasks: 112, total_tasks: 126, completion_rate: 89, score: 12320 },
+  { id: "mock_5", name: "GrindKing",   wallet_address: null,            tonic_tokens:  7300, completed_tasks:  73, total_tasks:  82, completion_rate: 89, score:  8030 },
+];
+
 app.get("/api/leaderboard", async (req, res) => {
   try {
     const result = await db.query(`
@@ -908,10 +916,15 @@ app.get("/api/leaderboard", async (req, res) => {
       ORDER BY score DESC
       LIMIT 20
     `);
-    res.json({ leaderboard: result.rows });
+    // Merge real users with mock leaders; real users who beat a mock user displace them
+    const real = result.rows.map(r => ({ ...r, completed_tasks: Number(r.completed_tasks), total_tasks: Number(r.total_tasks), completion_rate: Number(r.completion_rate), score: Number(r.score) }));
+    const combined = [...MOCK_LEADERS, ...real]
+      .sort((a, b) => b.score - a.score)
+      .slice(0, 20);
+    res.json({ leaderboard: combined });
   } catch (error) {
     console.error("Leaderboard error:", error.message);
-    res.status(500).json({ error: "Failed to fetch leaderboard", leaderboard: [] });
+    res.status(500).json({ error: "Failed to fetch leaderboard", leaderboard: MOCK_LEADERS });
   }
 });
 
