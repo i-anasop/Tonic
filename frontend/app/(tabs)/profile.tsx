@@ -424,7 +424,7 @@ export default function ProfileScreen() {
                 {isEditingName ? (
                   <>
                     <TextInput
-                      style={styles.nameInput}
+                      style={[styles.nameInput, { outlineWidth: 0 } as any]}
                       value={editNameValue}
                       onChangeText={setEditNameValue}
                       autoFocus
@@ -677,17 +677,25 @@ export default function ProfileScreen() {
                   </View>
                 ))}
               </View>
+              <View style={{ marginTop: 10, backgroundColor: colors.bgPrimary, borderRadius: 12, padding: 12, borderWidth: 1, borderColor: colors.border }}>
+                <Text style={{ fontSize: 11, color: colors.textMuted, fontWeight: "600", textTransform: "uppercase", letterSpacing: 0.7, marginBottom: 6 }}>Conversion Rate</Text>
+                <Text style={{ fontSize: 12, color: colors.textSecondary, lineHeight: 18 }}>
+                  100,000 TONIC = 1 TON{"\n"}
+                  Your balance ≈ <Text style={{ fontWeight: "700", color: Colors.gold }}>{((tonicBalance ?? 0) / 100000).toFixed(4)} TON</Text>
+                </Text>
+                <Text style={{ fontSize: 10, color: colors.textMuted, marginTop: 4 }}>Rate is intentionally conservative to preserve token value.</Text>
+              </View>
               {user?.walletAddress ? (
                 <TouchableOpacity
-                  style={{ marginTop: 14, backgroundColor: Colors.gold, borderRadius: 12, paddingVertical: 11, alignItems: "center" }}
+                  style={{ marginTop: 10, backgroundColor: Colors.gold, borderRadius: 12, paddingVertical: 11, alignItems: "center" }}
                   activeOpacity={0.85}
-                  onPress={() => Alert.alert("Claim on TON", "Token claiming will be live after the hackathon. Your balance is safely recorded on-chain.")}
+                  onPress={() => Alert.alert("Claim on TON", `You have ${(tonicBalance ?? 0).toLocaleString()} TONIC ≈ ${((tonicBalance ?? 0) / 100000).toFixed(4)} TON.\n\nClaiming will be available after the hackathon. Your balance is securely tracked.`)}
                 >
                   <Text style={{ color: "#000", fontWeight: "800", fontSize: 13 }}>Claim on TON Blockchain</Text>
                 </TouchableOpacity>
               ) : (
                 <TouchableOpacity
-                  style={{ marginTop: 14, backgroundColor: `${Colors.gold}20`, borderRadius: 12, paddingVertical: 11, alignItems: "center", borderWidth: 1, borderColor: `${Colors.gold}40` }}
+                  style={{ marginTop: 10, backgroundColor: `${Colors.gold}20`, borderRadius: 12, paddingVertical: 11, alignItems: "center", borderWidth: 1, borderColor: `${Colors.gold}40` }}
                   activeOpacity={0.85}
                   onPress={() => void connectTonWallet()}
                 >
@@ -721,7 +729,7 @@ export default function ProfileScreen() {
               </TouchableOpacity>
               <View style={{ flexDirection: "row", gap: 8 }}>
                 <TextInput
-                  style={{ flex: 1, backgroundColor: colors.bgSecondary, borderRadius: 12, paddingHorizontal: 14, height: 44, color: colors.textPrimary, fontSize: 16, fontWeight: "700", letterSpacing: 3, borderWidth: 1, borderColor: colors.border }}
+                  style={{ flex: 1, backgroundColor: colors.bgSecondary, borderRadius: 12, paddingHorizontal: 14, height: 44, color: colors.textPrimary, fontSize: 16, fontWeight: "700", letterSpacing: 3, borderWidth: 1, borderColor: colors.border, outlineWidth: 0 } as any}
                   placeholder="ENTER CODE"
                   placeholderTextColor={colors.textMuted}
                   value={syncInput}

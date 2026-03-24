@@ -118,8 +118,8 @@ export default function TaskModal() {
   const quickDates = [
     { label: "Today",      date: new Date() },
     { label: "Tomorrow",   date: new Date(Date.now() + 86400000) },
-    { label: "This week",  date: new Date(Date.now() + 3 * 86400000) },
-    { label: "Next week",  date: new Date(Date.now() + 7 * 86400000) },
+    { label: "In 3 days",  date: new Date(Date.now() + 3 * 86400000) },
+    { label: "In 7 days",  date: new Date(Date.now() + 7 * 86400000) },
   ];
 
   const selectedCat = categories.find((c) => c.key === category)!;
@@ -432,6 +432,7 @@ const makeStyles = (colors: AppColors) => StyleSheet.create({
   titleInput: {
     height: 54, color: colors.textPrimary, fontSize: 20, fontWeight: "600",
     paddingHorizontal: 0, paddingVertical: 0,
+    ...(Platform.OS === "web" ? { outlineWidth: 0, outlineStyle: "none" } as any : {}),
   },
   charCount: { fontSize: 10, color: colors.textMuted, textAlign: "right", paddingBottom: 6 },
   errorRow: { flexDirection: "row", alignItems: "center", gap: 6, marginTop: 7 },
@@ -483,6 +484,7 @@ const makeStyles = (colors: AppColors) => StyleSheet.create({
   descInput: {
     color: colors.textPrimary, fontSize: 14, lineHeight: 21,
     minHeight: 72, paddingHorizontal: 0,
+    ...(Platform.OS === "web" ? { outlineWidth: 0, outlineStyle: "none" } as any : {}),
   },
 
   summaryRow: { flexDirection: "row", flexWrap: "wrap", gap: 8, marginBottom: 20 },

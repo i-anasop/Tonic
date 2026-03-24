@@ -244,42 +244,58 @@ function TonicTokenWidget({ userId }: { userId?: string }) {
 }
 
 // ── Daily Challenge Card ───────────────────────────────────────────────────────
-function DailyChallengeCard({ userId }: { userId?: string }) {
+function DailyChallengeCard({ userId, tasks }: { userId?: string; tasks: Task[] }) {
   const { colors } = useTheme();
   const [challenge, setChallenge] = React.useState<any>(null);
-  const [claiming, setClaiming] = React.useState(false);
+  const claimedRef = useRef(false);
 
-  const load = () => {
+  useEffect(() => {
     const url = userId
       ? `${API_BASE_URL}/api/daily-challenge?userId=${userId}`
       : `${API_BASE_URL}/api/daily-challenge`;
     fetch(url).then(r => r.json()).then(d => { if (d.challenge) setChallenge(d.challenge); }).catch(() => {});
-  };
+  }, [userId]);
 
-  useEffect(() => { load(); }, [userId]);
+  const todayStr = new Date().toDateString();
+  const noonMs = (() => { const d = new Date(); d.setHours(12, 0, 0, 0); return d.getTime(); })();
+
+  const progress = React.useMemo(() => {
+    if (!challenge) return 0;
+    const todayCompleted = tasks.filter(t => t.status === "completed" && new Date(t.completedAt ?? t.dueDate).toDateString() === todayStr);
+    switch (challenge.type) {
+      case "tasks": return todayCompleted.length;
+      case "high_priority": return todayCompleted.filter(t => t.priority === "high").length;
+      case "overdue": return tasks.filter(t => t.status === "completed" && new Date(t.dueDate) < new Date(todayStr) && new Date(t.completedAt ?? t.dueDate).toDateString() === todayStr).length;
+      case "category_growth": return todayCompleted.filter(t => t.category === "health" || t.category === "learning").length;
+      case "morning_work": return todayCompleted.filter(t => t.category === "work" && new Date(t.completedAt ?? 0).getTime() < noonMs).length;
+      default: return 0;
+    }
+  }, [tasks, challenge, todayStr]);
+
+  useEffect(() => {
+    if (!challenge || challenge.done || !userId || claimedRef.current) return;
+    if (progress >= challenge.target) {
+      claimedRef.current = true;
+      fetch(`${API_BASE_URL}/api/daily-challenge/complete`, {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId }),
+      })
+        .then(() => setChallenge((c: any) => ({ ...c, done: true })))
+        .catch(() => { claimedRef.current = false; });
+    }
+  }, [progress, challenge, userId]);
 
   if (!challenge) return null;
 
-  const handleClaim = async () => {
-    if (!userId || challenge.done || claiming) return;
-    setClaiming(true);
-    try {
-      await fetch(`${API_BASE_URL}/api/daily-challenge/complete`, {
-        method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId }),
-      });
-      setChallenge((c: any) => ({ ...c, done: true }));
-    } catch {}
-    setClaiming(false);
-  };
-
-  const accent = challenge.done ? Colors.success : Colors.purple;
+  const done = challenge.done;
+  const pct = Math.min(progress / challenge.target, 1);
+  const accent = done ? Colors.success : Colors.purple;
 
   return (
     <View style={{ backgroundColor: `${accent}0D`, borderRadius: 18, padding: 16, marginBottom: 14, borderWidth: 1, borderColor: `${accent}30` }}>
-      <View style={{ flexDirection: "row", alignItems: "center", gap: 10, marginBottom: 10 }}>
+      <View style={{ flexDirection: "row", alignItems: "center", gap: 10, marginBottom: 12 }}>
         <View style={{ width: 34, height: 34, borderRadius: 10, backgroundColor: `${accent}20`, justifyContent: "center", alignItems: "center" }}>
-          <Target size={16} color={accent} />
+          {done ? <CheckSquare size={16} color={accent} /> : <Target size={16} color={accent} />}
         </View>
         <View style={{ flex: 1 }}>
           <Text style={{ fontSize: 10, color: accent, fontWeight: "700", textTransform: "uppercase", letterSpacing: 0.8 }}>Daily Challenge</Text>
@@ -290,16 +306,12 @@ function DailyChallengeCard({ userId }: { userId?: string }) {
           <Text style={{ fontSize: 11, fontWeight: "800", color: Colors.gold }}>+{challenge.reward}</Text>
         </View>
       </View>
-      <TouchableOpacity
-        onPress={handleClaim}
-        activeOpacity={challenge.done ? 1 : 0.85}
-        style={{ backgroundColor: challenge.done ? `${Colors.success}20` : accent, borderRadius: 12, paddingVertical: 10, alignItems: "center", flexDirection: "row", justifyContent: "center", gap: 6 }}
-      >
-        {challenge.done ? <CheckSquare size={14} color={Colors.success} /> : <Zap size={14} color="#fff" />}
-        <Text style={{ fontSize: 13, fontWeight: "700", color: challenge.done ? Colors.success : "#fff" }}>
-          {challenge.done ? "Challenge Complete! ✓" : "Mark Complete"}
-        </Text>
-      </TouchableOpacity>
+      <View style={{ backgroundColor: colors.bgPrimary, borderRadius: 10, height: 8, overflow: "hidden", marginBottom: 8 }}>
+        <View style={{ width: `${pct * 100}%`, height: 8, backgroundColor: accent, borderRadius: 10 }} />
+      </View>
+      <Text style={{ fontSize: 11, color: colors.textMuted, textAlign: "right" }}>
+        {done ? "Complete! +50 TONIC earned" : `${Math.min(progress, challenge.target)} / ${challenge.target} — complete tasks to unlock`}
+      </Text>
     </View>
   );
 }
@@ -661,7 +673,7 @@ export default function DashboardScreen() {
         <TonicTokenWidget userId={user?.id} />
 
         {/* Daily Challenge */}
-        <DailyChallengeCard userId={user?.id} />
+        <DailyChallengeCard userId={user?.id} tasks={tasks} />
 
         {/* Leaderboard Preview */}
         <LeaderboardPreview currentUserId={user?.id} />

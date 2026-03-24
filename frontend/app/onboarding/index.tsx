@@ -784,32 +784,42 @@ export default function OnboardingScreen() {
               )}
             </View>
           ) : (
-            <View style={styles.navRow}>
-              <View style={styles.slideCounter}>
-                <Text style={[styles.slideNum, { color: slide.accent }]}>
-                  {String(currentIndex + 1).padStart(2, "0")}
-                </Text>
-                <Text style={styles.slideTotal}>/{SLIDES.length}</Text>
-              </View>
+            <View>
+              <View style={styles.navRow}>
+                <View style={styles.slideCounter}>
+                  <Text style={[styles.slideNum, { color: slide.accent }]}>
+                    {String(currentIndex + 1).padStart(2, "0")}
+                  </Text>
+                  <Text style={styles.slideTotal}>/{SLIDES.length}</Text>
+                </View>
 
-              <Animated.View
-                style={{
-                  shadowColor: slide.accent,
-                  shadowOffset: { width: 0, height: 0 },
-                  shadowRadius: btnShadowRadius,
-                  shadowOpacity: btnShadowOpacity,
-                  elevation: 10,
-                  borderRadius: 32,
-                }}
-              >
-                <TouchableOpacity
-                  style={[styles.nextBtn, { backgroundColor: slide.accent }]}
-                  onPress={handleNext}
-                  activeOpacity={0.8}
+                <Animated.View
+                  style={{
+                    shadowColor: slide.accent,
+                    shadowOffset: { width: 0, height: 0 },
+                    shadowRadius: btnShadowRadius,
+                    shadowOpacity: btnShadowOpacity,
+                    elevation: 10,
+                    borderRadius: 32,
+                  }}
                 >
-                  <ChevronRight size={26} color="#0D1117" />
-                </TouchableOpacity>
-              </Animated.View>
+                  <TouchableOpacity
+                    style={[styles.nextBtn, { backgroundColor: slide.accent }]}
+                    onPress={handleNext}
+                    activeOpacity={0.8}
+                  >
+                    <ChevronRight size={26} color="#0D1117" />
+                  </TouchableOpacity>
+                </Animated.View>
+              </View>
+              <TouchableOpacity
+                onPress={handleConnectWallet}
+                activeOpacity={0.8}
+                style={{ flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 7, marginTop: 16, paddingVertical: 10 }}
+              >
+                <Wallet size={14} color={Colors.gold} />
+                <Text style={{ fontSize: 13, color: Colors.gold, fontWeight: "700" }}>Connect TON Wallet instead</Text>
+              </TouchableOpacity>
             </View>
           )}
         </View>
