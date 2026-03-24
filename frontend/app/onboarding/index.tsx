@@ -812,14 +812,6 @@ export default function OnboardingScreen() {
                   </TouchableOpacity>
                 </Animated.View>
               </View>
-              <TouchableOpacity
-                onPress={handleConnectWallet}
-                activeOpacity={0.8}
-                style={{ flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 7, marginTop: 16, paddingVertical: 10 }}
-              >
-                <Wallet size={14} color={Colors.gold} />
-                <Text style={{ fontSize: 13, color: Colors.gold, fontWeight: "700" }}>Connect TON Wallet instead</Text>
-              </TouchableOpacity>
             </View>
           )}
         </View>

@@ -283,7 +283,7 @@ function DailyChallengeCard({ userId, tasks }: { userId?: string; tasks: Task[] 
     const todayCompleted = tasks.filter(t => t.status === "completed" && new Date(t.completedAt ?? t.dueDate).toDateString() === todayStr);
     switch (challenge.type) {
       case "tasks": return todayCompleted.length;
-      case "high_priority": return todayCompleted.filter(t => t.priority === "high").length;
+      case "high_priority": return tasks.filter(t => t.status === "completed" && t.priority === "high" && t.completedAt && new Date(t.completedAt).toDateString() === todayStr).length;
       case "overdue": return tasks.filter(t => t.status === "completed" && new Date(t.dueDate) < new Date(todayStr) && new Date(t.completedAt ?? t.dueDate).toDateString() === todayStr).length;
       case "category_growth": return todayCompleted.filter(t => t.category === "health" || t.category === "learning").length;
       case "morning_work": return todayCompleted.filter(t => t.category === "work" && new Date(t.completedAt ?? 0).getTime() < noonMs).length;
@@ -357,7 +357,7 @@ function LeaderboardPreview({ currentUserId }: { currentUserId?: string }) {
     <View style={{ marginBottom: 18 }}>
       <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
         <Text style={{ fontSize: 16, fontWeight: "700", color: colors.textPrimary }}>Global Leaderboard</Text>
-        <TouchableOpacity onPress={() => router.push("/(tabs)/profile" as any)} style={{ flexDirection: "row", alignItems: "center", gap: 3 }}>
+        <TouchableOpacity onPress={() => router.push("/(tabs)/leaderboard" as any)} style={{ flexDirection: "row", alignItems: "center", gap: 3 }}>
           <Text style={{ fontSize: 12, color: colors.textMuted }}>Full board</Text>
           <ChevronRight size={13} color={colors.textMuted} />
         </TouchableOpacity>

@@ -250,7 +250,7 @@ const STEPS = [
     accent: Colors.gold,
     title: "Your Dashboard",
     subtitle: "AI-powered home base",
-    description: "See your stats, chat with the AI agent, and launch your day — all from one clean view.",
+    description: "Your stats, AI agent, and daily challenge — all in one view.",
     Screen: MiniDashboard,
   },
   {
@@ -260,7 +260,7 @@ const STEPS = [
     accent: Colors.blue,
     title: "Smart Task Manager",
     subtitle: "Organize with precision",
-    description: "Create tasks across Work, Personal, Health, and Learning. The AI prioritizes and schedules your day automatically.",
+    description: "Add tasks across Work, Health, and Learning — the AI prioritizes your day.",
     Screen: MiniTasks,
   },
   {
@@ -270,7 +270,7 @@ const STEPS = [
     accent: Colors.purple,
     title: "AI Productivity Insights",
     subtitle: "Know your patterns",
-    description: "GPT-5 analyzes your actual task data and delivers daily personalized insights — charts, trends, and honest advice.",
+    description: "GPT-5 reads your tasks and delivers daily insights — charts, trends, and honest advice.",
     Screen: MiniInsights,
   },
   {
@@ -280,17 +280,17 @@ const STEPS = [
     accent: "#F59E0B",
     title: "Tonic AI Agent",
     subtitle: "Talk to get things done",
-    description: 'Say "Add a workout for today" and it\'s added. Ask for a plan, a report, or just a nudge — it handles it all.',
+    description: 'Say "Add workout today" and it\'s done. Ask for a plan, a report, or a nudge.',
     Screen: MiniAgent,
   },
   {
     id: "profile",
-    tab: "/(tabs)/profile",
+    tab: "/(tabs)/",
     gradient: ["#001A0E", "#0D1117"] as [string, string],
     accent: Colors.success,
     title: "Achievements & TON",
     subtitle: "Rank up. Go on-chain.",
-    description: "Complete tasks to unlock achievements, climb 10 ranks from Rookie to Mythic, and record your proof on the TON blockchain.",
+    description: "Unlock achievements, climb 10 ranks to Mythic, and earn $TONIC on the TON blockchain.",
     Screen: MiniProfile,
   },
 ];

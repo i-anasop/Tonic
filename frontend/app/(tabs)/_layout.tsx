@@ -130,6 +130,12 @@ export default function TabLayout() {
             href: null,
           }}
         />
+        <Tabs.Screen
+          name="leaderboard"
+          options={{
+            href: null,
+          }}
+        />
       </Tabs>
 
       <AgentFAB visible={tourChecked && !showTour && !isAgentScreen} />
