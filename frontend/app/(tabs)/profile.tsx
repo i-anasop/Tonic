@@ -463,19 +463,6 @@ export default function ProfileScreen() {
           <View style={styles.section}>
             <Text style={styles.sectionLabel}>TON Blockchain</Text>
             <View style={styles.menuCard}>
-              <TouchableOpacity style={styles.menuItem} onPress={handleProofOfProductivity} activeOpacity={0.75} disabled={isRecordingOnChain || isSendingTx}>
-                <View style={[styles.menuIconWrap, { backgroundColor: `${Colors.blue}12` }]}>
-                  <Shield size={18} color={Colors.blue} />
-                </View>
-                <View style={styles.menuBody}>
-                  <Text style={styles.menuTitle}>Proof of Productivity</Text>
-                  <Text style={styles.menuSub}>{isTonConnected ? `Sign score (${stats.productivityScore}pts) on-chain` : "Connect wallet to verify identity"}</Text>
-                </View>
-                <View style={[styles.tonBadge, { backgroundColor: isTonConnected ? `${Colors.blue}15` : colors.bgTertiary, borderColor: isTonConnected ? `${Colors.blue}40` : colors.border }]}>
-                  <Text style={[styles.tonBadgeText, { color: isTonConnected ? Colors.blue : colors.textMuted }]}>{isTonConnected ? "SIGN" : "OFF"}</Text>
-                </View>
-              </TouchableOpacity>
-              <View style={styles.divider} />
               <TouchableOpacity style={styles.menuItem} onPress={() => void handleTonianBadge()} activeOpacity={0.75} disabled={isMintingTonian || isSendingTx}>
                 <View style={[styles.menuIconWrap, { backgroundColor: `${Colors.gold}15` }]}>
                   {isMintingTonian ? <ActivityIndicator size={16} color={Colors.gold} /> : <Star size={18} color={Colors.gold} fill={tonianMinted ? Colors.gold : "transparent"} />}
@@ -629,7 +616,7 @@ export default function ProfileScreen() {
             <ScrollView showsVerticalScrollIndicator={false} style={{ maxHeight: 460 }}>
               {[
                 { icon: Shield, color: Colors.success, title: "Local-First Storage", body: "All your tasks, progress, and preferences are stored locally on your device using secure on-device storage. We do not upload personal task data to any external server." },
-                { icon: Activity, color: Colors.blue, title: "Blockchain Transparency", body: "When you use TON features (Proof of Productivity, badge minting), those transactions are publicly recorded on the TON blockchain — this is by design for verifiability." },
+                { icon: Activity, color: Colors.blue, title: "Blockchain Transparency", body: "When you use TON features (Verify to be Tonian badge minting, achievement claims), those transactions are publicly recorded on the TON blockchain — this is by design for verifiability." },
                 { icon: Sparkles, color: Colors.gold, title: "AI Processing", body: "Task summaries are sent to our AI server solely to generate insights and power the agent. We do not store or share your conversation history with third parties." },
                 { icon: CheckCircle, color: Colors.purple, title: "No Account Required", body: "Tonic AI works as a guest — no email, no sign-up, no tracking. Connecting a TON wallet is optional and only used for on-chain features you explicitly trigger." },
               ].map(({ icon: Ic, color, title, body }, i) => (
@@ -682,8 +669,7 @@ export default function ProfileScreen() {
             <ScrollView showsVerticalScrollIndicator={false} style={{ maxHeight: 420 }}>
               {[
                 { q: "How do I add a task?", a: "Tap the + button on the dashboard, or chat with your AI agent. Say something like 'Add a task to finish the report by Friday' and it'll create it automatically." },
-                { q: "How do I connect my TON wallet?", a: "Go to Profile → Account → Connect TON Wallet. This enables blockchain features like Proof of Productivity, badge minting, and the 2× points boost." },
-                { q: "What is Proof of Productivity?", a: "It records your productivity score onto the TON blockchain, creating a permanently verifiable on-chain identity tied to your real work history." },
+                { q: "How do I connect my TON wallet?", a: "Go to Profile → TON Blockchain → tap any blockchain feature. This enables badge minting and the 2× points boost for achievements." },
                 { q: "What is the Tonian badge?", a: "A 1 TON on-chain verification that makes you a verified member of the Tonic AI community. It's a blockchain record proving you're a Tonic AI power user." },
                 { q: "How do achievements work?", a: "Complete tasks, maintain daily streaks, and hit productivity milestones to unlock achievements. Each unlocked achievement earns claimable points." },
                 { q: "What is the 2× points boost?", a: "When you claim points via TON, a tiny gas-only transaction verifies your claim on-chain, doubling your reward as a bonus for using the blockchain feature." },
