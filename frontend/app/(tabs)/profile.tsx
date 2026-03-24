@@ -134,6 +134,11 @@ export default function ProfileScreen() {
   const [showWalletNameModal, setShowWalletNameModal] = useState(false);
   const [walletNameInput, setWalletNameInput] = useState("");
   const [pendingWalletAddr, setPendingWalletAddr] = useState<string | null>(null);
+  const [tonicBalance, setTonicBalance] = useState<number | null>(null);
+  const [syncCode, setSyncCode] = useState<string | null>(null);
+  const [syncInput, setSyncInput] = useState("");
+  const [syncLoading, setSyncLoading] = useState(false);
+  const [syncRestoreMsg, setSyncRestoreMsg] = useState("");
 
   useEffect(() => {
     if (isTonConnected && tonWalletAddress && !user?.walletAddress) {
@@ -165,6 +170,51 @@ export default function ProfileScreen() {
   }, [getStats]);
 
   useEffect(() => { void loadStats(); }, [loadStats, tasks]);
+
+  useEffect(() => {
+    if (!user?.id) return;
+    fetch(`${API_BASE_URL}/api/users/${user.id}/tokens`)
+      .then(r => r.json())
+      .then(d => { if (typeof d.tokens === "number") setTonicBalance(d.tokens); })
+      .catch(() => {});
+  }, [user?.id]);
+
+  const handleGenerateSyncCode = useCallback(async () => {
+    if (!user?.id) return;
+    setSyncLoading(true);
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/sync-code/generate`, {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId: user.id }),
+      });
+      const data = await res.json();
+      if (data.code) setSyncCode(data.code);
+    } catch {}
+    setSyncLoading(false);
+  }, [user?.id]);
+
+  const handleRestoreSync = useCallback(async () => {
+    const code = syncInput.trim().toUpperCase();
+    if (!code || code.length < 4) return;
+    setSyncLoading(true);
+    setSyncRestoreMsg("");
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/sync-code/restore`, {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ code }),
+      });
+      const data = await res.json();
+      if (data.user) {
+        setSyncRestoreMsg(`✓ Restored account: ${data.user.name}`);
+        setSyncInput("");
+      } else {
+        setSyncRestoreMsg("Code not found. Check and try again.");
+      }
+    } catch {
+      setSyncRestoreMsg("Restore failed. Please try again.");
+    }
+    setSyncLoading(false);
+  }, [syncInput]);
 
   const handleEditName = useCallback(() => {
     setEditNameValue(user?.name ?? "");
@@ -595,6 +645,102 @@ export default function ProfileScreen() {
               <MenuItem icon={Shield} title="Privacy & Security" color={Colors.success} onPress={() => setShowPrivacyModal(true)} />
               <View style={styles.divider} />
               <MenuItem icon={HelpCircle} title="Help & Support" color={Colors.blue} onPress={() => setShowHelpModal(true)} />
+            </View>
+          </View>
+
+          {/* ── $TONIC Token Balance ── */}
+          <View style={styles.section}>
+            <Text style={styles.sectionLabel}>$TONIC Tokens</Text>
+            <View style={[styles.menuCard, { padding: 16 }]}>
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 12, marginBottom: 14 }}>
+                <View style={{ width: 42, height: 42, borderRadius: 13, backgroundColor: `${Colors.gold}20`, justifyContent: "center", alignItems: "center" }}>
+                  <Star size={20} color={Colors.gold} fill={Colors.gold} />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={{ fontSize: 11, color: colors.textMuted, fontWeight: "600", textTransform: "uppercase", letterSpacing: 0.8 }}>Balance</Text>
+                  <Text style={{ fontSize: 26, fontWeight: "900", color: Colors.gold }}>
+                    {tonicBalance !== null ? tonicBalance.toLocaleString() : "—"} <Text style={{ fontSize: 14, fontWeight: "600" }}>TONIC</Text>
+                  </Text>
+                </View>
+              </View>
+              <View style={{ gap: 6 }}>
+                {[
+                  { label: "Complete a task (low priority)", reward: "+10" },
+                  { label: "Complete a task (medium priority)", reward: "+15" },
+                  { label: "Complete a task (high priority)", reward: "+25" },
+                  { label: "Daily streak bonus", reward: "+25" },
+                  { label: "Daily challenge", reward: "+50" },
+                ].map((row, i) => (
+                  <View key={i} style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingVertical: 5, borderTopWidth: i > 0 ? 1 : 0, borderTopColor: colors.border }}>
+                    <Text style={{ fontSize: 12, color: colors.textSecondary, flex: 1 }}>{row.label}</Text>
+                    <Text style={{ fontSize: 12, fontWeight: "700", color: Colors.success }}>{row.reward}</Text>
+                  </View>
+                ))}
+              </View>
+              {user?.walletAddress ? (
+                <TouchableOpacity
+                  style={{ marginTop: 14, backgroundColor: Colors.gold, borderRadius: 12, paddingVertical: 11, alignItems: "center" }}
+                  activeOpacity={0.85}
+                  onPress={() => Alert.alert("Claim on TON", "Token claiming will be live after the hackathon. Your balance is safely recorded on-chain.")}
+                >
+                  <Text style={{ color: "#000", fontWeight: "800", fontSize: 13 }}>Claim on TON Blockchain</Text>
+                </TouchableOpacity>
+              ) : (
+                <TouchableOpacity
+                  style={{ marginTop: 14, backgroundColor: `${Colors.gold}20`, borderRadius: 12, paddingVertical: 11, alignItems: "center", borderWidth: 1, borderColor: `${Colors.gold}40` }}
+                  activeOpacity={0.85}
+                  onPress={() => void connectTonWallet()}
+                >
+                  <Text style={{ color: Colors.gold, fontWeight: "700", fontSize: 13 }}>Connect Wallet to Claim</Text>
+                </TouchableOpacity>
+              )}
+            </View>
+          </View>
+
+          {/* ── Cross-Device Sync ── */}
+          <View style={styles.section}>
+            <Text style={styles.sectionLabel}>Cross-Device Sync</Text>
+            <View style={[styles.menuCard, { padding: 16 }]}>
+              <Text style={{ fontSize: 13, color: colors.textSecondary, marginBottom: 14, lineHeight: 18 }}>
+                Generate a 6-character sync code to restore your account on another device.
+              </Text>
+              {syncCode ? (
+                <View style={{ alignItems: "center", backgroundColor: `${Colors.blue}10`, borderRadius: 14, padding: 16, marginBottom: 14, borderWidth: 1, borderColor: `${Colors.blue}25` }}>
+                  <Text style={{ fontSize: 11, color: colors.textMuted, marginBottom: 6, fontWeight: "600", textTransform: "uppercase", letterSpacing: 0.8 }}>Your Sync Code</Text>
+                  <Text style={{ fontSize: 36, fontWeight: "900", color: Colors.blue, letterSpacing: 6 }}>{syncCode}</Text>
+                  <Text style={{ fontSize: 11, color: colors.textMuted, marginTop: 6 }}>Enter this code on your other device</Text>
+                </View>
+              ) : null}
+              <TouchableOpacity
+                onPress={() => void handleGenerateSyncCode()}
+                disabled={syncLoading}
+                style={{ backgroundColor: Colors.blue, borderRadius: 12, paddingVertical: 11, alignItems: "center", marginBottom: 12 }}
+                activeOpacity={0.85}
+              >
+                {syncLoading ? <ActivityIndicator color="#fff" size="small" /> : <Text style={{ color: "#fff", fontWeight: "700", fontSize: 13 }}>Generate Sync Code</Text>}
+              </TouchableOpacity>
+              <View style={{ flexDirection: "row", gap: 8 }}>
+                <TextInput
+                  style={{ flex: 1, backgroundColor: colors.bgSecondary, borderRadius: 12, paddingHorizontal: 14, height: 44, color: colors.textPrimary, fontSize: 16, fontWeight: "700", letterSpacing: 3, borderWidth: 1, borderColor: colors.border }}
+                  placeholder="ENTER CODE"
+                  placeholderTextColor={colors.textMuted}
+                  value={syncInput}
+                  onChangeText={v => { setSyncInput(v.toUpperCase().slice(0, 8)); setSyncRestoreMsg(""); }}
+                  autoCapitalize="characters"
+                  maxLength={8}
+                />
+                <TouchableOpacity
+                  onPress={() => void handleRestoreSync()}
+                  disabled={syncLoading || syncInput.trim().length < 4}
+                  style={{ backgroundColor: syncInput.trim().length >= 4 ? Colors.purple : colors.bgSecondary, borderRadius: 12, paddingHorizontal: 16, justifyContent: "center", height: 44 }}
+                  activeOpacity={0.85}
+                >
+                  <Text style={{ color: syncInput.trim().length >= 4 ? "#fff" : colors.textMuted, fontWeight: "700", fontSize: 13 }}>Restore</Text>
+                </TouchableOpacity>
+              </View>
+              {syncRestoreMsg ? (
+                <Text style={{ marginTop: 8, fontSize: 12, color: syncRestoreMsg.startsWith("✓") ? Colors.success : Colors.danger, fontWeight: "600" }}>{syncRestoreMsg}</Text>
+              ) : null}
             </View>
           </View>
 

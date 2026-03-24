@@ -13,7 +13,7 @@ interface TasksState {
   addTask: (task: Omit<Task, "id" | "createdAt">) => void;
   updateTask: (id: string, updates: Partial<Task>) => void;
   deleteTask: (id: string) => void;
-  toggleTaskStatus: (id: string) => void;
+  toggleTaskStatus: (id: string, userId?: string) => void;
   getTasksByDate: (date: Date) => Task[];
   getTasksByCategory: (category: TaskCategory) => Task[];
   getTodayTasks: () => Task[];
@@ -109,18 +109,24 @@ function useTasksProvider(): TasksState {
     setTasks((prev) => prev.filter((task) => task.id !== id));
   }, []);
 
-  const toggleTaskStatus = useCallback((id: string) => {
-    setTasks((prev) =>
-      prev.map((task) =>
-        task.id === id
-          ? {
-              ...task,
-              status: task.status === "completed" ? "pending" : "completed",
-              completedAt: task.status !== "completed" ? new Date() : undefined,
-            }
-          : task
-      )
-    );
+  const toggleTaskStatus = useCallback((id: string, userId?: string) => {
+    setTasks((prev) => {
+      const task = prev.find((t) => t.id === id);
+      const becomingComplete = task?.status !== "completed";
+      if (becomingComplete && userId) {
+        const amount = task?.priority === "high" ? 25 : task?.priority === "medium" ? 15 : 10;
+        fetch(`${API_BASE_URL}/api/earn-tokens`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ userId, amount, reason: `Completed: ${task?.title}` }),
+        }).catch(() => {});
+      }
+      return prev.map((t) =>
+        t.id === id
+          ? { ...t, status: becomingComplete ? "completed" : "pending", completedAt: becomingComplete ? new Date() : undefined }
+          : t
+      );
+    });
   }, []);
 
   const getTasksByDate = useCallback((date: Date) => {

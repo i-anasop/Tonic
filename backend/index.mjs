@@ -76,6 +76,10 @@ async function initDB() {
     ALTER TABLE users ADD COLUMN IF NOT EXISTS ton_proof TEXT;
     ALTER TABLE users ADD COLUMN IF NOT EXISTS verified_at TIMESTAMP;
     ALTER TABLE users ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT NOW();
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS tonic_tokens INT DEFAULT 0;
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS sync_code TEXT;
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS last_daily_challenge DATE;
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS daily_challenge_done BOOLEAN DEFAULT FALSE;
   `);
 
   console.log("Database initialized");
@@ -150,42 +154,58 @@ app.post("/api/insights", async (req, res) => {
   }
 });
 
-app.post("/api/agent", async (req, res) => {
-  try {
-    const { messages = [], tasks = [], stats = {}, userId } = req.body;
+function buildAgentSystemPrompt(tasks, stats, pendingTasks) {
+  const completedTasks = tasks.filter((t) => t.status === "completed");
+  const catCounts = {};
+  for (const t of completedTasks) catCounts[t.category] = (catCounts[t.category] || 0) + 1;
+  const strongestCat = Object.entries(catCounts).sort((a, b) => b[1] - a[1])[0]?.[0] || null;
+  const overdueCount = pendingTasks.filter((t) => new Date(t.dueDate || t.due_date) < new Date()).length;
+  const highPriorityPending = pendingTasks.filter((t) => t.priority === "high").length;
+  const tasksByCategory = { work: 0, personal: 0, health: 0, learning: 0 };
+  for (const t of completedTasks) if (tasksByCategory[t.category] !== undefined) tasksByCategory[t.category]++;
 
-    const pendingTasks = tasks.filter((t) => t.status !== "completed");
-    const systemPrompt = `You are Tonic, an AI productivity agent for Tonic AI — a TON blockchain-integrated task management app. Help users manage tasks through natural conversation.
+  return `You are Tonic, an elite AI productivity coach embedded in Tonic AI — a TON blockchain-integrated productivity app.
 
-User's current pending tasks (${pendingTasks.length} total):
-${pendingTasks.slice(0, 15).map((t, i) => `${i + 1}. [${t.id}] "${t.title}" | ${t.priority} priority | ${t.category} | due: ${new Date(t.dueDate || t.due_date).toLocaleDateString()}`).join("\n")}
+USER CONTEXT:
+- Pending: ${pendingTasks.length} tasks (${highPriorityPending} high-priority, ${overdueCount} overdue)
+- Completed: ${stats.tasksCompleted || 0} tasks | ${stats.currentStreak || 0}-day streak | Score: ${stats.productivityScore || 0} | $TONIC: ${stats.tonicTokens || 0}
+- Category strength: Work(${tasksByCategory.work}) Health(${tasksByCategory.health}) Learning(${tasksByCategory.learning}) Personal(${tasksByCategory.personal})
+- Best category: ${strongestCat || "building your first habits"} | Date: ${new Date().toLocaleString()}
 
-User stats: ${stats.tasksCompleted || 0} tasks completed, ${stats.currentStreak || 0}-day streak, ${stats.productivityScore || 0} productivity score.
-Current date/time: ${new Date().toLocaleString()}
+PENDING TASKS:
+${pendingTasks.slice(0, 15).map((t, i) => `${i + 1}. [${t.id}] "${t.title}" | ${t.priority} | ${t.category} | due: ${new Date(t.dueDate || t.due_date).toLocaleDateString()}`).join("\n")}
 
-You can create tasks, complete them, schedule the user's day, or give advice.
+YOUR ROLE (beyond basic task management):
+- Detect habit patterns: notice which categories the user crushes vs. struggles with
+- Proactively coach: if overdue tasks exist, acknowledge them. If streak is active, reinforce it.
+- Reward framing: mention $TONIC earnings to reinforce completing tasks ("That earns you +15 $TONIC!")
+- Suggest smart batching: "You have 3 work tasks — block 90 minutes this morning"
+- Be brutally honest about productivity with warmth: "You've skipped health tasks 5 days in a row — want me to reschedule them?"
+- When asked "analyze me", "habits", "patterns", or "how am I doing" → use analyze_habits tool
+- For scheduling requests → use plan_my_day tool with a specific focus
 
-RESPONSE RULES — follow every time, no exceptions:
-- Max 60 words total. No exceptions.
-- NEVER use markdown headers (##, ###).
-- Use at most 3 bullet points if listing; prefer plain sentences.
-- Be direct, warm, and punchy — like a smart friend, not a corporate bot.
-- After creating or completing a task, confirm it in ONE sentence then stop.`;
+RESPONSE RULES:
+- Max 70 words. No markdown headers (##, ###). At most 3 bullets.
+- Direct, warm, punchy — like a brilliant friend who knows your calendar.
+- After any tool action: confirm in ONE sentence + one brief coaching insight.
+- Reference specific task names and numbers, not vague generalities.`;
+}
 
-    const tools = [
+function buildAgentTools() {
+  return [
       {
         type: "function",
         function: {
           name: "create_task",
-          description: "Create a new task based on the user's request. Use this when they say 'add', 'create', 'remind me', etc.",
+          description: "Create a new task based on the user's request. Use when they say 'add', 'create', 'remind me', 'schedule', etc.",
           parameters: {
             type: "object",
             properties: {
               title: { type: "string", description: "Clear, concise task title" },
-              category: { type: "string", enum: ["work", "personal", "health", "learning"], description: "Task category" },
-              priority: { type: "string", enum: ["high", "medium", "low"], description: "Task priority level" },
-              dueDate: { type: "string", description: "ISO date string for due date (e.g. 2026-03-25T09:00:00.000Z). Default to tomorrow if not specified." },
-              description: { type: "string", description: "Optional extra details" },
+              category: { type: "string", enum: ["work", "personal", "health", "learning"] },
+              priority: { type: "string", enum: ["high", "medium", "low"] },
+              dueDate: { type: "string", description: "ISO date string. Default to tomorrow if not specified." },
+              description: { type: "string" },
             },
             required: ["title", "category", "priority", "dueDate"],
           },
@@ -195,12 +215,12 @@ RESPONSE RULES — follow every time, no exceptions:
         type: "function",
         function: {
           name: "complete_task",
-          description: "Mark a pending task as completed. Match the task by title from the user's task list.",
+          description: "Mark a pending task as completed. Match by title from the user's task list.",
           parameters: {
             type: "object",
             properties: {
               taskId: { type: "string", description: "The exact task ID from the pending tasks list" },
-              taskTitle: { type: "string", description: "The task title for confirmation" },
+              taskTitle: { type: "string" },
             },
             required: ["taskId", "taskTitle"],
           },
@@ -217,12 +237,20 @@ RESPONSE RULES — follow every time, no exceptions:
       {
         type: "function",
         function: {
+          name: "analyze_habits",
+          description: "Deep analysis of the user's productivity habits, patterns, and behavioral trends. Use when asked about habits, patterns, analysis, 'how am I doing', or 'tell me about myself'.",
+          parameters: { type: "object", properties: {} },
+        },
+      },
+      {
+        type: "function",
+        function: {
           name: "plan_my_day",
           description: "Create an optimized schedule for today based on pending tasks",
           parameters: {
             type: "object",
             properties: {
-              focus: { type: "string", enum: ["work", "personal", "health", "learning", "balanced"], description: "Today's focus area" },
+              focus: { type: "string", enum: ["work", "personal", "health", "learning", "balanced"] },
             },
             required: ["focus"],
           },
@@ -232,20 +260,47 @@ RESPONSE RULES — follow every time, no exceptions:
         type: "function",
         function: {
           name: "reschedule_task",
-          description: "Reschedule a specific task to a new due date. Use when user wants to move, delay, or push a task.",
+          description: "Reschedule a task to a new due date.",
           parameters: {
             type: "object",
             properties: {
-              taskId: { type: "string", description: "The exact task ID to reschedule" },
-              taskTitle: { type: "string", description: "The task title for confirmation" },
-              newDueDate: { type: "string", description: "New ISO date string for the due date" },
-              reason: { type: "string", description: "Brief reason for the reschedule" },
+              taskId: { type: "string" },
+              taskTitle: { type: "string" },
+              newDueDate: { type: "string", description: "New ISO date string" },
+              reason: { type: "string" },
             },
             required: ["taskId", "taskTitle", "newDueDate"],
           },
         },
       },
-    ];
+      {
+        type: "function",
+        function: {
+          name: "set_task_priority",
+          description: "Change the priority of a specific task. Use when user wants to escalate, downgrade, or re-rank a task.",
+          parameters: {
+            type: "object",
+            properties: {
+              taskId: { type: "string" },
+              taskTitle: { type: "string" },
+              newPriority: { type: "string", enum: ["high", "medium", "low"] },
+              reason: { type: "string" },
+            },
+            required: ["taskId", "taskTitle", "newPriority"],
+          },
+        },
+      },
+  ];
+}
+
+app.post("/api/agent", async (req, res) => {
+  try {
+    const { messages = [], tasks = [], stats = {}, userId } = req.body;
+
+    const pendingTasks = tasks.filter((t) => t.status !== "completed");
+    const systemPrompt = buildAgentSystemPrompt(tasks, stats, pendingTasks);
+
+    const tools = buildAgentTools();
 
     const allMessages = [
       { role: "system", content: systemPrompt },
@@ -397,6 +452,45 @@ RESPONSE RULES — follow every time, no exceptions:
         });
         finalMessage = confirmRes.choices[0].message.content || "Here's your optimized plan for today!";
         action = { type: "schedule", data: { focus: toolArgs.focus } };
+
+      } else if (toolName === "analyze_habits") {
+        const completedByCategory = {};
+        const completedByDay = { Mon: 0, Tue: 0, Wed: 0, Thu: 0, Fri: 0, Sat: 0, Sun: 0 };
+        const dayNames = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
+        for (const t of tasks.filter(t => t.status === "completed")) {
+          completedByCategory[t.category] = (completedByCategory[t.category] || 0) + 1;
+          const d = new Date(t.completedAt || t.completed_at || t.createdAt);
+          if (!isNaN(d)) completedByDay[dayNames[d.getDay()]] = (completedByDay[dayNames[d.getDay()]] || 0) + 1;
+        }
+        const overdueCount = pendingTasks.filter(t => new Date(t.dueDate || t.due_date) < new Date()).length;
+        const habitData = { completedByCategory, completedByDay, overdueCount, streak: stats.currentStreak || 0, totalCompleted: tasks.filter(t => t.status === "completed").length, totalPending: pendingTasks.length };
+        const confirmRes = await openai.chat.completions.create({
+          model: "gpt-5.2",
+          messages: [
+            ...allMessages,
+            aiMessage,
+            { role: "tool", content: JSON.stringify(habitData), tool_call_id: toolCall.id },
+          ],
+        });
+        finalMessage = confirmRes.choices[0].message.content || "Here's your habit analysis!";
+        action = { type: "show_stats", data: stats };
+
+      } else if (toolName === "set_task_priority") {
+        action = { type: "update_priority", data: { taskId: toolArgs.taskId, taskTitle: toolArgs.taskTitle, newPriority: toolArgs.newPriority } };
+        if (userId) {
+          try {
+            await db.query("UPDATE tasks SET priority = $1 WHERE id = $2 AND user_id = $3", [toolArgs.newPriority, toolArgs.taskId, userId]);
+          } catch (dbErr) { console.warn("DB priority update failed:", dbErr.message); }
+        }
+        const confirmRes = await openai.chat.completions.create({
+          model: "gpt-5.2",
+          messages: [
+            ...allMessages,
+            aiMessage,
+            { role: "tool", content: JSON.stringify({ success: true, taskTitle: toolArgs.taskTitle, newPriority: toolArgs.newPriority, reason: toolArgs.reason }), tool_call_id: toolCall.id },
+          ],
+        });
+        finalMessage = confirmRes.choices[0].message.content || `"${toolArgs.taskTitle}" priority set to ${toolArgs.newPriority}!`;
       }
     }
 
@@ -423,30 +517,8 @@ app.post("/api/agent/stream", async (req, res) => {
   try {
     const pendingTasks = tasks.filter((t) => t.status !== "completed");
 
-    const systemPrompt = `You are Tonic, an AI productivity agent for Tonic AI — a TON blockchain-integrated task management app. Help users manage tasks through natural conversation.
-
-User's current pending tasks (${pendingTasks.length} total):
-${pendingTasks.slice(0, 15).map((t, i) => `${i + 1}. [${t.id}] "${t.title}" | ${t.priority} priority | ${t.category} | due: ${new Date(t.dueDate || t.due_date).toLocaleDateString()}`).join("\n")}
-
-User stats: ${stats.tasksCompleted || 0} tasks completed, ${stats.currentStreak || 0}-day streak, ${stats.productivityScore || 0} productivity score.
-Current date/time: ${new Date().toLocaleString()}
-
-You can create tasks, complete them, schedule the user's day, or give advice.
-
-RESPONSE RULES — follow every time, no exceptions:
-- Max 60 words total. No exceptions.
-- NEVER use markdown headers (##, ###).
-- Use at most 3 bullet points if listing; prefer plain sentences.
-- Be direct, warm, and punchy — like a smart friend, not a corporate bot.
-- After creating or completing a task, confirm it in ONE sentence then stop.`;
-
-    const tools = [
-      { type: "function", function: { name: "create_task", description: "Create a new task based on the user's request.", parameters: { type: "object", properties: { title: { type: "string" }, category: { type: "string", enum: ["work","personal","health","learning"] }, priority: { type: "string", enum: ["high","medium","low"] }, dueDate: { type: "string" }, description: { type: "string" } }, required: ["title","category","priority","dueDate"] } } },
-      { type: "function", function: { name: "complete_task", description: "Mark a pending task as completed.", parameters: { type: "object", properties: { taskId: { type: "string" }, taskTitle: { type: "string" } }, required: ["taskId","taskTitle"] } } },
-      { type: "function", function: { name: "get_productivity_summary", description: "Get a detailed productivity analysis.", parameters: { type: "object", properties: {} } } },
-      { type: "function", function: { name: "plan_my_day", description: "Create an optimized schedule for today.", parameters: { type: "object", properties: { focus: { type: "string", enum: ["work","personal","health","learning","balanced"] } }, required: ["focus"] } } },
-      { type: "function", function: { name: "reschedule_task", description: "Reschedule a specific task to a new due date.", parameters: { type: "object", properties: { taskId: { type: "string" }, taskTitle: { type: "string" }, newDueDate: { type: "string" }, reason: { type: "string" } }, required: ["taskId","taskTitle","newDueDate"] } } },
-    ];
+    const systemPrompt = buildAgentSystemPrompt(tasks, stats, pendingTasks);
+    const tools = buildAgentTools();
 
     const allMessages = [{ role: "system", content: systemPrompt }, ...messages.slice(-20)];
 
@@ -504,6 +576,17 @@ RESPONSE RULES — follow every time, no exceptions:
         const todayPending = pendingTasks.filter((t) => { const due = new Date(t.dueDate || t.due_date); return due.toDateString() === new Date().toDateString() || due < new Date(); });
         action = { type: "schedule", data: { focus: toolArgs.focus } };
         toolResult = { todayTasks: todayPending, allPending: pendingTasks.slice(0, 10), focus: toolArgs.focus };
+      } else if (toolCallName === "analyze_habits") {
+        const completedTasks2 = tasks.filter(t => t.status === "completed");
+        const catC = {}; const dayC = { Mon:0,Tue:0,Wed:0,Thu:0,Fri:0,Sat:0,Sun:0 };
+        const dn = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
+        for (const t of completedTasks2) { catC[t.category] = (catC[t.category]||0)+1; const d=new Date(t.completedAt||t.completed_at||t.createdAt); if(!isNaN(d)) dayC[dn[d.getDay()]]=(dayC[dn[d.getDay()]]||0)+1; }
+        action = { type: "show_stats", data: stats };
+        toolResult = { completedByCategory: catC, completedByDay: dayC, overdueCount: pendingTasks.filter(t=>new Date(t.dueDate||t.due_date)<new Date()).length, streak: stats.currentStreak||0, totalCompleted: completedTasks2.length };
+      } else if (toolCallName === "set_task_priority") {
+        action = { type: "update_priority", data: { taskId: toolArgs.taskId, taskTitle: toolArgs.taskTitle, newPriority: toolArgs.newPriority } };
+        toolResult = { success: true, taskTitle: toolArgs.taskTitle, newPriority: toolArgs.newPriority };
+        if (userId) { try { await db.query("UPDATE tasks SET priority=$1 WHERE id=$2 AND user_id=$3", [toolArgs.newPriority, toolArgs.taskId, userId]); } catch {} }
       }
 
       if (action) sendEvent({ action });
@@ -529,6 +612,113 @@ RESPONSE RULES — follow every time, no exceptions:
     sendEvent({ error: err.message, done: true });
     res.write("data: [DONE]\n\n");
     res.end();
+  }
+});
+
+// ── $TONIC Token Routes ──────────────────────────────────────────────────────
+const TONIC_PER_TASK = 15;
+const TONIC_STREAK_BONUS = 25;
+const TONIC_DAILY_CHALLENGE = 50;
+
+app.get("/api/users/:userId/tokens", async (req, res) => {
+  try {
+    const result = await db.query("SELECT tonic_tokens FROM users WHERE id = $1", [req.params.userId]);
+    const tokens = result.rows[0]?.tonic_tokens ?? 0;
+    res.json({ tokens, earnRate: `+${TONIC_PER_TASK} per task, +${TONIC_STREAK_BONUS} streak bonus` });
+  } catch (err) {
+    res.status(500).json({ error: "Failed to fetch tokens", tokens: 0 });
+  }
+});
+
+app.post("/api/earn-tokens", async (req, res) => {
+  try {
+    const { userId, reason, amount } = req.body;
+    if (!userId || !amount) return res.status(400).json({ error: "userId and amount required" });
+    const result = await db.query(
+      "UPDATE users SET tonic_tokens = COALESCE(tonic_tokens, 0) + $1 WHERE id = $2 RETURNING tonic_tokens",
+      [amount, userId]
+    );
+    const newBalance = result.rows[0]?.tonic_tokens ?? amount;
+    res.json({ success: true, earned: amount, balance: newBalance, reason: reason || "Task completed" });
+  } catch (err) {
+    console.error("Earn tokens error:", err.message);
+    res.status(500).json({ error: "Failed to earn tokens" });
+  }
+});
+
+// ── Daily Challenge ───────────────────────────────────────────────────────────
+const DAILY_CHALLENGES = [
+  { id: "c1", title: "Complete 3 tasks today", target: 3, type: "tasks", reward: 50 },
+  { id: "c2", title: "Finish a high-priority task", target: 1, type: "high_priority", reward: 60 },
+  { id: "c3", title: "Clear all overdue tasks", target: 1, type: "overdue", reward: 75 },
+  { id: "c4", title: "Complete a health or learning task", target: 1, type: "category_growth", reward: 45 },
+  { id: "c5", title: "Complete 2 work tasks before noon", target: 2, type: "morning_work", reward: 55 },
+];
+
+app.get("/api/daily-challenge", async (req, res) => {
+  try {
+    const today = new Date().toISOString().split("T")[0];
+    const dayIndex = Math.floor(Date.now() / 86400000) % DAILY_CHALLENGES.length;
+    const challenge = DAILY_CHALLENGES[dayIndex];
+    const { userId } = req.query;
+    let done = false;
+    if (userId) {
+      const r = await db.query("SELECT last_daily_challenge, daily_challenge_done FROM users WHERE id = $1", [userId]);
+      if (r.rows[0]) {
+        const lastDay = r.rows[0].last_daily_challenge?.toISOString?.()?.split("T")[0];
+        done = lastDay === today && r.rows[0].daily_challenge_done;
+      }
+    }
+    res.json({ challenge: { ...challenge, date: today, done } });
+  } catch (err) {
+    res.status(500).json({ error: "Failed to fetch challenge" });
+  }
+});
+
+app.post("/api/daily-challenge/complete", async (req, res) => {
+  try {
+    const { userId } = req.body;
+    if (!userId) return res.status(400).json({ error: "userId required" });
+    const today = new Date().toISOString().split("T")[0];
+    await db.query(
+      "UPDATE users SET last_daily_challenge = $1, daily_challenge_done = true, tonic_tokens = COALESCE(tonic_tokens,0) + $2 WHERE id = $3",
+      [today, TONIC_DAILY_CHALLENGE, userId]
+    );
+    const r = await db.query("SELECT tonic_tokens FROM users WHERE id = $1", [userId]);
+    res.json({ success: true, earned: TONIC_DAILY_CHALLENGE, balance: r.rows[0]?.tonic_tokens ?? 0 });
+  } catch (err) {
+    res.status(500).json({ error: "Failed to complete challenge" });
+  }
+});
+
+// ── Cross-Device Sync Code ────────────────────────────────────────────────────
+app.post("/api/sync-code/generate", async (req, res) => {
+  try {
+    const { userId } = req.body;
+    if (!userId) return res.status(400).json({ error: "userId required" });
+    const r = await db.query("SELECT sync_code FROM users WHERE id = $1", [userId]);
+    let code = r.rows[0]?.sync_code;
+    if (!code) {
+      code = Math.random().toString(36).substring(2, 8).toUpperCase();
+      await db.query("UPDATE users SET sync_code = $1 WHERE id = $2", [code, userId]);
+    }
+    res.json({ code, userId });
+  } catch (err) {
+    res.status(500).json({ error: "Failed to generate sync code" });
+  }
+});
+
+app.post("/api/sync-code/restore", async (req, res) => {
+  try {
+    const { code } = req.body;
+    if (!code) return res.status(400).json({ error: "code required" });
+    const userRes = await db.query("SELECT * FROM users WHERE UPPER(sync_code) = UPPER($1)", [code]);
+    if (!userRes.rows[0]) return res.status(404).json({ error: "Invalid sync code. Check the code and try again." });
+    const user = userRes.rows[0];
+    const tasksRes = await db.query("SELECT * FROM tasks WHERE user_id = $1 ORDER BY created_at DESC", [user.id]);
+    res.json({ user: { id: user.id, name: user.name, walletAddress: user.wallet_address, tonicTokens: user.tonic_tokens || 0 }, tasks: tasksRes.rows });
+  } catch (err) {
+    res.status(500).json({ error: "Failed to restore from sync code" });
   }
 });
 
@@ -701,6 +891,7 @@ app.get("/api/leaderboard", async (req, res) => {
         u.id,
         u.name,
         u.wallet_address,
+        COALESCE(u.tonic_tokens, 0) AS tonic_tokens,
         COUNT(t.id) FILTER (WHERE t.status = 'completed') AS completed_tasks,
         COUNT(t.id) AS total_tasks,
         ROUND(
@@ -708,13 +899,14 @@ app.get("/api/leaderboard", async (req, res) => {
             THEN (COUNT(t.id) FILTER (WHERE t.status = 'completed')::float / COUNT(t.id)::float) * 100
             ELSE 0
           END
-        ) AS completion_rate
+        ) AS completion_rate,
+        (COUNT(t.id) FILTER (WHERE t.status = 'completed') * 10 + COALESCE(u.tonic_tokens, 0)) AS score
       FROM users u
       LEFT JOIN tasks t ON t.user_id = u.id
-      GROUP BY u.id, u.name, u.wallet_address
+      GROUP BY u.id, u.name, u.wallet_address, u.tonic_tokens
       HAVING COUNT(t.id) > 0
-      ORDER BY completed_tasks DESC
-      LIMIT 10
+      ORDER BY score DESC
+      LIMIT 20
     `);
     res.json({ leaderboard: result.rows });
   } catch (error) {

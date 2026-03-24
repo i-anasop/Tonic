@@ -285,6 +285,10 @@ export default function AgentScreen() {
       const d = action.data as any;
       const task = tasks.find((t) => t.id === d.taskId || t.title.toLowerCase() === (d.taskTitle || "").toLowerCase());
       if (task) updateTask(task.id, { dueDate: new Date(d.newDueDate) });
+    } else if (action.type === "update_priority" && action.data) {
+      const d = action.data as any;
+      const task = tasks.find((t) => t.id === d.taskId || t.title.toLowerCase() === (d.taskTitle || "").toLowerCase());
+      if (task && d.priority) updateTask(task.id, { priority: d.priority });
     }
   }, [tasks, addTask, toggleTaskStatus, updateTask]);
 

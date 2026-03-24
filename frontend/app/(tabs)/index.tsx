@@ -34,6 +34,7 @@ import {
 import { useRouter } from "expo-router";
 
 import { Colors } from "@/constants/colors";
+import { API_BASE_URL } from "@/constants/api";
 import { useTheme, type AppColors } from "@/providers/ThemeProvider";
 import { useAppState } from "@/providers/AppStateProvider";
 import { useTasks } from "@/providers/TasksProvider";
@@ -195,6 +196,157 @@ function TonConnectCTA({ onPress }: { onPress: () => void }) {
         <ChevronRight size={16} color={Colors.gold} />
       </Animated.View>
     </TouchableOpacity>
+  );
+}
+
+// ── $TONIC Token Widget ───────────────────────────────────────────────────────
+function TonicTokenWidget({ userId }: { userId?: string }) {
+  const { colors } = useTheme();
+  const [tokens, setTokens] = React.useState<number | null>(null);
+  const flashAnim = useRef(new Animated.Value(1)).current;
+
+  useEffect(() => {
+    if (!userId) return;
+    fetch(`${API_BASE_URL}/api/users/${userId}/tokens`)
+      .then(r => r.json())
+      .then(d => { if (typeof d.tokens === "number") setTokens(d.tokens); })
+      .catch(() => {});
+  }, [userId]);
+
+  useEffect(() => {
+    if (tokens === null) return;
+    Animated.sequence([
+      Animated.timing(flashAnim, { toValue: 1.08, duration: 200, useNativeDriver: true }),
+      Animated.timing(flashAnim, { toValue: 1, duration: 200, useNativeDriver: true }),
+    ]).start();
+  }, [tokens]);
+
+  if (!userId || tokens === null) return null;
+
+  return (
+    <Animated.View style={{ transform: [{ scale: flashAnim }], backgroundColor: `${Colors.gold}0E`, borderRadius: 18, padding: 16, marginBottom: 14, borderWidth: 1, borderColor: `${Colors.gold}30`, flexDirection: "row", alignItems: "center", gap: 12 }}>
+      <View style={{ width: 42, height: 42, borderRadius: 13, backgroundColor: `${Colors.gold}20`, justifyContent: "center", alignItems: "center" }}>
+        <Star size={20} color={Colors.gold} fill={Colors.gold} />
+      </View>
+      <View style={{ flex: 1 }}>
+        <Text style={{ fontSize: 11, color: colors.textMuted, fontWeight: "600", textTransform: "uppercase", letterSpacing: 0.8 }}>$TONIC Balance</Text>
+        <Text style={{ fontSize: 22, fontWeight: "900", color: Colors.gold, letterSpacing: -0.5 }}>{tokens.toLocaleString()} <Text style={{ fontSize: 13, fontWeight: "600" }}>TONIC</Text></Text>
+      </View>
+      <View style={{ alignItems: "flex-end", gap: 3 }}>
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 4, backgroundColor: `${Colors.success}15`, borderRadius: 8, paddingHorizontal: 8, paddingVertical: 4 }}>
+          <Zap size={10} color={Colors.success} />
+          <Text style={{ fontSize: 10, color: Colors.success, fontWeight: "700" }}>+15 per task</Text>
+        </View>
+        <Text style={{ fontSize: 9, color: colors.textMuted }}>+25 streak bonus</Text>
+      </View>
+    </Animated.View>
+  );
+}
+
+// ── Daily Challenge Card ───────────────────────────────────────────────────────
+function DailyChallengeCard({ userId }: { userId?: string }) {
+  const { colors } = useTheme();
+  const [challenge, setChallenge] = React.useState<any>(null);
+  const [claiming, setClaiming] = React.useState(false);
+
+  const load = () => {
+    const url = userId
+      ? `${API_BASE_URL}/api/daily-challenge?userId=${userId}`
+      : `${API_BASE_URL}/api/daily-challenge`;
+    fetch(url).then(r => r.json()).then(d => { if (d.challenge) setChallenge(d.challenge); }).catch(() => {});
+  };
+
+  useEffect(() => { load(); }, [userId]);
+
+  if (!challenge) return null;
+
+  const handleClaim = async () => {
+    if (!userId || challenge.done || claiming) return;
+    setClaiming(true);
+    try {
+      await fetch(`${API_BASE_URL}/api/daily-challenge/complete`, {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId }),
+      });
+      setChallenge((c: any) => ({ ...c, done: true }));
+    } catch {}
+    setClaiming(false);
+  };
+
+  const accent = challenge.done ? Colors.success : Colors.purple;
+
+  return (
+    <View style={{ backgroundColor: `${accent}0D`, borderRadius: 18, padding: 16, marginBottom: 14, borderWidth: 1, borderColor: `${accent}30` }}>
+      <View style={{ flexDirection: "row", alignItems: "center", gap: 10, marginBottom: 10 }}>
+        <View style={{ width: 34, height: 34, borderRadius: 10, backgroundColor: `${accent}20`, justifyContent: "center", alignItems: "center" }}>
+          <Target size={16} color={accent} />
+        </View>
+        <View style={{ flex: 1 }}>
+          <Text style={{ fontSize: 10, color: accent, fontWeight: "700", textTransform: "uppercase", letterSpacing: 0.8 }}>Daily Challenge</Text>
+          <Text style={{ fontSize: 13, fontWeight: "700", color: colors.textPrimary, marginTop: 1 }}>{challenge.title}</Text>
+        </View>
+        <View style={{ backgroundColor: `${Colors.gold}20`, borderRadius: 10, paddingHorizontal: 8, paddingVertical: 4, flexDirection: "row", alignItems: "center", gap: 4 }}>
+          <Star size={10} color={Colors.gold} fill={Colors.gold} />
+          <Text style={{ fontSize: 11, fontWeight: "800", color: Colors.gold }}>+{challenge.reward}</Text>
+        </View>
+      </View>
+      <TouchableOpacity
+        onPress={handleClaim}
+        activeOpacity={challenge.done ? 1 : 0.85}
+        style={{ backgroundColor: challenge.done ? `${Colors.success}20` : accent, borderRadius: 12, paddingVertical: 10, alignItems: "center", flexDirection: "row", justifyContent: "center", gap: 6 }}
+      >
+        {challenge.done ? <CheckSquare size={14} color={Colors.success} /> : <Zap size={14} color="#fff" />}
+        <Text style={{ fontSize: 13, fontWeight: "700", color: challenge.done ? Colors.success : "#fff" }}>
+          {challenge.done ? "Challenge Complete! ✓" : "Mark Complete"}
+        </Text>
+      </TouchableOpacity>
+    </View>
+  );
+}
+
+// ── Leaderboard Preview ────────────────────────────────────────────────────────
+function LeaderboardPreview({ currentUserId }: { currentUserId?: string }) {
+  const { colors } = useTheme();
+  const [board, setBoard] = React.useState<any[]>([]);
+  const router = useRouter();
+
+  useEffect(() => {
+    fetch(`${API_BASE_URL}/api/leaderboard`)
+      .then(r => r.json())
+      .then(d => { if (Array.isArray(d.leaderboard)) setBoard(d.leaderboard.slice(0, 3)); })
+      .catch(() => {});
+  }, []);
+
+  if (board.length === 0) return null;
+
+  const medals = ["🥇", "🥈", "🥉"];
+  const rankColors = [Colors.gold, "#C0C0C0", "#CD7F32"];
+
+  return (
+    <View style={{ marginBottom: 18 }}>
+      <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
+        <Text style={{ fontSize: 16, fontWeight: "700", color: colors.textPrimary }}>Global Leaderboard</Text>
+        <TouchableOpacity onPress={() => router.push("/(tabs)/profile" as any)} style={{ flexDirection: "row", alignItems: "center", gap: 3 }}>
+          <Text style={{ fontSize: 12, color: colors.textMuted }}>Full board</Text>
+          <ChevronRight size={13} color={colors.textMuted} />
+        </TouchableOpacity>
+      </View>
+      <View style={{ gap: 8 }}>
+        {board.map((u, i) => {
+          const isMe = u.id === currentUserId;
+          return (
+            <View key={u.id} style={{ flexDirection: "row", alignItems: "center", gap: 10, backgroundColor: isMe ? `${Colors.gold}10` : colors.bgSecondary, borderRadius: 14, padding: 12, borderWidth: 1, borderColor: isMe ? `${Colors.gold}30` : colors.border }}>
+              <Text style={{ fontSize: 20, width: 28 }}>{medals[i]}</Text>
+              <View style={{ flex: 1 }}>
+                <Text style={{ fontSize: 13, fontWeight: "700", color: isMe ? Colors.gold : colors.textPrimary }}>{u.name}{isMe ? " (you)" : ""}</Text>
+                <Text style={{ fontSize: 11, color: colors.textMuted }}>{u.completed_tasks} tasks · {u.tonic_tokens} $TONIC</Text>
+              </View>
+              <Text style={{ fontSize: 14, fontWeight: "800", color: rankColors[i] }}>{u.score}</Text>
+            </View>
+          );
+        })}
+      </View>
+    </View>
   );
 }
 
@@ -505,6 +657,15 @@ export default function DashboardScreen() {
         {/* Level / XP Progress */}
         <LevelProgressCard />
 
+        {/* $TONIC Token Balance Widget */}
+        <TonicTokenWidget userId={user?.id} />
+
+        {/* Daily Challenge */}
+        <DailyChallengeCard userId={user?.id} />
+
+        {/* Leaderboard Preview */}
+        <LeaderboardPreview currentUserId={user?.id} />
+
         {/* Category Breakdown */}
         <CategoryBreakdown tasks={tasks} />
 
@@ -534,7 +695,7 @@ export default function DashboardScreen() {
           ) : (
             <View style={styles.taskList}>
               {todayTasks.slice(0, 5).map((task: Task) => (
-                <TaskItem key={task.id} task={task} onToggle={toggleTaskStatus} />
+                <TaskItem key={task.id} task={task} onToggle={(id) => toggleTaskStatus(id, user?.id)} />
               ))}
             </View>
           )}
