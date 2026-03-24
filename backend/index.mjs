@@ -4,7 +4,7 @@ import pg from "pg";
 import OpenAI from "openai";
 import { fileURLToPath } from "url";
 import path from "path";
-import { existsSync, readFileSync } from "fs";
+import { existsSync, readFileSync, copyFileSync } from "fs";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const WEB_DIST = path.join(__dirname, "../frontend/dist");
@@ -738,18 +738,26 @@ app.get("/api/users/:userId/records", async (req, res) => {
 
 const PORTRAIT_CSS = `
   <style id="portrait-mobile">
-    html, body {
-      margin: 0; padding: 0;
+    html {
+      height: 100%;
+      margin: 0;
+      padding: 0;
+      background-color: #060810;
+    }
+    body {
+      margin: 0;
+      padding: 0;
+      height: 100%;
+      overflow: hidden;
       background-color: #060810;
       background-image:
         radial-gradient(ellipse 80% 50% at 50% -20%, rgba(255,215,0,0.06) 0%, transparent 60%),
         radial-gradient(ellipse 60% 40% at 80% 100%, rgba(100,160,255,0.04) 0%, transparent 50%);
       display: flex;
+      flex-direction: row;
       justify-content: center;
-      align-items: center;
-      height: 100%;
+      align-items: stretch;
     }
-    body { overflow: hidden; }
     #root {
       display: flex;
       flex: 1;
@@ -761,8 +769,6 @@ const PORTRAIT_CSS = `
     }
     @media (min-width: 431px) {
       #root {
-        height: 100vh;
-        max-height: 900px;
         box-shadow:
           0 0 0 1px rgba(255,215,0,0.13),
           0 12px 80px rgba(0,0,0,0.75),
@@ -770,16 +776,31 @@ const PORTRAIT_CSS = `
       }
     }
   </style>
+  <link rel="icon" type="image/png" href="/logo.png" />
+  <link rel="apple-touch-icon" href="/logo.png" />
+  <meta name="theme-color" content="#0D1117" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-title" content="Tonic AI" />
 `;
 
 if (existsSync(WEB_DIST)) {
+  const logoSrc = path.join(__dirname, "../frontend/assets/images/logo.png");
+  const logoDest = path.join(WEB_DIST, "logo.png");
+  if (existsSync(logoSrc) && !existsSync(logoDest)) {
+    try { copyFileSync(logoSrc, logoDest); } catch {}
+  }
+
   const indexHtmlPath = path.join(WEB_DIST, "index.html");
   let cachedHtml = null;
 
   const getPortraitHtml = () => {
     if (!cachedHtml) {
-      const raw = readFileSync(indexHtmlPath, "utf8");
-      cachedHtml = raw.replace("</head>", `${PORTRAIT_CSS}</head>`);
+      try {
+        const raw = readFileSync(indexHtmlPath, "utf8");
+        cachedHtml = raw.replace("</head>", `${PORTRAIT_CSS}</head>`);
+      } catch {
+        cachedHtml = `<!DOCTYPE html><html><body><p>App loading…</p></body></html>`;
+      }
     }
     return cachedHtml;
   };
@@ -790,7 +811,9 @@ if (existsSync(WEB_DIST)) {
     if (req.path.startsWith("/api/") || req.path === "/tonconnect-manifest.json" || req.path === "/health") {
       return next();
     }
-    res.setHeader("Content-Type", "text/html");
+    res.setHeader("Content-Type", "text/html; charset=utf-8");
+    res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
+    res.setHeader("Pragma", "no-cache");
     res.send(getPortraitHtml());
   });
   console.log("Serving Expo web build from:", WEB_DIST);
