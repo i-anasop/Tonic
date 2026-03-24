@@ -112,10 +112,10 @@ function MenuItem({
 
 export default function ProfileScreen() {
   const router = useRouter();
-  const { user, signOut, setUser } = useAppState();
+  const { user, signOut, setUser, connectWallet: saveWalletUser } = useAppState();
   const { tasks, getStats, getCompletedTasks } = useTasks();
   const { stats: achievementStats, claimPoints } = useAchievements();
-  const { isConnected: isTonConnected, connectWallet: connectTonWallet, sendTransaction, recordAchievementOnChain, isSendingTx } = useTonConnect();
+  const { isConnected: isTonConnected, walletAddress: tonWalletAddress, connectWallet: connectTonWallet, sendTransaction, recordAchievementOnChain, isSendingTx } = useTonConnect();
   const { isDark, toggleTheme, colors } = useTheme();
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const [isRecordingOnChain, setIsRecordingOnChain] = useState(false);
@@ -131,6 +131,25 @@ export default function ProfileScreen() {
   const [isMintingTonian, setIsMintingTonian] = useState(false);
   const [tonianMinted, setTonianMinted] = useState(false);
   const [expandedFaq, setExpandedFaq] = useState<number | null>(null);
+  const [showWalletNameModal, setShowWalletNameModal] = useState(false);
+  const [walletNameInput, setWalletNameInput] = useState("");
+  const [pendingWalletAddr, setPendingWalletAddr] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (isTonConnected && tonWalletAddress && !user?.walletAddress) {
+      setPendingWalletAddr(tonWalletAddress);
+      setWalletNameInput(user?.name && user.name !== "TON User" && !user.name.startsWith("Guest") ? user.name : "");
+      setShowWalletNameModal(true);
+    }
+  }, [isTonConnected, tonWalletAddress]);
+
+  const handleWalletNameSave = useCallback(() => {
+    if (!pendingWalletAddr) return;
+    saveWalletUser(pendingWalletAddr, walletNameInput.trim() || undefined);
+    setShowWalletNameModal(false);
+    setPendingWalletAddr(null);
+    setWalletNameInput("");
+  }, [pendingWalletAddr, walletNameInput, saveWalletUser]);
 
   useEffect(() => {
     if (!user?.id) return;
@@ -597,6 +616,46 @@ export default function ProfileScreen() {
         </ScrollView>
       </SafeAreaView>
       <AchievementsModal isVisible={isAchievementsModalVisible} onClose={() => setIsAchievementsModalVisible(false)} />
+
+      {/* ── Wallet Name Modal ── */}
+      <Modal visible={showWalletNameModal} animationType="slide" transparent presentationStyle="overFullScreen" onRequestClose={() => setShowWalletNameModal(false)}>
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalSheet, { paddingBottom: 32 }]}>
+            <View style={styles.modalHandle} />
+            <View style={{ alignItems: "center", marginVertical: 20 }}>
+              <View style={{ width: 56, height: 56, borderRadius: 18, backgroundColor: `${Colors.gold}20`, justifyContent: "center", alignItems: "center", marginBottom: 12, borderWidth: 1.5, borderColor: `${Colors.gold}40` }}>
+                <Wallet size={24} color={Colors.gold} />
+              </View>
+              <Text style={[styles.modalTitle, { fontSize: 18 }]}>Wallet Connected! 🎉</Text>
+              <Text style={{ fontSize: 13, color: colors.textMuted, marginTop: 6, textAlign: "center", paddingHorizontal: 24 }}>What should we call you? This name shows on your profile and leaderboard.</Text>
+            </View>
+            <View style={{ paddingHorizontal: 20, gap: 14 }}>
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 10, backgroundColor: colors.bgTertiary, borderRadius: 14, paddingHorizontal: 14, paddingVertical: 4, borderWidth: 1.5, borderColor: Colors.gold }}>
+                <User size={17} color={Colors.gold} />
+                <TextInput
+                  style={[{ flex: 1, color: colors.textPrimary, fontSize: 15, paddingVertical: 12, outlineWidth: 0 } as any]}
+                  placeholder="Enter your name"
+                  placeholderTextColor={colors.textMuted}
+                  value={walletNameInput}
+                  onChangeText={setWalletNameInput}
+                  autoFocus
+                  onSubmitEditing={handleWalletNameSave}
+                  returnKeyType="done"
+                />
+              </View>
+              <TouchableOpacity onPress={handleWalletNameSave} activeOpacity={0.85} style={{ borderRadius: 16, overflow: "hidden" }}>
+                <View style={{ backgroundColor: Colors.gold, borderRadius: 16, paddingVertical: 14, alignItems: "center", flexDirection: "row", justifyContent: "center", gap: 8 }}>
+                  <Wallet size={17} color="#0D1117" />
+                  <Text style={{ fontSize: 15, fontWeight: "700", color: "#0D1117" }}>Save & Continue</Text>
+                </View>
+              </TouchableOpacity>
+              <TouchableOpacity onPress={handleWalletNameSave} style={{ alignItems: "center", paddingVertical: 8 }}>
+                <Text style={{ fontSize: 12, color: colors.textMuted }}>Skip — keep current name</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
 
       {/* ── Privacy & Security Modal ── */}
       <Modal visible={showPrivacyModal} animationType="slide" transparent presentationStyle="overFullScreen" onRequestClose={() => setShowPrivacyModal(false)}>

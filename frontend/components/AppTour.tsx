@@ -1,13 +1,11 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import {
   Animated,
-  Dimensions,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
   useWindowDimensions,
-  Platform,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
@@ -27,10 +25,13 @@ import {
   Shield,
   TrendingUp,
   Flame,
+  Wallet,
+  Star,
+  Plus,
 } from "lucide-react-native";
 import { Colors } from "@/constants/colors";
 
-const TOUR_KEY = "@tonic_tour_v7_seen";
+const TOUR_KEY = "@tonic_tour_v8_seen";
 
 export async function checkTourSeen(): Promise<boolean> {
   try {
@@ -46,93 +47,275 @@ export async function markTourSeen(): Promise<void> {
   } catch {}
 }
 
+function MiniDashboard({ accent }: { accent: string }) {
+  return (
+    <View style={mini.screen}>
+      <View style={mini.header}>
+        <View>
+          <View style={[mini.pill, { backgroundColor: `${accent}25`, width: 60 }]} />
+          <View style={[mini.line, { width: 80, marginTop: 4, backgroundColor: "#E6EDF3" }]} />
+        </View>
+        <View style={[mini.avatar, { backgroundColor: `${accent}30`, borderColor: accent }]} />
+      </View>
+      <View style={mini.row}>
+        {[
+          { label: "Tasks", val: "12", icon: CheckCircle },
+          { label: "Streak", val: "7d", icon: Flame },
+          { label: "Score", val: "940", icon: Star },
+        ].map(({ label, val, icon: Icon }, i) => (
+          <View key={i} style={[mini.statCard, { borderColor: `${accent}30` }]}>
+            <Icon size={10} color={accent} />
+            <Text style={[mini.statVal, { color: accent }]}>{val}</Text>
+            <Text style={mini.statLabel}>{label}</Text>
+          </View>
+        ))}
+      </View>
+      <View style={[mini.chatBubble, { borderColor: `${accent}40`, backgroundColor: `${accent}10` }]}>
+        <Bot size={9} color={accent} />
+        <Text style={[mini.chatText, { color: accent }]}>Ask me anything…</Text>
+        <View style={[mini.sendBtn, { backgroundColor: accent }]}>
+          <Zap size={7} color="#0D1117" />
+        </View>
+      </View>
+      <View style={mini.tabBar}>
+        {[LayoutDashboard, ListTodo, Sparkles, User].map((Icon, i) => (
+          <View key={i} style={[mini.tabItem, i === 0 && { borderTopWidth: 2, borderTopColor: accent }]}>
+            <Icon size={11} color={i === 0 ? accent : "rgba(255,255,255,0.3)"} />
+          </View>
+        ))}
+      </View>
+    </View>
+  );
+}
+
+function MiniTasks({ accent }: { accent: string }) {
+  const tasks = [
+    { label: "Finish project report", cat: "Work", done: false },
+    { label: "30 min workout", cat: "Health", done: true },
+    { label: "Read 20 pages", cat: "Learning", done: false },
+  ];
+  const catColors: Record<string, string> = { Work: Colors.blue, Health: Colors.success, Learning: Colors.purple };
+  return (
+    <View style={mini.screen}>
+      <View style={mini.header}>
+        <Text style={[mini.screenTitle, { color: "#E6EDF3" }]}>Tasks</Text>
+        <View style={[mini.iconBtn, { backgroundColor: `${accent}25` }]}>
+          <Plus size={10} color={accent} />
+        </View>
+      </View>
+      <View style={[mini.row, { gap: 4, marginBottom: 8 }]}>
+        {["Work", "Health", "Learning"].map((c) => (
+          <View key={c} style={[mini.catPill, { backgroundColor: `${catColors[c]}25`, borderColor: `${catColors[c]}50` }]}>
+            <Text style={[mini.catText, { color: catColors[c] }]}>{c}</Text>
+          </View>
+        ))}
+      </View>
+      {tasks.map((t, i) => (
+        <View key={i} style={[mini.taskRow, { opacity: t.done ? 0.5 : 1 }]}>
+          <View style={[mini.checkbox, { borderColor: t.done ? Colors.success : "rgba(255,255,255,0.25)", backgroundColor: t.done ? `${Colors.success}30` : "transparent" }]}>
+            {t.done && <CheckCircle size={8} color={Colors.success} />}
+          </View>
+          <View style={{ flex: 1 }}>
+            <View style={[mini.line, { width: "80%", opacity: t.done ? 0.4 : 1 }]} />
+          </View>
+          <View style={[mini.catDot, { backgroundColor: catColors[t.cat] || accent }]} />
+        </View>
+      ))}
+      <View style={mini.tabBar}>
+        {[LayoutDashboard, ListTodo, Sparkles, User].map((Icon, i) => (
+          <View key={i} style={[mini.tabItem, i === 1 && { borderTopWidth: 2, borderTopColor: accent }]}>
+            <Icon size={11} color={i === 1 ? accent : "rgba(255,255,255,0.3)"} />
+          </View>
+        ))}
+      </View>
+    </View>
+  );
+}
+
+function MiniInsights({ accent }: { accent: string }) {
+  const bars = [0.4, 0.65, 0.5, 0.8, 0.6, 0.9, 0.75];
+  return (
+    <View style={mini.screen}>
+      <View style={mini.header}>
+        <Text style={[mini.screenTitle, { color: "#E6EDF3" }]}>Insights</Text>
+        <View style={[mini.pill, { backgroundColor: `${accent}25`, width: 36 }]} />
+      </View>
+      <View style={[mini.chartWrap, { borderColor: `${accent}20` }]}>
+        <View style={mini.bars}>
+          {bars.map((h, i) => (
+            <View key={i} style={[mini.barCol]}>
+              <View style={[mini.bar, { height: h * 36, backgroundColor: i === 5 ? accent : `${accent}40` }]} />
+            </View>
+          ))}
+        </View>
+        <Text style={[mini.chartLabel, { color: accent }]}>7-day completion rate</Text>
+      </View>
+      <View style={[mini.insightCard, { borderColor: `${accent}30`, backgroundColor: `${accent}0A` }]}>
+        <Brain size={9} color={accent} />
+        <View style={{ flex: 1, gap: 3 }}>
+          <View style={[mini.line, { width: "90%" }]} />
+          <View style={[mini.line, { width: "70%", opacity: 0.6 }]} />
+        </View>
+      </View>
+      <View style={mini.tabBar}>
+        {[LayoutDashboard, ListTodo, Sparkles, User].map((Icon, i) => (
+          <View key={i} style={[mini.tabItem, i === 2 && { borderTopWidth: 2, borderTopColor: accent }]}>
+            <Icon size={11} color={i === 2 ? accent : "rgba(255,255,255,0.3)"} />
+          </View>
+        ))}
+      </View>
+    </View>
+  );
+}
+
+function MiniAgent({ accent }: { accent: string }) {
+  return (
+    <View style={mini.screen}>
+      <View style={mini.header}>
+        <View style={[mini.iconBtn, { backgroundColor: `${accent}25` }]}>
+          <Bot size={10} color={accent} />
+        </View>
+        <Text style={[mini.screenTitle, { color: "#E6EDF3", fontSize: 11 }]}>Tonic AI Agent</Text>
+        <View style={[mini.pill, { backgroundColor: `${Colors.success}25`, width: 28 }]} />
+      </View>
+      <View style={mini.chatArea}>
+        <View style={[mini.msgUser, { backgroundColor: `${accent}20`, borderColor: `${accent}30` }]}>
+          <Text style={[mini.msgText, { color: accent }]}>"Add workout task for today"</Text>
+        </View>
+        <View style={[mini.msgBot, { backgroundColor: "rgba(255,255,255,0.06)", borderColor: "rgba(255,255,255,0.1)" }]}>
+          <Bot size={8} color={accent} style={{ marginBottom: 2 }} />
+          <Text style={mini.msgText}>Done! Added "30 min workout" — Health category, high priority.</Text>
+        </View>
+        <View style={[mini.actionChip, { backgroundColor: `${Colors.success}20`, borderColor: `${Colors.success}40` }]}>
+          <CheckCircle size={8} color={Colors.success} />
+          <Text style={[mini.chipText, { color: Colors.success }]}>Task created ✓</Text>
+        </View>
+      </View>
+      <View style={[mini.chatBubble, { borderColor: `${accent}40`, backgroundColor: `${accent}10` }]}>
+        <Bot size={9} color={accent} />
+        <Text style={[mini.chatText, { color: accent }]}>Type a message…</Text>
+        <View style={[mini.sendBtn, { backgroundColor: accent }]}>
+          <Zap size={7} color="#0D1117" />
+        </View>
+      </View>
+    </View>
+  );
+}
+
+function MiniProfile({ accent }: { accent: string }) {
+  return (
+    <View style={mini.screen}>
+      <View style={[mini.header, { justifyContent: "center", flexDirection: "column", gap: 4 }]}>
+        <View style={[mini.avatar, { backgroundColor: `${accent}25`, borderColor: accent, width: 36, height: 36, borderRadius: 18 }]} />
+        <View style={[mini.pill, { backgroundColor: "transparent", width: 60 }]}>
+          <Text style={[mini.screenTitle, { color: "#E6EDF3", textAlign: "center" }]}>User Name</Text>
+        </View>
+        <View style={[mini.catPill, { backgroundColor: `${accent}25`, borderColor: `${accent}50`, alignSelf: "center" }]}>
+          <Trophy size={8} color={accent} />
+          <Text style={[mini.catText, { color: accent }]}>Rising Star</Text>
+        </View>
+      </View>
+      <View style={[mini.row, { gap: 4, marginBottom: 8 }]}>
+        {[{ icon: CheckCircle, val: "40", lbl: "Tasks" }, { icon: Flame, val: "14d", lbl: "Streak" }, { icon: Star, val: "1.2k", lbl: "Score" }].map(({ icon: Icon, val, lbl }, i) => (
+          <View key={i} style={[mini.statCard, { borderColor: `${accent}30` }]}>
+            <Icon size={8} color={accent} />
+            <Text style={[mini.statVal, { color: accent, fontSize: 9 }]}>{val}</Text>
+            <Text style={mini.statLabel}>{lbl}</Text>
+          </View>
+        ))}
+      </View>
+      <View style={[mini.walletRow, { borderColor: `${Colors.gold}40`, backgroundColor: `${Colors.gold}0D` }]}>
+        <Wallet size={9} color={Colors.gold} />
+        <Text style={[mini.catText, { color: Colors.gold, flex: 1 }]}>Connect TON Wallet</Text>
+        <View style={[mini.sendBtn, { backgroundColor: Colors.gold }]}>
+          <ChevronRight size={7} color="#0D1117" />
+        </View>
+      </View>
+      <View style={mini.tabBar}>
+        {[LayoutDashboard, ListTodo, Sparkles, User].map((Icon, i) => (
+          <View key={i} style={[mini.tabItem, i === 3 && { borderTopWidth: 2, borderTopColor: accent }]}>
+            <Icon size={11} color={i === 3 ? accent : "rgba(255,255,255,0.3)"} />
+          </View>
+        ))}
+      </View>
+    </View>
+  );
+}
+
 const STEPS = [
   {
-    id: "welcome",
+    id: "dashboard",
     tab: "/(tabs)/",
     gradient: ["#1A1200", "#0D1117"] as [string, string],
     accent: Colors.gold,
-    icon: Zap,
-    title: "Welcome to Tonic AI",
-    subtitle: "Your AI-powered productivity hub",
-    description: "An intelligent workspace where AI meets blockchain. Complete tasks, earn achievements, and build streaks that matter.",
-    features: [
-      { icon: Bot, text: "AI Agent that creates & manages tasks for you" },
-      { icon: Shield, text: "Achievements recorded on TON blockchain" },
-      { icon: Flame, text: "Daily streak system to keep you motivated" },
-    ],
-    tabLabel: "Dashboard",
-    tabIcon: LayoutDashboard,
+    title: "Your Dashboard",
+    subtitle: "AI-powered home base",
+    description: "See your stats, chat with the AI agent, and launch your day — all from one clean view.",
+    Screen: MiniDashboard,
   },
   {
     id: "tasks",
     tab: "/(tabs)/tasks",
     gradient: ["#001A2E", "#0D1117"] as [string, string],
     accent: Colors.blue,
-    icon: ListTodo,
     title: "Smart Task Manager",
     subtitle: "Organize with precision",
-    description: "Create tasks across Work, Personal, Health, and Learning — then let the AI prioritize and schedule your day automatically.",
-    features: [
-      { icon: Target, text: "4 categories with smart color-coding" },
-      { icon: CheckCircle, text: "One tap to complete and earn XP points" },
-      { icon: TrendingUp, text: "Priority levels: high, medium, low" },
-    ],
-    tabLabel: "Tasks",
-    tabIcon: ListTodo,
+    description: "Create tasks across Work, Personal, Health, and Learning. The AI prioritizes and schedules your day automatically.",
+    Screen: MiniTasks,
   },
   {
     id: "insights",
     tab: "/(tabs)/insights",
     gradient: ["#160D24", "#0D1117"] as [string, string],
     accent: Colors.purple,
-    icon: Sparkles,
     title: "AI Productivity Insights",
     subtitle: "Know your patterns",
-    description: "GPT-5 analyzes your actual task data and delivers daily personalized insights — no generic advice, only what applies to you.",
-    features: [
-      { icon: Brain, text: "Real-time AI analysis of your tasks & habits" },
-      { icon: TrendingUp, text: "Weekly charts showing your completion trend" },
-      { icon: Sparkles, text: "Actionable suggestions, not just pretty graphs" },
-    ],
-    tabLabel: "Insights",
-    tabIcon: Sparkles,
+    description: "GPT-5 analyzes your actual task data and delivers daily personalized insights — charts, trends, and honest advice.",
+    Screen: MiniInsights,
   },
   {
     id: "agent",
     tab: "/(tabs)/",
     gradient: ["#1A1000", "#0D1117"] as [string, string],
     accent: "#F59E0B",
-    icon: Bot,
     title: "Tonic AI Agent",
-    subtitle: "Your intelligent assistant",
-    description: 'Chat naturally to create tasks, plan your day, or get a productivity analysis. Just say "Add a workout task for tomorrow" and it\'s done.',
-    features: [
-      { icon: Zap, text: "Creates & completes tasks through conversation" },
-      { icon: Target, text: "Plans your full day based on pending work" },
-      { icon: Brain, text: "Provides honest, data-backed productivity reports" },
-    ],
-    tabLabel: "AI Agent (⚡ button)",
-    tabIcon: Bot,
+    subtitle: "Talk to get things done",
+    description: 'Say "Add a workout for today" and it\'s added. Ask for a plan, a report, or just a nudge — it handles it all.',
+    Screen: MiniAgent,
   },
   {
     id: "profile",
     tab: "/(tabs)/profile",
     gradient: ["#001A0E", "#0D1117"] as [string, string],
     accent: Colors.success,
-    icon: Trophy,
-    title: "Achievements & TON Rewards",
-    subtitle: "Earn. Rank up. Go on-chain.",
-    description: "Complete tasks to unlock 40+ achievements, climb from Rookie to Mythic, and permanently record your productivity proof on the TON blockchain.",
-    features: [
-      { icon: Trophy, text: "10 rank levels from Rookie to Mythic" },
-      { icon: Shield, text: "Claim points on-chain with TON wallet" },
-      { icon: Sparkles, text: "2× point multiplier when wallet is connected" },
-    ],
-    tabLabel: "Profile",
-    tabIcon: User,
+    title: "Achievements & TON",
+    subtitle: "Rank up. Go on-chain.",
+    description: "Complete tasks to unlock achievements, climb 10 ranks from Rookie to Mythic, and record your proof on the TON blockchain.",
+    Screen: MiniProfile,
   },
 ];
+
+function StepIndicator({ total, current, accent }: { total: number; current: number; accent: string }) {
+  return (
+    <View style={{ flexDirection: "row", gap: 6, justifyContent: "center", marginBottom: 18 }}>
+      {Array.from({ length: total }).map((_, i) => {
+        const isActive = i === current;
+        const isPast = i < current;
+        return (
+          <View
+            key={i}
+            style={{
+              height: 4,
+              width: isActive ? 28 : 8,
+              borderRadius: 2,
+              backgroundColor: isActive ? accent : isPast ? `${accent}50` : "rgba(255,255,255,0.15)",
+            }}
+          />
+        );
+      })}
+    </View>
+  );
+}
 
 function FloatingParticle({ color, delay, x }: { color: string; delay: number; x: number }) {
   const y = useRef(new Animated.Value(0)).current;
@@ -176,93 +359,6 @@ function FloatingParticle({ color, delay, x }: { color: string; delay: number; x
   );
 }
 
-function FeatureRow({ icon: Icon, text, accent, index }: { icon: any; text: string; accent: string; index: number }) {
-  const anim = useRef(new Animated.Value(0)).current;
-  useEffect(() => {
-    anim.setValue(0);
-    Animated.timing(anim, {
-      toValue: 1,
-      duration: 380,
-      delay: 200 + index * 100,
-      useNativeDriver: true,
-    }).start();
-  }, [text]);
-
-  return (
-    <Animated.View
-      style={{
-        flexDirection: "row",
-        alignItems: "flex-start",
-        gap: 12,
-        marginBottom: 10,
-        opacity: anim,
-        transform: [{ translateX: anim.interpolate({ inputRange: [0, 1], outputRange: [-20, 0] }) }],
-      }}
-    >
-      <View style={{ width: 28, height: 28, borderRadius: 8, backgroundColor: `${accent}20`, justifyContent: "center", alignItems: "center", marginTop: 1 }}>
-        <Icon size={13} color={accent} />
-      </View>
-      <Text style={{ flex: 1, fontSize: 13, color: "#C9D1D9", lineHeight: 20 }}>{text}</Text>
-    </Animated.View>
-  );
-}
-
-function StepIndicator({ total, current, accent }: { total: number; current: number; accent: string }) {
-  return (
-    <View style={{ flexDirection: "row", gap: 6, justifyContent: "center", marginBottom: 24 }}>
-      {Array.from({ length: total }).map((_, i) => {
-        const isActive = i === current;
-        const isPast = i < current;
-        return (
-          <View
-            key={i}
-            style={{
-              height: 4,
-              width: isActive ? 28 : 8,
-              borderRadius: 2,
-              backgroundColor: isActive ? accent : isPast ? `${accent}50` : "rgba(255,255,255,0.15)",
-            }}
-          />
-        );
-      })}
-    </View>
-  );
-}
-
-function TabHighlight({ label, Icon, accent }: { label: string; Icon: any; accent: string }) {
-  const pulse = useRef(new Animated.Value(1)).current;
-  useEffect(() => {
-    Animated.loop(Animated.sequence([
-      Animated.timing(pulse, { toValue: 1.12, duration: 700, useNativeDriver: true }),
-      Animated.timing(pulse, { toValue: 1, duration: 700, useNativeDriver: true }),
-    ])).start();
-  }, [label]);
-
-  return (
-    <View style={{ flexDirection: "row", alignItems: "center", gap: 8, justifyContent: "center", marginBottom: 6 }}>
-      <Text style={{ fontSize: 11, color: "rgba(255,255,255,0.45)", fontWeight: "500" }}>Find it in the</Text>
-      <Animated.View
-        style={{
-          flexDirection: "row",
-          alignItems: "center",
-          gap: 5,
-          backgroundColor: `${accent}20`,
-          borderWidth: 1,
-          borderColor: `${accent}50`,
-          paddingHorizontal: 10,
-          paddingVertical: 4,
-          borderRadius: 20,
-          transform: [{ scale: pulse }],
-        }}
-      >
-        <Icon size={11} color={accent} />
-        <Text style={{ fontSize: 11, fontWeight: "700", color: accent }}>{label}</Text>
-      </Animated.View>
-      <Text style={{ fontSize: 11, color: "rgba(255,255,255,0.45)", fontWeight: "500" }}>tab</Text>
-    </View>
-  );
-}
-
 export function AppTour({ onDone }: { onDone: () => void }) {
   const router = useRouter();
   const [step, setStep] = useState(0);
@@ -271,26 +367,21 @@ export function AppTour({ onDone }: { onDone: () => void }) {
   const slideAnim = useRef(new Animated.Value(0)).current;
   const overlayOpacity = useRef(new Animated.Value(0)).current;
   const cardScale = useRef(new Animated.Value(0.92)).current;
-  const iconAnim = useRef(new Animated.Value(0)).current;
-  const glowAnim = useRef(new Animated.Value(0)).current;
+  const screenAnim = useRef(new Animated.Value(0)).current;
 
   const isLargeScreen = W >= 768;
-  const cardWidth = isLargeScreen ? Math.min(480, W * 0.6) : W - 40;
+  const cardWidth = isLargeScreen ? Math.min(440, W * 0.6) : W - 36;
 
   useEffect(() => {
     Animated.parallel([
       Animated.timing(overlayOpacity, { toValue: 1, duration: 400, useNativeDriver: true }),
       Animated.spring(cardScale, { toValue: 1, friction: 8, tension: 55, useNativeDriver: true }),
+      Animated.spring(screenAnim, { toValue: 1, friction: 7, tension: 60, useNativeDriver: true }),
     ]).start();
-
-    Animated.loop(Animated.sequence([
-      Animated.timing(glowAnim, { toValue: 1, duration: 1600, useNativeDriver: true }),
-      Animated.timing(glowAnim, { toValue: 0, duration: 1600, useNativeDriver: true }),
-    ])).start();
   }, []);
 
   const transitionToStep = useCallback((nextStep: number) => {
-    iconAnim.setValue(0);
+    screenAnim.setValue(0);
     Animated.parallel([
       Animated.timing(slideAnim, { toValue: -30, duration: 180, useNativeDriver: true }),
       Animated.timing(overlayOpacity, { toValue: 0.7, duration: 180, useNativeDriver: true }),
@@ -304,14 +395,14 @@ export function AppTour({ onDone }: { onDone: () => void }) {
       Animated.parallel([
         Animated.timing(slideAnim, { toValue: 0, duration: 280, useNativeDriver: true }),
         Animated.timing(overlayOpacity, { toValue: 1, duration: 280, useNativeDriver: true }),
-        Animated.spring(iconAnim, { toValue: 1, friction: 7, tension: 60, useNativeDriver: true }),
+        Animated.spring(screenAnim, { toValue: 1, friction: 7, tension: 60, useNativeDriver: true }),
       ]).start();
     });
   }, []);
 
   useEffect(() => {
-    iconAnim.setValue(0);
-    Animated.spring(iconAnim, { toValue: 1, friction: 7, tension: 60, useNativeDriver: true }).start();
+    screenAnim.setValue(0);
+    Animated.spring(screenAnim, { toValue: 1, friction: 7, tension: 60, useNativeDriver: true }).start();
     const s = STEPS[step];
     if (s?.tab) {
       try { router.push(s.tab as any); } catch {}
@@ -335,23 +426,22 @@ export function AppTour({ onDone }: { onDone: () => void }) {
 
   const current = STEPS[step];
   const isLast = step === STEPS.length - 1;
-  const StepIcon = current.icon;
-  const TabIcon = current.tabIcon;
+  const { Screen } = current;
 
-  const iconScale = iconAnim.interpolate({ inputRange: [0, 1], outputRange: [0.5, 1] });
-  const glowOpacity = glowAnim.interpolate({ inputRange: [0, 1], outputRange: [0.3, 0.7] });
+  const screenScale = screenAnim.interpolate({ inputRange: [0, 1], outputRange: [0.88, 1] });
+  const screenOpacity = screenAnim.interpolate({ inputRange: [0, 1], outputRange: [0, 1] });
 
   return (
     <Animated.View
       style={[StyleSheet.absoluteFill, styles.overlay, { opacity: overlayOpacity }]}
       pointerEvents="box-none"
     >
-      {Array.from({ length: 10 }).map((_, i) => (
+      {Array.from({ length: 8 }).map((_, i) => (
         <FloatingParticle
           key={i}
           color={current.accent}
           delay={(i * 300) % 2000}
-          x={(W / 10) * i + 10}
+          x={(W / 8) * i + 10}
         />
       ))}
 
@@ -362,10 +452,10 @@ export function AppTour({ onDone }: { onDone: () => void }) {
         onPress={skip}
         hitSlop={{ top: 14, right: 14, bottom: 14, left: 14 }}
       >
-        <Text style={styles.skipText}>Skip tour</Text>
+        <Text style={styles.skipText}>Skip</Text>
       </TouchableOpacity>
 
-      <View style={[styles.centered, { paddingHorizontal: isLargeScreen ? 0 : 20 }]} pointerEvents="box-none">
+      <View style={[styles.centered, { paddingHorizontal: isLargeScreen ? 0 : 18 }]} pointerEvents="box-none">
         <Animated.View
           style={[
             styles.card,
@@ -382,48 +472,23 @@ export function AppTour({ onDone }: { onDone: () => void }) {
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 1 }}
           />
-          <View style={[styles.cardBorder, { borderColor: `${current.accent}30` }]} />
+          <View style={[styles.cardBorder, { borderColor: `${current.accent}35` }]} />
 
           <StepIndicator total={STEPS.length} current={step} accent={current.accent} />
-
-          <View style={styles.iconWrap}>
-            <Animated.View
-              style={[
-                styles.iconGlow,
-                {
-                  backgroundColor: current.accent,
-                  opacity: glowOpacity,
-                  transform: [{ scale: glowAnim.interpolate({ inputRange: [0, 1], outputRange: [1, 1.5] }) }],
-                },
-              ]}
-            />
-            <Animated.View
-              style={[
-                styles.iconOrb,
-                {
-                  backgroundColor: `${current.accent}20`,
-                  borderColor: `${current.accent}45`,
-                  transform: [{ scale: iconScale }],
-                },
-              ]}
-            >
-              <StepIcon size={34} color={current.accent} />
-            </Animated.View>
-          </View>
 
           <Text style={[styles.subtitle, { color: current.accent }]}>{current.subtitle}</Text>
           <Text style={styles.title}>{current.title}</Text>
           <Text style={styles.description}>{current.description}</Text>
 
-          <View style={styles.divider} />
-
-          <View style={styles.featureList}>
-            {current.features.map((f, i) => (
-              <FeatureRow key={i} icon={f.icon} text={f.text} accent={current.accent} index={i} />
-            ))}
-          </View>
-
-          <TabHighlight label={current.tabLabel} Icon={TabIcon} accent={current.accent} />
+          <Animated.View
+            style={[
+              styles.mockWrap,
+              { borderColor: `${current.accent}25`, transform: [{ scale: screenScale }], opacity: screenOpacity },
+            ]}
+            pointerEvents="none"
+          >
+            <Screen accent={current.accent} />
+          </Animated.View>
 
           <TouchableOpacity
             style={[styles.nextBtn, { backgroundColor: current.accent }]}
@@ -431,7 +496,7 @@ export function AppTour({ onDone }: { onDone: () => void }) {
             activeOpacity={0.85}
           >
             <Text style={styles.nextBtnText}>
-              {isLast ? "Start Productivity Journey 🚀" : "Next"}
+              {isLast ? "Start My Journey 🚀" : "Next"}
             </Text>
             {!isLast && <ChevronRight size={16} color="#0D1117" />}
           </TouchableOpacity>
@@ -443,9 +508,225 @@ export function AppTour({ onDone }: { onDone: () => void }) {
   );
 }
 
+const mini = StyleSheet.create({
+  screen: {
+    backgroundColor: "#0D1117",
+    borderRadius: 12,
+    overflow: "hidden",
+    flex: 1,
+    padding: 10,
+    gap: 7,
+  },
+  header: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 2,
+  },
+  screenTitle: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: "#E6EDF3",
+  },
+  avatar: {
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    borderWidth: 1.5,
+  },
+  pill: {
+    height: 8,
+    borderRadius: 4,
+  },
+  line: {
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: "rgba(255,255,255,0.2)",
+  },
+  row: {
+    flexDirection: "row",
+    gap: 6,
+  },
+  statCard: {
+    flex: 1,
+    backgroundColor: "rgba(255,255,255,0.04)",
+    borderRadius: 8,
+    borderWidth: 1,
+    padding: 6,
+    alignItems: "center",
+    gap: 2,
+  },
+  statVal: {
+    fontSize: 10,
+    fontWeight: "800",
+  },
+  statLabel: {
+    fontSize: 7,
+    color: "rgba(255,255,255,0.4)",
+  },
+  chatBubble: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    borderRadius: 10,
+    borderWidth: 1,
+    paddingHorizontal: 8,
+    paddingVertical: 6,
+  },
+  chatText: {
+    flex: 1,
+    fontSize: 9,
+  },
+  sendBtn: {
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  tabBar: {
+    flexDirection: "row",
+    borderTopWidth: 1,
+    borderTopColor: "rgba(255,255,255,0.07)",
+    marginTop: "auto",
+    paddingTop: 6,
+    marginHorizontal: -10,
+    paddingHorizontal: 10,
+  },
+  tabItem: {
+    flex: 1,
+    alignItems: "center",
+    paddingVertical: 2,
+  },
+  catPill: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 3,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 10,
+    borderWidth: 1,
+  },
+  catText: {
+    fontSize: 7,
+    fontWeight: "600",
+  },
+  catDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+  },
+  taskRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 7,
+    backgroundColor: "rgba(255,255,255,0.03)",
+    borderRadius: 8,
+    padding: 7,
+  },
+  checkbox: {
+    width: 13,
+    height: 13,
+    borderRadius: 4,
+    borderWidth: 1.5,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  chartWrap: {
+    backgroundColor: "rgba(255,255,255,0.03)",
+    borderRadius: 10,
+    borderWidth: 1,
+    padding: 8,
+    gap: 4,
+  },
+  bars: {
+    flexDirection: "row",
+    alignItems: "flex-end",
+    gap: 4,
+    height: 40,
+  },
+  barCol: {
+    flex: 1,
+    justifyContent: "flex-end",
+  },
+  bar: {
+    borderRadius: 3,
+    minHeight: 3,
+  },
+  chartLabel: {
+    fontSize: 7,
+    fontWeight: "600",
+    textAlign: "center",
+  },
+  insightCard: {
+    flexDirection: "row",
+    gap: 6,
+    alignItems: "flex-start",
+    borderRadius: 10,
+    borderWidth: 1,
+    padding: 8,
+  },
+  chatArea: {
+    flex: 1,
+    gap: 6,
+  },
+  msgUser: {
+    alignSelf: "flex-end",
+    borderRadius: 10,
+    borderWidth: 1,
+    paddingHorizontal: 8,
+    paddingVertical: 5,
+    maxWidth: "80%",
+  },
+  msgBot: {
+    alignSelf: "flex-start",
+    borderRadius: 10,
+    borderWidth: 1,
+    paddingHorizontal: 8,
+    paddingVertical: 5,
+    maxWidth: "85%",
+    gap: 2,
+  },
+  msgText: {
+    fontSize: 8,
+    color: "rgba(255,255,255,0.8)",
+    lineHeight: 11,
+  },
+  actionChip: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    alignSelf: "flex-start",
+    borderRadius: 8,
+    borderWidth: 1,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+  },
+  chipText: {
+    fontSize: 7,
+    fontWeight: "700",
+  },
+  walletRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    borderRadius: 10,
+    borderWidth: 1,
+    paddingHorizontal: 8,
+    paddingVertical: 7,
+  },
+  iconBtn: {
+    width: 22,
+    height: 22,
+    borderRadius: 7,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+});
+
 const styles = StyleSheet.create({
   overlay: {
-    backgroundColor: "rgba(0,0,0,0.82)",
+    backgroundColor: "rgba(0,0,0,0.86)",
     zIndex: 999,
     justifyContent: "center",
     alignItems: "center",
@@ -473,8 +754,8 @@ const styles = StyleSheet.create({
     fontWeight: "600",
   },
   card: {
-    borderRadius: 28,
-    padding: 26,
+    borderRadius: 26,
+    padding: 22,
     overflow: "hidden",
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 20 },
@@ -484,69 +765,47 @@ const styles = StyleSheet.create({
   },
   cardBorder: {
     ...StyleSheet.absoluteFillObject,
-    borderRadius: 28,
+    borderRadius: 26,
     borderWidth: 1,
   },
-  iconWrap: {
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: 16,
-    height: 90,
-  },
-  iconGlow: {
-    position: "absolute",
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    opacity: 0.4,
-  },
-  iconOrb: {
-    width: 74,
-    height: 74,
-    borderRadius: 22,
-    borderWidth: 1.5,
-    justifyContent: "center",
-    alignItems: "center",
-  },
   subtitle: {
-    fontSize: 11,
+    fontSize: 10,
     fontWeight: "700",
     textTransform: "uppercase",
     letterSpacing: 1.2,
     textAlign: "center",
-    marginBottom: 6,
+    marginBottom: 4,
   },
   title: {
-    fontSize: 22,
+    fontSize: 21,
     fontWeight: "800",
     color: "#E6EDF3",
     textAlign: "center",
-    marginBottom: 10,
+    marginBottom: 8,
     letterSpacing: -0.3,
   },
   description: {
-    fontSize: 14,
+    fontSize: 13,
     color: "#8B949E",
     textAlign: "center",
-    lineHeight: 21,
-    marginBottom: 20,
+    lineHeight: 19,
+    marginBottom: 14,
   },
-  divider: {
-    height: 1,
-    backgroundColor: "rgba(255,255,255,0.07)",
+  mockWrap: {
+    borderRadius: 16,
+    borderWidth: 1,
+    overflow: "hidden",
     marginBottom: 16,
-  },
-  featureList: {
-    marginBottom: 18,
+    height: 200,
+    backgroundColor: "#0D1117",
   },
   nextBtn: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
     gap: 6,
-    paddingVertical: 15,
+    paddingVertical: 14,
     borderRadius: 16,
-    marginTop: 4,
     marginBottom: 10,
   },
   nextBtnText: {
@@ -556,8 +815,8 @@ const styles = StyleSheet.create({
   },
   tapHint: {
     textAlign: "center",
-    fontSize: 11,
-    color: "rgba(255,255,255,0.28)",
+    fontSize: 10,
+    color: "rgba(255,255,255,0.25)",
     fontWeight: "500",
   },
 });

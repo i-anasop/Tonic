@@ -797,7 +797,9 @@ if (existsSync(WEB_DIST)) {
     if (!cachedHtml) {
       try {
         const raw = readFileSync(indexHtmlPath, "utf8");
-        cachedHtml = raw.replace("</head>", `${PORTRAIT_CSS}</head>`);
+        cachedHtml = raw
+          .replace(/<link rel="icon" href="\/favicon\.ico" ?\/?>/gi, "")
+          .replace("</head>", `${PORTRAIT_CSS}</head>`);
       } catch {
         cachedHtml = `<!DOCTYPE html><html><body><p>App loading…</p></body></html>`;
       }
