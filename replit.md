@@ -92,6 +92,10 @@ workspace/
 - `TonConnectProvider`: removed deprecated `includeAppWallet` and invalid `colorsSet` string
 - `app/_layout.tsx`: replaced non-existent `animationEnabled` with valid `animation: "slide_from_bottom"`
 - All 4 standalone sub-components (`StatItem`, `MenuItem`, `FilterTabButton`, `CategoryFilterChip`) call `useTheme()` themselves
+- `TasksProvider.generateInsights`: now maps `metric`, `trend`, `action` from API response so insight cards display correctly
+- `generateFallbackInsights`: all fallback insight objects now include `metric`, `trend`, `action` fields
+- `agent.tsx`: removed unused `StreamingText` component (dead code)
+- `+not-found.tsx`: removed leftover `// template` comment
 
 ## Running the App
 - **Backend**: `node backend/index.mjs` (workflow: "Start application", port 3000)

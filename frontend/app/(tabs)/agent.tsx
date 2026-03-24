@@ -29,24 +29,6 @@ const QUICK_ACTIONS = [
   { label: "Motivate Me", icon: Zap, prompt: "I need some motivation to get things done. Analyze my tasks and fire me up." },
 ];
 
-// ── Streaming Text ───────────────────────────────────────────────────────────
-function StreamingText({ text, style, animate }: { text: string; style?: any; animate?: boolean }) {
-  const [count, setCount] = React.useState(animate ? 0 : text.length);
-  useEffect(() => {
-    if (!animate) { setCount(text.length); return; }
-    setCount(0);
-    const batchSize = Math.max(1, Math.ceil(text.length / 55));
-    let current = 0;
-    const timer = setInterval(() => {
-      current += batchSize;
-      if (current >= text.length) { setCount(text.length); clearInterval(timer); }
-      else { setCount(current); }
-    }, 12);
-    return () => clearInterval(timer);
-  }, [text, animate]);
-  return <Text style={style}>{text.slice(0, count)}</Text>;
-}
-
 // ── Typing Indicator ─────────────────────────────────────────────────────────
 function TypingIndicator() {
   const { colors } = useTheme();

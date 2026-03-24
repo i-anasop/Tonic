@@ -246,6 +246,9 @@ function useTasksProvider(): TasksState {
           description: i.description || "",
           icon: i.icon || "brain",
           priority: i.priority || "medium",
+          metric: i.metric,
+          trend: i.trend,
+          action: i.action,
           createdAt: new Date(),
         }));
         setInsights(newInsights);
@@ -363,6 +366,9 @@ function generateFallbackInsights(
     description: focusDesc,
     icon: "target",
     priority: "high",
+    metric: pending.length > 0 ? `${pending.length} pending` : "On track",
+    trend: "neutral" as const,
+    action: "Start your top task",
     createdAt: new Date(),
   });
 
@@ -375,6 +381,9 @@ function generateFallbackInsights(
       description: `${highPriorityPending.length} high-priority tasks are pending. Reschedule lower-priority items to focus.`,
       icon: "alert",
       priority: "high",
+      metric: `${highPriorityPending.length} high-pri`,
+      trend: "down" as const,
+      action: "Reschedule lower items",
       createdAt: new Date(),
     });
   }
@@ -390,6 +399,9 @@ function generateFallbackInsights(
       description: `${recentCompletions.length} tasks completed this week — your momentum is building strong!`,
       icon: "trending",
       priority: "medium",
+      metric: `${recentCompletions.length} this week`,
+      trend: "up" as const,
+      action: "Keep the momentum",
       createdAt: new Date(),
     });
   }
@@ -404,6 +416,9 @@ function generateFallbackInsights(
         description: `${completionRate}% completion rate — try breaking large tasks into smaller, achievable steps.`,
         icon: "brain",
         priority: "medium",
+        metric: `${completionRate}% done`,
+        trend: "down" as const,
+        action: "Break tasks down",
         createdAt: new Date(),
       });
     }
