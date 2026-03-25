@@ -24,16 +24,16 @@ import { useAppState } from "@/providers/AppStateProvider";
 import { API_BASE_URL } from "@/constants/api";
 
 const RANK_PATH = [
-  { name: "Rookie",      min: 0,    color: "#9CA3AF" },
-  { name: "Bronze",      min: 500,  color: "#CD7F32" },
-  { name: "Silver",      min: 1500, color: "#C0C0C0" },
-  { name: "Gold",        min: 3000, color: Colors.gold },
-  { name: "Platinum",    min: 6000, color: "#66D9E8" },
-  { name: "Diamond",     min: 10000,color: "#60A5FA" },
-  { name: "Master",      min: 15000,color: "#A78BFA" },
-  { name: "Grandmaster", min: 22000,color: "#F472B6" },
-  { name: "Legend",      min: 30000,color: "#F97316" },
-  { name: "Mythic",      min: 40000,color: "#FFD700" },
+  { name: "Rookie",     min: 0,      color: "#9CA3AF" },
+  { name: "Apprentice", min: 200,    color: "#CD7F32" },
+  { name: "Grinder",    min: 600,    color: "#C0C0C0" },
+  { name: "Strategist", min: 1500,   color: Colors.gold },
+  { name: "Pro",        min: 3500,   color: "#66D9E8" },
+  { name: "Elite",      min: 7500,   color: "#60A5FA" },
+  { name: "Master",     min: 15000,  color: "#A78BFA" },
+  { name: "Champion",   min: 30000,  color: "#F472B6" },
+  { name: "Legend",     min: 60000,  color: "#F97316" },
+  { name: "Mythic",     min: 120000, color: "#FFD700" },
 ];
 
 function getRank(score: number) {

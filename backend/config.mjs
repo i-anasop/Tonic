@@ -1,4 +1,5 @@
-export const TONIC_PER_TASK = 15;
+export const TONIC_PER_TASK = 15; // default / fallback
+export const TONIC_REWARD_BY_PRIORITY = { high: 25, medium: 15, low: 10 };
 export const TONIC_STREAK_BONUS = 25;
 export const TONIC_DAILY_CHALLENGE = 50;
 

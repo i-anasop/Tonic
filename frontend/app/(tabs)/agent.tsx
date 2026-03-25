@@ -313,7 +313,7 @@ export default function AgentScreen() {
     } else if (action.type === "complete_task" && action.data) {
       const d = action.data as any;
       const task = tasks.find((t) => t.id === d.taskId || t.title.toLowerCase() === (d.taskTitle || "").toLowerCase());
-      if (task && task.status !== "completed") toggleTaskStatus(task.id);
+      if (task && task.status !== "completed") toggleTaskStatus(task.id, user?.id);
     } else if (action.type === "reschedule_task" && action.data) {
       const d = action.data as any;
       const task = tasks.find((t) => t.id === d.taskId || t.title.toLowerCase() === (d.taskTitle || "").toLowerCase());

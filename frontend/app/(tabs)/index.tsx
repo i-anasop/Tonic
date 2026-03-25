@@ -254,7 +254,7 @@ function TonicTokenWidget({ userId }: { userId?: string }) {
       <View style={{ alignItems: "flex-end", gap: 3 }}>
         <View style={{ flexDirection: "row", alignItems: "center", gap: 4, backgroundColor: `${Colors.success}15`, borderRadius: 8, paddingHorizontal: 8, paddingVertical: 4 }}>
           <Zap size={10} color={Colors.success} />
-          <Text style={{ fontSize: 10, color: Colors.success, fontWeight: "700" }}>+15 per task</Text>
+          <Text style={{ fontSize: 10, color: Colors.success, fontWeight: "700" }}>+10–25 per task</Text>
         </View>
         <Text style={{ fontSize: 9, color: colors.textMuted }}>+25 streak bonus</Text>
       </View>

@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { db } from "../db.mjs";
 import { sendTonicReward, isDeployerReady } from "../ton/wallet.mjs";
-import { TONIC_PER_TASK } from "../config.mjs";
+import { TONIC_REWARD_BY_PRIORITY } from "../config.mjs";
 
 const router = Router();
 
@@ -63,7 +63,8 @@ router.post("/tasks", async (req, res) => {
           );
           const walletAddress = userRes.rows[0]?.wallet_address;
           if (!walletAddress) return;
-          const result = await sendTonicReward(walletAddress, TONIC_PER_TASK, "task_complete");
+          const reward = TONIC_REWARD_BY_PRIORITY[savedTask.priority] ?? TONIC_REWARD_BY_PRIORITY.medium;
+          const result = await sendTonicReward(walletAddress, reward, "task_complete");
           if (result.success && result.txHash) {
             await db.query(
               `INSERT INTO on_chain_records (id, user_id, record_type, title, description, ton_tx_hash)
@@ -71,12 +72,12 @@ router.post("/tasks", async (req, res) => {
               [
                 `task_${savedTask.id}_${Date.now()}`,
                 userId,
-                `+${TONIC_PER_TASK} $TONIC — Task Complete`,
+                `+${reward} $TONIC — Task Complete`,
                 `"${title}" · tx: ${result.txHash.slice(0, 16)}...`,
                 result.txHash,
               ]
             );
-            console.log(`[TON] On-chain reward sent for task "${title}": ${result.txHash}`);
+            console.log(`[TON] On-chain reward sent for task "${title}" (${savedTask.priority}): ${result.txHash}`);
           }
         } catch (e) {
           console.warn("[TON] On-chain task reward failed:", e.message);

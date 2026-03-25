@@ -2,7 +2,7 @@ function getApiBaseUrl(): string {
   if (typeof window !== "undefined" && window.location?.origin) {
     return window.location.origin;
   }
-  return "https://4134e415-ecd2-4b0e-86de-4619963e1f41-00-3jthtt2pvqs7.pike.replit.dev";
+  return "";
 }
 
 export const API_BASE_URL = getApiBaseUrl();

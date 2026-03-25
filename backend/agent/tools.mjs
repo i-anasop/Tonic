@@ -124,7 +124,7 @@ export function buildAgentTools() {
               description: "TONIC cost: 25 for habit_coach, 30 for schedule_optimizer, 40 for goal_strategist",
             },
           },
-          required: ["specialist", "mission", "tonicCost"],
+          required: ["specialist", "mission"],
         },
       },
     },

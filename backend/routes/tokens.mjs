@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { db } from "../db.mjs";
-import { TONIC_PER_TASK, TONIC_STREAK_BONUS, TONIC_DAILY_CHALLENGE, DAILY_CHALLENGES } from "../config.mjs";
+import { TONIC_REWARD_BY_PRIORITY, TONIC_STREAK_BONUS, TONIC_DAILY_CHALLENGE, DAILY_CHALLENGES } from "../config.mjs";
 
 const router = Router();
 
@@ -12,7 +12,7 @@ router.get("/users/:userId/tokens", async (req, res) => {
     );
     res.json({
       tokens:   rows[0]?.tonic_tokens ?? 0,
-      earnRate: `+${TONIC_PER_TASK} per task, +${TONIC_STREAK_BONUS} streak bonus`,
+      earnRate: `+${TONIC_REWARD_BY_PRIORITY.low}–${TONIC_REWARD_BY_PRIORITY.high} per task (by priority), +${TONIC_STREAK_BONUS} streak bonus`,
     });
   } catch (err) {
     console.error("[Tokens] Fetch error:", err.message);

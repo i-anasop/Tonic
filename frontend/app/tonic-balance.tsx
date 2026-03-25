@@ -15,12 +15,13 @@ import { useAchievements } from "@/providers/AchievementsProvider";
 import { API_BASE_URL } from "@/constants/api";
 
 const EARN_RATES = [
-  { label: "Low-priority task", reward: 10, icon: "📋" },
-  { label: "Medium-priority task", reward: 15, icon: "📌" },
-  { label: "High-priority task", reward: 25, icon: "🔥" },
-  { label: "Daily login streak", reward: 25, icon: "⚡" },
-  { label: "Daily challenge", reward: 50, icon: "🏆" },
-  { label: "On-chain achievement (2×)", reward: null, icon: "⛓️" },
+  { label: "Complete a low-priority task",    reward: "+10",    icon: "📋" },
+  { label: "Complete a medium-priority task", reward: "+15",    icon: "📌" },
+  { label: "Complete a high-priority task",   reward: "+25",    icon: "🔥" },
+  { label: "Daily login streak bonus",        reward: "+25",    icon: "⚡" },
+  { label: "Daily challenge completion",      reward: "+50",    icon: "🏆" },
+  { label: "Hire specialist AI agent",        reward: "25–40",  icon: "🤖" },
+  { label: "On-chain achievement claim",      reward: "2× pts", icon: "⛓️" },
 ];
 
 function makeStyles(colors: AppColors) {
@@ -191,11 +192,9 @@ export default function TonicBalanceScreen() {
               <View key={i} style={[styles.earnRow, i === EARN_RATES.length - 1 && { borderBottomWidth: 0 }]}>
                 <Text style={styles.earnEmoji}>{row.icon}</Text>
                 <Text style={styles.earnLabel}>{row.label}</Text>
-                {row.reward !== null ? (
-                  <Text style={styles.earnReward}>+{row.reward}</Text>
-                ) : (
-                  <Text style={styles.earnRewardSpecial}>2× pts</Text>
-                )}
+                <Text style={row.reward?.startsWith("+") ? styles.earnReward : styles.earnRewardSpecial}>
+                  {row.reward}
+                </Text>
               </View>
             ))}
           </View>
