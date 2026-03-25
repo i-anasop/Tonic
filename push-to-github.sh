@@ -14,19 +14,18 @@ echo "📋 Checking for uncommitted changes..."
 if ! git diff --quiet || ! git diff --cached --quiet || [ -n "$(git ls-files --others --exclude-standard)" ]; then
   echo "   Staging all changes..."
   git add -A
-  git commit -m "feat: add landing page, priority-based TONIC rewards, bug fixes — v2.0.0
+  git commit -m "fix: critical bug fixes + backend sync — v2.1.0
 
-- Beautiful marketing landing page (/landing) with particle animations
-- Priority-based on-chain TONIC rewards: high=25, medium=15, low=10
-- Fixed AI agent task completion not crediting user TONIC balance
-- Fixed hardcoded fallback API URL in frontend
-- Fixed leaderboard rank names (Rookie→Mythic unified system)
-- Fixed dashboard reward label and tonic-balance earn rates display
-- Removed tonicCost from agent tools required array
-- GPT-4o powered, TON testnet real transactions verified
-- 8 AI agent tools, 90+ achievements, 10 rank levels
-- TEP-74/89 Jetton smart contract (Tact language)
-- Comprehensive README for TON AI Hackathon 2026 submission"
+- Fix stale closure bug in sendTransaction (walletRef instead of state.isConnected)
+- Fix wrong zero/burn address in recordAchievementOnChain (uses TON_REWARD_ADDRESS now)
+- Fix empty onStatusChange handler — updates wallet state for faster mobile detection
+- Fix mainnet TONScan link after badge mint (testnet.tonscan.org)
+- Fix minted state not persisting after navigation (backend check on mount)
+- Fix AchievementsModal missing backend sync after on-chain claim
+- Landing page at /landing with particle animations and full feature showcase
+- GPT-4o, real TON testnet transactions, deployer wallet 2 tTON funded
+- 8 AI agent tools, 90+ achievements, 10 rank levels (Rookie to Mythic)
+- TEP-74/89 Jetton smart contract, SSE streaming, Telegram bot"
   echo "   Committed."
 else
   echo "   Nothing to commit — all changes already committed."
