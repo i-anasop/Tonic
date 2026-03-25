@@ -1,0 +1,1443 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Tonic AI — GPT-4o Productivity on the TON Blockchain</title>
+<meta name="description" content="AI-native task management powered by GPT-4o with real on-chain $TONIC rewards on TON. Built for the TON AI Hackathon 2026." />
+<style>
+  :root {
+    --gold: #FFD700;
+    --gold-dim: rgba(255,215,0,0.12);
+    --gold-border: rgba(255,215,0,0.22);
+    --bg: #060810;
+    --bg2: #0D1117;
+    --bg3: #111827;
+    --text: #F9FAFB;
+    --text2: #9CA3AF;
+    --text3: #6B7280;
+    --blue: #3B82F6;
+    --purple: #8B5CF6;
+    --green: #10B981;
+    --red: #EF4444;
+    --radius: 20px;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    overflow-x: hidden;
+    line-height: 1.6;
+  }
+
+  /* ── Canvas bg ──────────────────────────────────────────────────────────── */
+  #canvas-bg {
+    position: fixed; inset: 0; z-index: 0;
+    pointer-events: none;
+  }
+
+  /* ── Nav ────────────────────────────────────────────────────────────────── */
+  nav {
+    position: fixed; top: 0; left: 0; right: 0;
+    z-index: 100;
+    padding: 0 max(24px, calc((100vw - 1200px) / 2));
+    height: 64px;
+    display: flex; align-items: center; justify-content: space-between;
+    background: rgba(6,8,16,0.8);
+    backdrop-filter: blur(20px);
+    border-bottom: 1px solid var(--gold-border);
+  }
+
+  .nav-logo {
+    display: flex; align-items: center; gap: 10px;
+    font-weight: 800; font-size: 18px; color: var(--gold);
+    text-decoration: none; letter-spacing: -0.3px;
+  }
+
+  .logo-icon {
+    width: 32px; height: 32px; border-radius: 9px;
+    background: linear-gradient(135deg, #FFD700, #B8860B);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 16px; flex-shrink: 0;
+    box-shadow: 0 0 16px rgba(255,215,0,0.35);
+  }
+
+  .nav-links {
+    display: flex; align-items: center; gap: 28px;
+    list-style: none;
+  }
+
+  .nav-links a {
+    color: var(--text2); text-decoration: none; font-size: 14px;
+    font-weight: 500; transition: color 0.2s;
+  }
+  .nav-links a:hover { color: var(--text); }
+
+  .nav-cta {
+    padding: 9px 20px; border-radius: 12px;
+    background: linear-gradient(135deg, var(--gold), #B8860B);
+    color: #0D1117 !important; font-weight: 800 !important;
+    font-size: 14px !important;
+    box-shadow: 0 4px 20px rgba(255,215,0,0.3);
+    transition: transform 0.2s, box-shadow 0.2s !important;
+  }
+  .nav-cta:hover {
+    transform: translateY(-1px) !important;
+    box-shadow: 0 6px 28px rgba(255,215,0,0.45) !important;
+  }
+
+  /* ── Container ──────────────────────────────────────────────────────────── */
+  .container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 24px;
+    position: relative; z-index: 1;
+  }
+
+  /* ── Section ────────────────────────────────────────────────────────────── */
+  section {
+    position: relative; z-index: 1;
+    padding: 100px 0;
+  }
+
+  .section-label {
+    display: inline-block;
+    font-size: 11px; font-weight: 800; letter-spacing: 2px;
+    text-transform: uppercase; color: var(--gold);
+    background: var(--gold-dim);
+    border: 1px solid var(--gold-border);
+    padding: 5px 14px; border-radius: 100px;
+    margin-bottom: 20px;
+  }
+
+  .section-title {
+    font-size: clamp(28px, 4vw, 48px);
+    font-weight: 900; line-height: 1.1;
+    letter-spacing: -1px; color: var(--text);
+    margin-bottom: 16px;
+  }
+
+  .section-sub {
+    font-size: 17px; color: var(--text2);
+    max-width: 560px; line-height: 1.7;
+    margin-bottom: 56px;
+  }
+
+  /* ── Hero ───────────────────────────────────────────────────────────────── */
+  #hero {
+    min-height: 100vh;
+    display: flex; align-items: center;
+    padding-top: 120px;
+    padding-bottom: 60px;
+  }
+
+  .hero-inner {
+    display: grid; grid-template-columns: 1fr 1fr;
+    gap: 60px; align-items: center;
+  }
+
+  .hero-badge {
+    display: inline-flex; align-items: center; gap: 8px;
+    font-size: 12px; font-weight: 700; letter-spacing: 1.5px;
+    text-transform: uppercase; color: var(--gold);
+    background: var(--gold-dim);
+    border: 1px solid var(--gold-border);
+    padding: 7px 16px; border-radius: 100px;
+    margin-bottom: 24px;
+  }
+
+  .hero-badge-dot {
+    width: 7px; height: 7px; border-radius: 50%;
+    background: var(--green);
+    box-shadow: 0 0 8px var(--green);
+    animation: pulse 2s infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.6; transform: scale(0.85); }
+  }
+
+  .hero-title {
+    font-size: clamp(36px, 5vw, 66px);
+    font-weight: 900; line-height: 1.05;
+    letter-spacing: -2px; margin-bottom: 22px;
+  }
+
+  .hero-title .gold { color: var(--gold); }
+
+  .hero-sub {
+    font-size: 18px; color: var(--text2);
+    line-height: 1.75; margin-bottom: 40px;
+    max-width: 480px;
+  }
+
+  .hero-actions {
+    display: flex; align-items: center; gap: 14px;
+    flex-wrap: wrap;
+  }
+
+  .btn-primary {
+    display: inline-flex; align-items: center; gap: 9px;
+    padding: 16px 32px; border-radius: 16px;
+    background: linear-gradient(135deg, var(--gold), #B8860B, var(--gold));
+    background-size: 200% 100%;
+    color: #0D1117; font-weight: 900; font-size: 16px;
+    text-decoration: none; border: none; cursor: pointer;
+    box-shadow: 0 6px 30px rgba(255,215,0,0.35);
+    transition: all 0.3s;
+    animation: shimmer 3s linear infinite;
+  }
+  @keyframes shimmer {
+    0% { background-position: 0% 50%; }
+    100% { background-position: 200% 50%; }
+  }
+  .btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 40px rgba(255,215,0,0.5);
+  }
+
+  .btn-secondary {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 15px 28px; border-radius: 16px;
+    border: 1.5px solid var(--gold-border);
+    color: var(--text); font-weight: 700; font-size: 15px;
+    text-decoration: none; background: transparent;
+    transition: all 0.2s;
+  }
+  .btn-secondary:hover {
+    background: var(--gold-dim);
+    border-color: rgba(255,215,0,0.45);
+  }
+
+  /* Hero phone mockup */
+  .hero-visual {
+    position: relative;
+    display: flex; justify-content: center;
+  }
+
+  .phone-frame {
+    width: 280px; height: 560px;
+    background: var(--bg2);
+    border-radius: 40px;
+    border: 1.5px solid rgba(255,215,0,0.25);
+    box-shadow:
+      0 0 0 6px rgba(255,215,0,0.06),
+      0 40px 120px rgba(0,0,0,0.7),
+      0 0 80px rgba(255,215,0,0.12);
+    overflow: hidden;
+    position: relative;
+    animation: float 4s ease-in-out infinite;
+  }
+
+  @keyframes float {
+    0%, 100% { transform: translateY(0px) rotate(-1deg); }
+    50% { transform: translateY(-16px) rotate(1deg); }
+  }
+
+  .phone-screen {
+    width: 100%; height: 100%;
+    background: linear-gradient(180deg, #0A0D18 0%, #111827 100%);
+    padding: 20px 16px;
+    display: flex; flex-direction: column; gap: 10px;
+  }
+
+  .phone-header {
+    font-size: 11px; font-weight: 800; color: var(--gold);
+    text-align: center; letter-spacing: 1px; text-transform: uppercase;
+    padding-bottom: 8px; border-bottom: 1px solid rgba(255,215,0,0.12);
+  }
+
+  .phone-stat-row {
+    display: flex; gap: 8px;
+  }
+
+  .phone-stat {
+    flex: 1; background: rgba(255,215,0,0.06); border-radius: 12px;
+    padding: 10px 8px; text-align: center;
+    border: 1px solid rgba(255,215,0,0.12);
+  }
+  .phone-stat-val { font-size: 20px; font-weight: 900; color: var(--gold); }
+  .phone-stat-lbl { font-size: 8px; color: var(--text3); text-transform: uppercase; letter-spacing: 0.5px; margin-top: 2px; }
+
+  .phone-task {
+    background: rgba(255,255,255,0.04); border-radius: 12px;
+    padding: 10px 12px;
+    border: 1px solid rgba(255,255,255,0.07);
+    display: flex; align-items: center; gap: 8px;
+  }
+  .phone-task-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+  .phone-task-title { font-size: 11px; color: var(--text); font-weight: 600; flex: 1; }
+  .phone-task-badge {
+    font-size: 8px; padding: 2px 7px; border-radius: 6px;
+    font-weight: 700; text-transform: uppercase;
+  }
+
+  .phone-ai-bubble {
+    background: linear-gradient(135deg, rgba(255,215,0,0.1), rgba(255,215,0,0.04));
+    border: 1px solid var(--gold-border);
+    border-radius: 14px; padding: 10px 12px;
+  }
+  .phone-ai-lbl { font-size: 8px; color: var(--gold); font-weight: 700; letter-spacing: 1px; margin-bottom: 4px; }
+  .phone-ai-text { font-size: 10px; color: var(--text2); line-height: 1.5; }
+
+  .phone-tonic {
+    background: rgba(255,215,0,0.06); border-radius: 12px;
+    padding: 10px 12px;
+    border: 1px solid rgba(255,215,0,0.15);
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .phone-tonic-lbl { font-size: 8px; color: var(--text3); text-transform: uppercase; letter-spacing: 0.5px; }
+  .phone-tonic-val { font-size: 18px; font-weight: 900; color: var(--gold); }
+  .phone-tonic-earn { font-size: 9px; color: var(--green); background: rgba(16,185,129,0.1); border-radius: 5px; padding: 2px 7px; }
+
+  .phone-glow {
+    position: absolute;
+    width: 200px; height: 200px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(255,215,0,0.15), transparent 70%);
+    top: -60px; left: 50%; transform: translateX(-50%);
+    filter: blur(30px);
+    pointer-events: none;
+  }
+
+  .hero-stats {
+    display: flex; gap: 32px; margin-top: 48px; padding-top: 32px;
+    border-top: 1px solid rgba(255,255,255,0.07);
+  }
+  .hero-stat-val { font-size: 28px; font-weight: 900; color: var(--gold); }
+  .hero-stat-lbl { font-size: 12px; color: var(--text3); margin-top: 2px; }
+
+  /* ── Features grid ──────────────────────────────────────────────────────── */
+  .features-grid {
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px;
+  }
+
+  .feature-card {
+    background: linear-gradient(145deg, rgba(255,255,255,0.04), rgba(255,255,255,0.01));
+    border: 1px solid rgba(255,255,255,0.07);
+    border-radius: var(--radius);
+    padding: 28px;
+    transition: all 0.3s;
+    position: relative; overflow: hidden;
+  }
+  .feature-card::before {
+    content: '';
+    position: absolute; top: 0; left: 0; right: 0; height: 2px;
+    background: linear-gradient(90deg, transparent, var(--card-color, var(--gold)), transparent);
+    opacity: 0;
+    transition: opacity 0.3s;
+  }
+  .feature-card:hover {
+    border-color: rgba(255,255,255,0.14);
+    transform: translateY(-4px);
+    box-shadow: 0 20px 60px rgba(0,0,0,0.4);
+  }
+  .feature-card:hover::before { opacity: 1; }
+
+  .feature-icon {
+    width: 48px; height: 48px; border-radius: 14px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 22px; margin-bottom: 18px;
+  }
+  .feature-title {
+    font-size: 17px; font-weight: 800; color: var(--text);
+    margin-bottom: 8px; letter-spacing: -0.3px;
+  }
+  .feature-desc { font-size: 13.5px; color: var(--text2); line-height: 1.65; }
+
+  /* featured card variant */
+  .feature-card-wide {
+    grid-column: span 2;
+    background: linear-gradient(135deg, rgba(255,215,0,0.06), rgba(255,215,0,0.01));
+    border-color: var(--gold-border);
+  }
+
+  /* ── Tools grid ─────────────────────────────────────────────────────────── */
+  .tools-grid {
+    display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px;
+    margin-top: 40px;
+  }
+  .tool-chip {
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 14px; padding: 14px 16px;
+    text-align: center;
+    transition: all 0.2s;
+  }
+  .tool-chip:hover {
+    background: var(--gold-dim);
+    border-color: var(--gold-border);
+    transform: scale(1.02);
+  }
+  .tool-chip-icon { font-size: 22px; margin-bottom: 8px; }
+  .tool-chip-name { font-size: 12px; font-weight: 700; color: var(--text); }
+  .tool-chip-desc { font-size: 10px; color: var(--text3); margin-top: 2px; }
+
+  /* ── Flow diagram ───────────────────────────────────────────────────────── */
+  .flow-container {
+    background: var(--bg2);
+    border: 1px solid rgba(255,255,255,0.07);
+    border-radius: 24px; padding: 48px;
+    margin-top: 40px;
+  }
+
+  .flow-title {
+    font-size: 13px; font-weight: 700; color: var(--text2);
+    letter-spacing: 1px; text-transform: uppercase;
+    margin-bottom: 40px; text-align: center;
+  }
+
+  .flow-steps {
+    display: flex; align-items: center; justify-content: center;
+    gap: 0; flex-wrap: wrap;
+  }
+
+  .flow-step {
+    display: flex; flex-direction: column; align-items: center;
+    gap: 12px; flex: 1; min-width: 140px; text-align: center;
+  }
+
+  .flow-step-num {
+    width: 52px; height: 52px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 20px; font-weight: 900;
+    border: 2px solid;
+    position: relative; z-index: 1;
+    transition: transform 0.3s;
+  }
+  .flow-step:hover .flow-step-num { transform: scale(1.1); }
+
+  .flow-step-title { font-size: 13px; font-weight: 800; color: var(--text); }
+  .flow-step-desc { font-size: 11px; color: var(--text3); max-width: 100px; line-height: 1.5; }
+
+  .flow-arrow {
+    font-size: 22px; color: rgba(255,255,255,0.15);
+    padding: 0 8px; flex-shrink: 0; margin-bottom: 40px;
+    animation: arrowPulse 2s ease-in-out infinite;
+  }
+  @keyframes arrowPulse {
+    0%, 100% { opacity: 0.3; }
+    50% { opacity: 0.8; }
+  }
+
+  /* ── Token economics ────────────────────────────────────────────────────── */
+  .token-grid {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 20px;
+  }
+
+  .earn-table {
+    background: var(--bg2);
+    border: 1px solid rgba(255,255,255,0.07);
+    border-radius: 20px; overflow: hidden;
+  }
+  .earn-table-header {
+    padding: 18px 24px;
+    background: var(--gold-dim);
+    border-bottom: 1px solid var(--gold-border);
+    font-size: 13px; font-weight: 800; color: var(--gold);
+    letter-spacing: 0.5px;
+  }
+  .earn-row {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 14px 24px;
+    border-bottom: 1px solid rgba(255,255,255,0.04);
+    gap: 12px;
+  }
+  .earn-row:last-child { border-bottom: none; }
+  .earn-row-icon { font-size: 18px; flex-shrink: 0; }
+  .earn-row-label { font-size: 13px; color: var(--text2); flex: 1; }
+  .earn-row-reward {
+    font-size: 13px; font-weight: 800;
+    color: var(--green);
+    background: rgba(16,185,129,0.1);
+    padding: 3px 10px; border-radius: 8px;
+    white-space: nowrap;
+  }
+  .earn-row-reward.cost {
+    color: var(--gold);
+    background: rgba(255,215,0,0.1);
+  }
+  .earn-row-reward.special {
+    color: var(--blue);
+    background: rgba(59,130,246,0.1);
+  }
+
+  .specialist-grid {
+    display: flex; flex-direction: column; gap: 12px;
+  }
+
+  .specialist-card {
+    background: var(--bg2);
+    border: 1px solid rgba(255,255,255,0.07);
+    border-radius: 16px; padding: 20px;
+    display: flex; align-items: center; gap: 16px;
+    transition: all 0.2s;
+  }
+  .specialist-card:hover {
+    border-color: rgba(255,215,0,0.25);
+    background: rgba(255,215,0,0.03);
+  }
+  .specialist-icon {
+    width: 44px; height: 44px; border-radius: 12px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 20px; flex-shrink: 0;
+  }
+  .specialist-info { flex: 1; }
+  .specialist-name { font-size: 15px; font-weight: 800; color: var(--text); }
+  .specialist-desc { font-size: 12px; color: var(--text3); margin-top: 2px; }
+  .specialist-cost {
+    font-size: 13px; font-weight: 900; color: var(--gold);
+    background: var(--gold-dim);
+    border: 1px solid var(--gold-border);
+    padding: 5px 12px; border-radius: 10px; white-space: nowrap;
+  }
+
+  /* ── Rank ladder ────────────────────────────────────────────────────────── */
+  .ranks-grid {
+    display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px;
+    margin-top: 40px;
+  }
+
+  .rank-card {
+    background: var(--bg2);
+    border: 1px solid rgba(255,255,255,0.07);
+    border-radius: 16px; padding: 20px 14px;
+    text-align: center;
+    transition: all 0.3s;
+    position: relative; overflow: hidden;
+  }
+  .rank-card::after {
+    content: '';
+    position: absolute; bottom: 0; left: 0; right: 0; height: 3px;
+    background: var(--rank-color, #9CA3AF);
+    opacity: 0.6;
+    transition: opacity 0.3s;
+  }
+  .rank-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 16px 40px rgba(0,0,0,0.4);
+  }
+  .rank-card:hover::after { opacity: 1; }
+
+  .rank-icon { font-size: 26px; margin-bottom: 10px; }
+  .rank-name { font-size: 13px; font-weight: 800; color: var(--text); margin-bottom: 5px; }
+  .rank-pts { font-size: 10px; color: var(--text3); }
+
+  /* ── Tech stack ─────────────────────────────────────────────────────────── */
+  .tech-stack-grid {
+    display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px;
+    margin-top: 40px;
+  }
+
+  .tech-group {
+    background: var(--bg2);
+    border: 1px solid rgba(255,255,255,0.07);
+    border-radius: 18px; padding: 22px;
+  }
+  .tech-group-title {
+    font-size: 10px; font-weight: 800; letter-spacing: 1.5px;
+    text-transform: uppercase; color: var(--text3);
+    margin-bottom: 16px;
+    display: flex; align-items: center; gap: 6px;
+  }
+  .tech-group-dot {
+    width: 6px; height: 6px; border-radius: 50%;
+  }
+  .tech-item {
+    display: flex; align-items: center; gap: 8px;
+    padding: 8px 0;
+    border-bottom: 1px solid rgba(255,255,255,0.04);
+  }
+  .tech-item:last-child { border-bottom: none; }
+  .tech-item-icon { font-size: 16px; flex-shrink: 0; }
+  .tech-item-name { font-size: 13px; font-weight: 600; color: var(--text2); }
+
+  /* ── On-chain section ───────────────────────────────────────────────────── */
+  .onchain-hero {
+    background: linear-gradient(135deg, rgba(255,215,0,0.06) 0%, rgba(59,130,246,0.06) 100%);
+    border: 1px solid var(--gold-border);
+    border-radius: 28px; padding: 60px;
+    display: grid; grid-template-columns: 1fr 1fr;
+    gap: 60px; align-items: center;
+  }
+
+  .onchain-tx {
+    background: var(--bg);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 16px; padding: 20px;
+    font-family: 'SFMono-Regular', 'Menlo', monospace;
+    font-size: 11px; color: var(--green);
+    line-height: 1.8;
+  }
+  .onchain-tx .comment { color: var(--text3); }
+  .onchain-tx .key { color: var(--blue); }
+  .onchain-tx .hash { color: var(--gold); word-break: break-all; }
+
+  .onchain-features { display: flex; flex-direction: column; gap: 16px; }
+  .onchain-feat {
+    display: flex; align-items: flex-start; gap: 14px;
+  }
+  .onchain-feat-icon {
+    width: 40px; height: 40px; border-radius: 12px;
+    background: rgba(255,215,0,0.1);
+    border: 1px solid var(--gold-border);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px; flex-shrink: 0;
+  }
+  .onchain-feat-title { font-size: 15px; font-weight: 800; color: var(--text); margin-bottom: 3px; }
+  .onchain-feat-desc { font-size: 13px; color: var(--text2); line-height: 1.6; }
+
+  /* ── CTA section ────────────────────────────────────────────────────────── */
+  .cta-section {
+    text-align: center;
+    padding: 120px 0;
+  }
+
+  .cta-glow {
+    width: 400px; height: 400px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(255,215,0,0.15), transparent 70%);
+    position: absolute; top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    filter: blur(60px);
+    pointer-events: none;
+  }
+
+  .cta-title {
+    font-size: clamp(32px, 5vw, 60px);
+    font-weight: 900; letter-spacing: -1.5px;
+    margin-bottom: 20px;
+  }
+
+  .cta-sub {
+    font-size: 17px; color: var(--text2);
+    max-width: 480px; margin: 0 auto 40px;
+    line-height: 1.7;
+  }
+
+  .cta-note {
+    margin-top: 20px;
+    font-size: 13px; color: var(--text3);
+  }
+
+  /* ── Footer ─────────────────────────────────────────────────────────────── */
+  footer {
+    position: relative; z-index: 1;
+    border-top: 1px solid rgba(255,255,255,0.06);
+    padding: 40px 0;
+  }
+  .footer-inner {
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .footer-logo { font-weight: 800; color: var(--gold); font-size: 16px; }
+  .footer-text { font-size: 13px; color: var(--text3); }
+  .footer-links { display: flex; gap: 24px; }
+  .footer-links a {
+    font-size: 13px; color: var(--text3); text-decoration: none;
+    transition: color 0.2s;
+  }
+  .footer-links a:hover { color: var(--text2); }
+
+  /* ── Divider ────────────────────────────────────────────────────────────── */
+  .section-divider {
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(255,215,0,0.2), transparent);
+    margin: 0 auto; max-width: 800px;
+  }
+
+  /* ── Scroll fade in ─────────────────────────────────────────────────────── */
+  .fade-in {
+    opacity: 0; transform: translateY(28px);
+    transition: opacity 0.7s ease, transform 0.7s ease;
+  }
+  .fade-in.visible { opacity: 1; transform: translateY(0); }
+
+  /* ── Responsive ─────────────────────────────────────────────────────────── */
+  @media (max-width: 900px) {
+    .hero-inner { grid-template-columns: 1fr; }
+    .hero-visual { display: none; }
+    .features-grid { grid-template-columns: 1fr; }
+    .feature-card-wide { grid-column: span 1; }
+    .tools-grid { grid-template-columns: repeat(2, 1fr); }
+    .token-grid { grid-template-columns: 1fr; }
+    .ranks-grid { grid-template-columns: repeat(2, 1fr); }
+    .tech-stack-grid { grid-template-columns: repeat(2, 1fr); }
+    .onchain-hero { grid-template-columns: 1fr; }
+    .footer-inner { flex-direction: column; gap: 20px; text-align: center; }
+    nav .nav-links { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ── Canvas particles ─────────────────────────────────────────────────────── -->
+<canvas id="canvas-bg"></canvas>
+
+<!-- ── Nav ─────────────────────────────────────────────────────────────────── -->
+<nav>
+  <a href="/landing" class="nav-logo">
+    <div class="logo-icon">⚡</div>
+    Tonic AI
+  </a>
+  <ul class="nav-links">
+    <li><a href="#features">Features</a></li>
+    <li><a href="#onchain">On-Chain</a></li>
+    <li><a href="#tokenomics">$TONIC</a></li>
+    <li><a href="#stack">Tech Stack</a></li>
+    <li><a href="/" class="nav-cta">Launch App →</a></li>
+  </ul>
+</nav>
+
+<!-- ── Hero ─────────────────────────────────────────────────────────────────── -->
+<section id="hero">
+  <div class="container">
+    <div class="hero-inner">
+      <div>
+        <div class="hero-badge">
+          <div class="hero-badge-dot"></div>
+          TON AI Hackathon 2026 · Live
+        </div>
+        <h1 class="hero-title">
+          AI Productivity<br>
+          on the <span class="gold">TON Blockchain</span>
+        </h1>
+        <p class="hero-sub">
+          GPT-4o agent with 8 tools and real-time $TONIC rewards. Every task you complete fires a verifiable on-chain transaction. Manage your work through natural conversation.
+        </p>
+        <div class="hero-actions">
+          <a href="/" class="btn-primary">
+            ⚡ Launch App
+          </a>
+          <a href="https://testnet.tonscan.org/address/0QBrXSY1xnP25QBRLg6G_9lSgoV4aypr92BK3pFQkactXG6V" target="_blank" class="btn-secondary">
+            🔗 View on TON Explorer
+          </a>
+        </div>
+        <div class="hero-stats">
+          <div>
+            <div class="hero-stat-val">8</div>
+            <div class="hero-stat-lbl">AI Agent Tools</div>
+          </div>
+          <div>
+            <div class="hero-stat-val">90+</div>
+            <div class="hero-stat-lbl">Achievements</div>
+          </div>
+          <div>
+            <div class="hero-stat-val">10</div>
+            <div class="hero-stat-lbl">Rank Levels</div>
+          </div>
+          <div>
+            <div class="hero-stat-val">Live</div>
+            <div class="hero-stat-lbl">On-Chain Rewards</div>
+          </div>
+        </div>
+      </div>
+      <div class="hero-visual">
+        <div class="phone-glow"></div>
+        <div class="phone-frame">
+          <div class="phone-screen">
+            <div class="phone-header">⚡ Tonic AI v2.0</div>
+            <div class="phone-stat-row">
+              <div class="phone-stat">
+                <div class="phone-stat-val">87%</div>
+                <div class="phone-stat-lbl">Score</div>
+              </div>
+              <div class="phone-stat">
+                <div class="phone-stat-val">14</div>
+                <div class="phone-stat-lbl">Streak</div>
+              </div>
+              <div class="phone-stat">
+                <div class="phone-stat-val">32</div>
+                <div class="phone-stat-lbl">Done</div>
+              </div>
+            </div>
+            <div class="phone-task">
+              <div class="phone-task-dot" style="background:#EF4444"></div>
+              <div class="phone-task-title">Submit hackathon project</div>
+              <div class="phone-task-badge" style="background:rgba(239,68,68,0.15);color:#EF4444">HIGH</div>
+            </div>
+            <div class="phone-task">
+              <div class="phone-task-dot" style="background:#F59E0B"></div>
+              <div class="phone-task-title">Deploy Jetton contract</div>
+              <div class="phone-task-badge" style="background:rgba(245,158,11,0.15);color:#F59E0B">MED</div>
+            </div>
+            <div class="phone-ai-bubble">
+              <div class="phone-ai-lbl">🤖 Tonic Agent · GPT-4o</div>
+              <div class="phone-ai-text">You've completed 87% of this week's tasks. High-priority streak: 3 in a row. Want me to plan tomorrow?</div>
+            </div>
+            <div class="phone-tonic">
+              <div>
+                <div class="phone-tonic-lbl">$TONIC Balance</div>
+                <div class="phone-tonic-val">4,820</div>
+              </div>
+              <div class="phone-tonic-earn">+25 just now</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="section-divider"></div>
+
+<!-- ── Features ──────────────────────────────────────────────────────────────── -->
+<section id="features">
+  <div class="container">
+    <span class="section-label fade-in">Core Features</span>
+    <h2 class="section-title fade-in">Everything you need.<br>Nothing you don't.</h2>
+    <p class="section-sub fade-in">Eight AI tools, real blockchain rewards, specialist agents, and a full achievement system — all in one conversational interface.</p>
+
+    <div class="features-grid">
+      <div class="feature-card feature-card-wide fade-in" style="--card-color: var(--gold)">
+        <div class="feature-icon" style="background:rgba(255,215,0,0.12); font-size: 26px">🤖</div>
+        <div class="feature-title">GPT-4o Agent — 8 Function-Calling Tools</div>
+        <div class="feature-desc">Manage your entire productivity system through natural conversation. The agent creates tasks, marks them complete (triggering real on-chain rewards), reschedules, re-prioritizes, plans your day, analyzes your habits, and delegates to specialist sub-agents — all through one interface.</div>
+        <div class="tools-grid" style="margin-top: 24px">
+          <div class="tool-chip">
+            <div class="tool-chip-icon">📋</div>
+            <div class="tool-chip-name">Create Task</div>
+            <div class="tool-chip-desc">From natural language</div>
+          </div>
+          <div class="tool-chip">
+            <div class="tool-chip-icon">✅</div>
+            <div class="tool-chip-name">Complete Task</div>
+            <div class="tool-chip-desc">Fires on-chain reward</div>
+          </div>
+          <div class="tool-chip">
+            <div class="tool-chip-icon">📊</div>
+            <div class="tool-chip-name">Stats Summary</div>
+            <div class="tool-chip-desc">Live productivity data</div>
+          </div>
+          <div class="tool-chip">
+            <div class="tool-chip-icon">🧠</div>
+            <div class="tool-chip-name">Habit Analysis</div>
+            <div class="tool-chip-desc">Pattern recognition</div>
+          </div>
+          <div class="tool-chip">
+            <div class="tool-chip-icon">📅</div>
+            <div class="tool-chip-name">Plan My Day</div>
+            <div class="tool-chip-desc">Optimized schedule</div>
+          </div>
+          <div class="tool-chip">
+            <div class="tool-chip-icon">🔁</div>
+            <div class="tool-chip-name">Reschedule</div>
+            <div class="tool-chip-desc">Smart date shifting</div>
+          </div>
+          <div class="tool-chip">
+            <div class="tool-chip-icon">🚩</div>
+            <div class="tool-chip-name">Set Priority</div>
+            <div class="tool-chip-desc">Escalate or downgrade</div>
+          </div>
+          <div class="tool-chip" style="background:rgba(255,215,0,0.07); border-color: var(--gold-border)">
+            <div class="tool-chip-icon">💎</div>
+            <div class="tool-chip-name">Hire Specialist</div>
+            <div class="tool-chip-desc">$TONIC Protocol</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="feature-card fade-in" style="--card-color: #10B981">
+        <div class="feature-icon" style="background:rgba(16,185,129,0.12)">⛓️</div>
+        <div class="feature-title">Real On-Chain Rewards</div>
+        <div class="feature-desc">Every task completion fires a real TON testnet transaction. Tx hash stored and shown in profile with a live block explorer link. Priority-based: High=25, Medium=15, Low=10 $TONIC.</div>
+      </div>
+
+      <div class="feature-card fade-in" style="--card-color: #8B5CF6">
+        <div class="feature-icon" style="background:rgba(139,92,246,0.12)">🎯</div>
+        <div class="feature-title">Deep Strategy (Premium)</div>
+        <div class="feature-desc">A full diagnostic report: Executive Summary → Pattern Analysis → Critical Vulnerabilities → Strategic Action Plan → 30-Day Forecast. Free for Tonian badge holders.</div>
+      </div>
+
+      <div class="feature-card fade-in" style="--card-color: #3B82F6">
+        <div class="feature-icon" style="background:rgba(59,130,246,0.12)">🏆</div>
+        <div class="feature-title">90+ Achievements</div>
+        <div class="feature-desc">Daily, weekly, monthly, and timeless achievements across all task categories. Claim on-chain for a 2× point multiplier. 10 competitive ranks from Rookie to Mythic.</div>
+      </div>
+
+      <div class="feature-card fade-in" style="--card-color: #F59E0B">
+        <div class="feature-icon" style="background:rgba(245,158,11,0.12)">⚡</div>
+        <div class="feature-title">SSE Streaming</div>
+        <div class="feature-desc">Agent responses stream token-by-token in real time via Server-Sent Events. Voice input supported on Chrome. No waiting — start reading as the AI thinks.</div>
+      </div>
+
+      <div class="feature-card fade-in" style="--card-color: #EC4899">
+        <div class="feature-icon" style="background:rgba(236,72,153,0.12)">🤖</div>
+        <div class="feature-title">Telegram Bot</div>
+        <div class="feature-desc">Full-featured bot: /tasks, /today, /done, /stats, /ai — manage everything from Telegram without opening the app.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="section-divider"></div>
+
+<!-- ── On-Chain ──────────────────────────────────────────────────────────────── -->
+<section id="onchain">
+  <div class="container">
+    <span class="section-label fade-in">Blockchain Integration</span>
+    <h2 class="section-title fade-in">Real transactions.<br><span style="color:var(--gold)">Not simulated.</span></h2>
+    <p class="section-sub fade-in">Every task completion triggers a verifiable TON testnet transaction. Judges can click through to the block explorer and see it live.</p>
+
+    <div class="onchain-hero fade-in">
+      <div class="onchain-features">
+        <div class="onchain-feat">
+          <div class="onchain-feat-icon">⚡</div>
+          <div>
+            <div class="onchain-feat-title">Priority-Based Rewards</div>
+            <div class="onchain-feat-desc">High-priority tasks earn 25 $TONIC, medium 15, low 10 — matching real effort to real reward.</div>
+          </div>
+        </div>
+        <div class="onchain-feat">
+          <div class="onchain-feat-icon">🔗</div>
+          <div>
+            <div class="onchain-feat-title">Instant Tx Hash Storage</div>
+            <div class="onchain-feat-desc">Hash stored in <code>on_chain_records</code> with direct link to testnet.tonscan.org shown in Profile.</div>
+          </div>
+        </div>
+        <div class="onchain-feat">
+          <div class="onchain-feat-icon">🛡️</div>
+          <div>
+            <div class="onchain-feat-title">Non-Blocking Architecture</div>
+            <div class="onchain-feat-desc">On-chain reward fires in <code>setImmediate</code> — users get an instant response, the blockchain tx happens in the background.</div>
+          </div>
+        </div>
+        <div class="onchain-feat">
+          <div class="onchain-feat-icon">📜</div>
+          <div>
+            <div class="onchain-feat-title">TEP-74/89 Jetton Contract</div>
+            <div class="onchain-feat-desc">Full Tact smart contract ready for mainnet. <code>TonicJettonMinter</code> + per-user <code>TonicWallet</code> contracts.</div>
+          </div>
+        </div>
+        <a href="https://testnet.tonscan.org/address/0QBrXSY1xnP25QBRLg6G_9lSgoV4aypr92BK3pFQkactXG6V" target="_blank" class="btn-secondary" style="display:inline-flex;margin-top:8px">
+          🔍 View Deployer on Testnet Explorer
+        </a>
+      </div>
+      <div>
+        <div style="font-size:11px;color:var(--text3);margin-bottom:10px;letter-spacing:1px;text-transform:uppercase">Actual transaction payload</div>
+        <div class="onchain-tx">
+<span class="comment">// Fired on every task completion</span>
+<span class="key">from</span>: 0QBrXSY1...ctXG6V
+<span class="key">to</span>:   &lt;user_wallet_address&gt;
+<span class="key">amount</span>: 0.001 tTON
+<span class="key">comment</span>: <span style="color:#10B981">"TONIC:25:task_complete"</span>
+
+<span class="comment">// Stored in on_chain_records</span>
+<span class="key">ton_tx_hash</span>: <span class="hash">3a7f9c2e...d8b4a1f</span>
+<span class="key">title</span>: "+25 $TONIC — Task Complete"
+<span class="key">record_type</span>: "tonic_reward"
+
+<span class="comment">// Profile shows live link:</span>
+testnet.tonscan.org/tx/3a7f9c2e...
+        </div>
+
+        <div style="margin-top:20px;background:rgba(255,215,0,0.05);border:1px solid var(--gold-border);border-radius:16px;padding:20px">
+          <div style="font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:1px;margin-bottom:12px">Deployer Wallet</div>
+          <div style="font-family:monospace;font-size:12px;color:var(--gold);word-break:break-all;margin-bottom:8px">0QBrXSY1xnP25QBRLg6G_9lSgoV4aypr92BK3pFQkactXG6V</div>
+          <div style="font-size:12px;color:var(--text3)">TON Testnet · Sends real tx on every task complete</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="section-divider"></div>
+
+<!-- ── $TONIC Tokenomics ─────────────────────────────────────────────────────── -->
+<section id="tokenomics">
+  <div class="container">
+    <span class="section-label fade-in">Token Economy</span>
+    <h2 class="section-title fade-in">The $TONIC Protocol</h2>
+    <p class="section-sub fade-in">Earn $TONIC for every productive action. Spend it to hire specialist AI sub-agents. Claim on-chain for permanent proof of productivity.</p>
+
+    <div class="token-grid fade-in">
+      <div>
+        <div class="earn-table">
+          <div class="earn-table-header">💰 How to Earn $TONIC</div>
+          <div class="earn-row">
+            <div class="earn-row-icon">🔥</div>
+            <div class="earn-row-label">Complete high-priority task</div>
+            <div class="earn-row-reward">+25</div>
+          </div>
+          <div class="earn-row">
+            <div class="earn-row-icon">📌</div>
+            <div class="earn-row-label">Complete medium-priority task</div>
+            <div class="earn-row-reward">+15</div>
+          </div>
+          <div class="earn-row">
+            <div class="earn-row-icon">📋</div>
+            <div class="earn-row-label">Complete low-priority task</div>
+            <div class="earn-row-reward">+10</div>
+          </div>
+          <div class="earn-row">
+            <div class="earn-row-icon">⚡</div>
+            <div class="earn-row-label">Daily login streak</div>
+            <div class="earn-row-reward">+25</div>
+          </div>
+          <div class="earn-row">
+            <div class="earn-row-icon">🏆</div>
+            <div class="earn-row-label">Daily challenge completion</div>
+            <div class="earn-row-reward">+50</div>
+          </div>
+          <div class="earn-row">
+            <div class="earn-row-icon">⛓️</div>
+            <div class="earn-row-label">On-chain achievement claim</div>
+            <div class="earn-row-reward special">2× pts</div>
+          </div>
+        </div>
+
+        <div style="background:var(--bg2);border:1px solid rgba(255,255,255,0.07);border-radius:20px;padding:24px;margin-top:20px">
+          <div style="font-size:12px;color:var(--text3);text-transform:uppercase;letter-spacing:1px;margin-bottom:16px">Exchange Rate</div>
+          <div style="display:flex;align-items:center;gap:16px">
+            <div style="text-align:center">
+              <div style="font-size:24px;font-weight:900;color:var(--gold)">100,000</div>
+              <div style="font-size:11px;color:var(--text3)">$TONIC</div>
+            </div>
+            <div style="font-size:20px;color:var(--text3)">=</div>
+            <div style="text-align:center">
+              <div style="font-size:24px;font-weight:900;color:var(--text)">1</div>
+              <div style="font-size:11px;color:var(--text3)">TON</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="specialist-grid">
+        <div style="font-size:13px;font-weight:800;color:var(--text2);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px">⚙️ Specialist Sub-Agents</div>
+        <div style="font-size:13px;color:var(--text3);margin-bottom:8px">Hire via the $TONIC inter-agent coordination protocol</div>
+        <div class="specialist-card">
+          <div class="specialist-icon" style="background:rgba(16,185,129,0.12);border-color:rgba(16,185,129,0.2)">🧠</div>
+          <div class="specialist-info">
+            <div class="specialist-name">HabitOS</div>
+            <div class="specialist-desc">Behavioral neuroscience · Habit stacks · Pattern coaching</div>
+          </div>
+          <div class="specialist-cost">25 $TONIC</div>
+        </div>
+        <div class="specialist-card">
+          <div class="specialist-icon" style="background:rgba(59,130,246,0.12);border-color:rgba(59,130,246,0.2)">⏰</div>
+          <div class="specialist-info">
+            <div class="specialist-name">ChronoX</div>
+            <div class="specialist-desc">Chronobiology · Time-blocking · Peak hour optimization</div>
+          </div>
+          <div class="specialist-cost">30 $TONIC</div>
+        </div>
+        <div class="specialist-card">
+          <div class="specialist-icon" style="background:rgba(139,92,246,0.12);border-color:rgba(139,92,246,0.2)">🎯</div>
+          <div class="specialist-info">
+            <div class="specialist-name">VisionCore</div>
+            <div class="specialist-desc">OKR coaching · Goal alignment · Long-term prioritization</div>
+          </div>
+          <div class="specialist-cost">40 $TONIC</div>
+        </div>
+        <div style="background:rgba(255,215,0,0.04);border:1px solid var(--gold-border);border-radius:16px;padding:18px;margin-top:4px">
+          <div style="font-size:12px;font-weight:700;color:var(--gold);margin-bottom:6px">Tonian Badge Perks</div>
+          <div style="font-size:12px;color:var(--text2);line-height:1.7">
+            ✓ 2× lifetime point multiplier<br>
+            ✓ Free Deep Strategy sessions<br>
+            ✓ Verified rank on leaderboard<br>
+            ✓ Permanent on-chain identity
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="section-divider"></div>
+
+<!-- ── Ranks ──────────────────────────────────────────────────────────────────── -->
+<section id="ranks">
+  <div class="container">
+    <span class="section-label fade-in">Achievement System</span>
+    <h2 class="section-title fade-in">10 Ranks. 90+ Achievements.</h2>
+    <p class="section-sub fade-in">Climb from Rookie to Mythic by completing tasks and claiming achievements on-chain. Every rank is a milestone — every action is progress.</p>
+
+    <div class="ranks-grid fade-in">
+      <div class="rank-card" style="--rank-color:#9CA3AF">
+        <div class="rank-icon">🥋</div>
+        <div class="rank-name">Rookie</div>
+        <div class="rank-pts">0 pts</div>
+      </div>
+      <div class="rank-card" style="--rank-color:#CD7F32">
+        <div class="rank-icon">⚒️</div>
+        <div class="rank-name">Apprentice</div>
+        <div class="rank-pts">200 pts</div>
+      </div>
+      <div class="rank-card" style="--rank-color:#C0C0C0">
+        <div class="rank-icon">💪</div>
+        <div class="rank-name">Grinder</div>
+        <div class="rank-pts">600 pts</div>
+      </div>
+      <div class="rank-card" style="--rank-color:#FFD700">
+        <div class="rank-icon">🧩</div>
+        <div class="rank-name">Strategist</div>
+        <div class="rank-pts">1,500 pts</div>
+      </div>
+      <div class="rank-card" style="--rank-color:#66D9E8">
+        <div class="rank-icon">⚡</div>
+        <div class="rank-name">Pro</div>
+        <div class="rank-pts">3,500 pts</div>
+      </div>
+      <div class="rank-card" style="--rank-color:#60A5FA">
+        <div class="rank-icon">🛡️</div>
+        <div class="rank-name">Elite</div>
+        <div class="rank-pts">7,500 pts</div>
+      </div>
+      <div class="rank-card" style="--rank-color:#A78BFA">
+        <div class="rank-icon">🎭</div>
+        <div class="rank-name">Master</div>
+        <div class="rank-pts">15,000 pts</div>
+      </div>
+      <div class="rank-card" style="--rank-color:#F472B6">
+        <div class="rank-icon">👑</div>
+        <div class="rank-name">Champion</div>
+        <div class="rank-pts">30,000 pts</div>
+      </div>
+      <div class="rank-card" style="--rank-color:#F97316">
+        <div class="rank-icon">🌟</div>
+        <div class="rank-name">Legend</div>
+        <div class="rank-pts">60,000 pts</div>
+      </div>
+      <div class="rank-card" style="--rank-color:#FFD700;background:linear-gradient(145deg,rgba(255,215,0,0.08),rgba(255,215,0,0.02));border-color:rgba(255,215,0,0.3)">
+        <div class="rank-icon">⚜️</div>
+        <div class="rank-name" style="color:var(--gold)">Mythic</div>
+        <div class="rank-pts">120,000 pts</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="section-divider"></div>
+
+<!-- ── How it works ──────────────────────────────────────────────────────────── -->
+<section id="flow">
+  <div class="container">
+    <span class="section-label fade-in">Architecture</span>
+    <h2 class="section-title fade-in">How it works</h2>
+    <p class="section-sub fade-in">From natural language input to a verified blockchain transaction — all in one seamless flow.</p>
+
+    <div class="flow-container fade-in">
+      <div class="flow-title">Task Completion → On-Chain Reward Flow</div>
+      <div class="flow-steps">
+
+        <div class="flow-step">
+          <div class="flow-step-num" style="background:rgba(255,215,0,0.12);border-color:var(--gold);color:var(--gold)">💬</div>
+          <div class="flow-step-title">You Talk</div>
+          <div class="flow-step-desc">Tell the agent "complete my task"</div>
+        </div>
+
+        <div class="flow-arrow">→</div>
+
+        <div class="flow-step">
+          <div class="flow-step-num" style="background:rgba(139,92,246,0.12);border-color:#8B5CF6;color:#8B5CF6">🤖</div>
+          <div class="flow-step-title">GPT-4o</div>
+          <div class="flow-step-desc">Calls complete_task function</div>
+        </div>
+
+        <div class="flow-arrow">→</div>
+
+        <div class="flow-step">
+          <div class="flow-step-num" style="background:rgba(59,130,246,0.12);border-color:#3B82F6;color:#3B82F6">💾</div>
+          <div class="flow-step-title">Database</div>
+          <div class="flow-step-desc">Task status → completed</div>
+        </div>
+
+        <div class="flow-arrow">→</div>
+
+        <div class="flow-step">
+          <div class="flow-step-num" style="background:rgba(16,185,129,0.12);border-color:#10B981;color:#10B981">⛓️</div>
+          <div class="flow-step-title">TON Testnet</div>
+          <div class="flow-step-desc">Real tx fired with TONIC comment</div>
+        </div>
+
+        <div class="flow-arrow">→</div>
+
+        <div class="flow-step">
+          <div class="flow-step-num" style="background:rgba(255,215,0,0.12);border-color:var(--gold);color:var(--gold)">🔍</div>
+          <div class="flow-step-title">Explorer Link</div>
+          <div class="flow-step-desc">Tx hash shown in Profile</div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="section-divider"></div>
+
+<!-- ── Tech Stack ────────────────────────────────────────────────────────────── -->
+<section id="stack">
+  <div class="container">
+    <span class="section-label fade-in">Tech Stack</span>
+    <h2 class="section-title fade-in">Built with the best tools.</h2>
+    <p class="section-sub fade-in">Production-grade stack — GPT-4o, TON blockchain, real-time SSE streaming, and a mobile-first React Native web app.</p>
+
+    <div class="tech-stack-grid fade-in">
+      <div class="tech-group">
+        <div class="tech-group-title">
+          <div class="tech-group-dot" style="background:#8B5CF6"></div>
+          Frontend
+        </div>
+        <div class="tech-item">
+          <div class="tech-item-icon">📱</div>
+          <div class="tech-item-name">Expo / React Native</div>
+        </div>
+        <div class="tech-item">
+          <div class="tech-item-icon">🔤</div>
+          <div class="tech-item-name">TypeScript</div>
+        </div>
+        <div class="tech-item">
+          <div class="tech-item-icon">🗺️</div>
+          <div class="tech-item-name">Expo Router</div>
+        </div>
+        <div class="tech-item">
+          <div class="tech-item-icon">💎</div>
+          <div class="tech-item-name">TonConnect UI</div>
+        </div>
+        <div class="tech-item">
+          <div class="tech-item-icon">⚡</div>
+          <div class="tech-item-name">Bun (bundler)</div>
+        </div>
+      </div>
+
+      <div class="tech-group">
+        <div class="tech-group-title">
+          <div class="tech-group-dot" style="background:#10B981"></div>
+          Backend
+        </div>
+        <div class="tech-item">
+          <div class="tech-item-icon">🟢</div>
+          <div class="tech-item-name">Node.js ESM</div>
+        </div>
+        <div class="tech-item">
+          <div class="tech-item-icon">🚂</div>
+          <div class="tech-item-name">Express 5</div>
+        </div>
+        <div class="tech-item">
+          <div class="tech-item-icon">🐘</div>
+          <div class="tech-item-name">PostgreSQL</div>
+        </div>
+        <div class="tech-item">
+          <div class="tech-item-icon">📡</div>
+          <div class="tech-item-name">SSE Streaming</div>
+        </div>
+        <div class="tech-item">
+          <div class="tech-item-icon">🤖</div>
+          <div class="tech-item-name">Telegram Bot</div>
+        </div>
+      </div>
+
+      <div class="tech-group">
+        <div class="tech-group-title">
+          <div class="tech-group-dot" style="background:var(--gold)"></div>
+          AI & Blockchain
+        </div>
+        <div class="tech-item">
+          <div class="tech-item-icon">🧠</div>
+          <div class="tech-item-name">GPT-4o</div>
+        </div>
+        <div class="tech-item">
+          <div class="tech-item-icon">🔧</div>
+          <div class="tech-item-name">Function Calling</div>
+        </div>
+        <div class="tech-item">
+          <div class="tech-item-icon">💎</div>
+          <div class="tech-item-name">@ton/ton</div>
+        </div>
+        <div class="tech-item">
+          <div class="tech-item-icon">🔑</div>
+          <div class="tech-item-name">@ton/crypto</div>
+        </div>
+        <div class="tech-item">
+          <div class="tech-item-icon">🌐</div>
+          <div class="tech-item-name">Toncenter API</div>
+        </div>
+      </div>
+
+      <div class="tech-group">
+        <div class="tech-group-title">
+          <div class="tech-group-dot" style="background:#3B82F6"></div>
+          Smart Contract
+        </div>
+        <div class="tech-item">
+          <div class="tech-item-icon">📜</div>
+          <div class="tech-item-name">Tact Language</div>
+        </div>
+        <div class="tech-item">
+          <div class="tech-item-icon">🪙</div>
+          <div class="tech-item-name">TEP-74 Jetton</div>
+        </div>
+        <div class="tech-item">
+          <div class="tech-item-icon">🛡️</div>
+          <div class="tech-item-name">TEP-89 Metadata</div>
+        </div>
+        <div class="tech-item">
+          <div class="tech-item-icon">🏭</div>
+          <div class="tech-item-name">JettonMinter</div>
+        </div>
+        <div class="tech-item">
+          <div class="tech-item-icon">👛</div>
+          <div class="tech-item-name">JettonWallet</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="section-divider"></div>
+
+<!-- ── CTA ───────────────────────────────────────────────────────────────────── -->
+<section class="cta-section">
+  <div class="container" style="position:relative">
+    <div class="cta-glow"></div>
+    <div class="section-label" style="display:inline-block">Ready to start?</div>
+    <h2 class="cta-title fade-in">Your productivity,<br>on the <span style="color:var(--gold)">blockchain.</span></h2>
+    <p class="cta-sub fade-in">Join now and start earning real $TONIC rewards for every task you complete. No crypto knowledge needed — just start talking to your AI agent.</p>
+    <div class="fade-in" style="display:flex;align-items:center;justify-content:center;gap:14px;flex-wrap:wrap">
+      <a href="/" class="btn-primary" style="font-size:18px;padding:18px 40px">
+        ⚡ Launch Tonic AI
+      </a>
+      <a href="https://github.com" target="_blank" class="btn-secondary">
+        ⭐ Star on GitHub
+      </a>
+    </div>
+    <div class="cta-note fade-in">Free to use · No wallet required to start · TON Testnet rewards live</div>
+  </div>
+</section>
+
+<!-- ── Footer ────────────────────────────────────────────────────────────────── -->
+<footer>
+  <div class="container">
+    <div class="footer-inner">
+      <div class="footer-logo">⚡ Tonic AI</div>
+      <div class="footer-text">Built for TON AI Hackathon 2026 · v2.0.0 · GPT-4o + TON Testnet</div>
+      <div class="footer-links">
+        <a href="/">App</a>
+        <a href="https://testnet.tonscan.org/address/0QBrXSY1xnP25QBRLg6G_9lSgoV4aypr92BK3pFQkactXG6V" target="_blank">Explorer</a>
+        <a href="/health">API</a>
+      </div>
+    </div>
+  </div>
+</footer>
+
+<!-- ── Scripts ───────────────────────────────────────────────────────────────── -->
+<script>
+// ── Particle canvas background
+const canvas = document.getElementById('canvas-bg');
+const ctx = canvas.getContext('2d');
+let particles = [];
+
+function resize() {
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+}
+
+function createParticles() {
+  particles = [];
+  const count = Math.floor((canvas.width * canvas.height) / 14000);
+  for (let i = 0; i < count; i++) {
+    particles.push({
+      x: Math.random() * canvas.width,
+      y: Math.random() * canvas.height,
+      r: Math.random() * 1.2 + 0.3,
+      vx: (Math.random() - 0.5) * 0.18,
+      vy: (Math.random() - 0.5) * 0.18,
+      alpha: Math.random() * 0.5 + 0.1,
+      gold: Math.random() < 0.25,
+    });
+  }
+}
+
+function drawParticles() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  // Draw subtle radial gradient
+  const grad = ctx.createRadialGradient(canvas.width/2, canvas.height*0.3, 0, canvas.width/2, canvas.height*0.3, canvas.width*0.6);
+  grad.addColorStop(0, 'rgba(255,215,0,0.025)');
+  grad.addColorStop(1, 'transparent');
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  for (let p of particles) {
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+    ctx.fillStyle = p.gold
+      ? `rgba(255,215,0,${p.alpha})`
+      : `rgba(255,255,255,${p.alpha * 0.4})`;
+    ctx.fill();
+
+    p.x += p.vx;
+    p.y += p.vy;
+
+    if (p.x < 0) p.x = canvas.width;
+    if (p.x > canvas.width) p.x = 0;
+    if (p.y < 0) p.y = canvas.height;
+    if (p.y > canvas.height) p.y = 0;
+  }
+
+  // Connect nearby particles
+  for (let i = 0; i < particles.length; i++) {
+    for (let j = i + 1; j < particles.length; j++) {
+      const dx = particles[i].x - particles[j].x;
+      const dy = particles[i].y - particles[j].y;
+      const dist = Math.sqrt(dx*dx + dy*dy);
+      if (dist < 90) {
+        const alpha = (1 - dist/90) * 0.06;
+        ctx.beginPath();
+        ctx.moveTo(particles[i].x, particles[i].y);
+        ctx.lineTo(particles[j].x, particles[j].y);
+        ctx.strokeStyle = particles[i].gold || particles[j].gold
+          ? `rgba(255,215,0,${alpha})`
+          : `rgba(255,255,255,${alpha * 0.5})`;
+        ctx.lineWidth = 0.5;
+        ctx.stroke();
+      }
+    }
+  }
+
+  requestAnimationFrame(drawParticles);
+}
+
+resize();
+createParticles();
+drawParticles();
+window.addEventListener('resize', () => { resize(); createParticles(); });
+
+// ── Scroll fade-in
+const observer = new IntersectionObserver((entries) => {
+  entries.forEach((entry, i) => {
+    if (entry.isIntersecting) {
+      setTimeout(() => entry.target.classList.add('visible'), i * 80);
+    }
+  });
+}, { threshold: 0.08 });
+
+document.querySelectorAll('.fade-in').forEach(el => observer.observe(el));
+
+// ── Smooth nav scroll
+document.querySelectorAll('a[href^="#"]').forEach(a => {
+  a.addEventListener('click', e => {
+    const id = a.getAttribute('href').slice(1);
+    const el = document.getElementById(id);
+    if (el) { e.preventDefault(); el.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
+  });
+});
+
+// ── Nav scroll effect
+const nav = document.querySelector('nav');
+window.addEventListener('scroll', () => {
+  if (window.scrollY > 50) {
+    nav.style.boxShadow = '0 4px 40px rgba(0,0,0,0.5)';
+  } else {
+    nav.style.boxShadow = 'none';
+  }
+});
+</script>
+
+</body>
+</html>
