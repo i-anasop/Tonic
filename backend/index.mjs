@@ -1,11 +1,17 @@
 import express from "express";
 import cors from "cors";
+import { existsSync } from "fs";
+import path from "path";
+import { fileURLToPath } from "url";
 
 import { initDB } from "./db.mjs";
 import { openai } from "./openai.mjs";
 import { registerStaticServing } from "./static.mjs";
 import { initTelegramBot } from "./telegram.mjs";
 import { initDeployerWallet } from "./ton/wallet.mjs";
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const LANDING_HTML = path.join(__dirname, "../landing/index.html");
 
 import agentRouter       from "./routes/agent.mjs";
 import tasksRouter       from "./routes/tasks.mjs";
@@ -100,6 +106,17 @@ app.use("/api",       tokensRouter);
 app.use("/api",       recordsRouter);
 app.use("/api",       leaderboardRouter);
 app.use("/api",       tonChainRouter);
+
+// ── Landing page ──────────────────────────────────────────────────────────────
+app.get("/landing", (_req, res) => {
+  if (existsSync(LANDING_HTML)) {
+    res.setHeader("Content-Type", "text/html; charset=utf-8");
+    res.setHeader("Cache-Control", "public, max-age=3600");
+    res.sendFile(LANDING_HTML);
+  } else {
+    res.status(404).send("Landing page not found.");
+  }
+});
 
 // ── Static / SPA serving ──────────────────────────────────────────────────────
 registerStaticServing(app);
