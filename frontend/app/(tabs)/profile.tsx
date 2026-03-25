@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, useMemo, useRef } from "react";
+import { useState, useCallback, useEffect, useMemo } from "react";
 import {
   ScrollView,
   StyleSheet,
@@ -11,11 +11,8 @@ import {
   ActivityIndicator,
   TextInput,
   Modal,
-  Linking,
   Platform,
-  Animated,
 } from "react-native";
-import { LinearGradient } from "expo-linear-gradient";
 import { SafeAreaView } from "react-native-safe-area-context";
 import {
   Trophy,
@@ -43,6 +40,7 @@ import {
   X,
   ChevronDown,
   ChevronUp,
+  Smartphone,
 } from "lucide-react-native";
 import { useRouter } from "expo-router";
 import * as ImagePicker from "expo-image-picker";
@@ -112,162 +110,12 @@ function MenuItem({
   );
 }
 
-function TonianBadgeSection({ minted, minting, disabled, onMint }: { minted: boolean; minting: boolean; disabled: boolean; onMint: () => void }) {
-  const rotateAnim = useRef(new Animated.Value(0)).current;
-  const pulseAnim = useRef(new Animated.Value(1)).current;
-  const glowAnim = useRef(new Animated.Value(0.5)).current;
-
-  useEffect(() => {
-    Animated.loop(Animated.timing(rotateAnim, { toValue: 1, duration: 7000, useNativeDriver: true })).start();
-    Animated.loop(Animated.sequence([
-      Animated.timing(pulseAnim, { toValue: 1.07, duration: 1600, useNativeDriver: true }),
-      Animated.timing(pulseAnim, { toValue: 1, duration: 1600, useNativeDriver: true }),
-    ])).start();
-    Animated.loop(Animated.sequence([
-      Animated.timing(glowAnim, { toValue: 1, duration: 1200, useNativeDriver: true }),
-      Animated.timing(glowAnim, { toValue: 0.4, duration: 1200, useNativeDriver: true }),
-    ])).start();
-  }, []);
-
-  const rotate = rotateAnim.interpolate({ inputRange: [0, 1], outputRange: ["0deg", "360deg"] });
-
-  const REWARDS = [
-    { emoji: "⚡", text: "2× lifetime point multiplier on all claims" },
-    { emoji: "🏅", text: "Verified Tonian rank on the global leaderboard" },
-    { emoji: "🔗", text: "Permanent on-chain identity — provable on TON" },
-    { emoji: "✨", text: "Exclusive Tonian badge on your profile forever" },
-  ];
-
-  return (
-    <View style={{ marginBottom: 20, borderRadius: 26, overflow: "hidden", borderWidth: 1.5, borderColor: `${Colors.gold}45` }}>
-      <LinearGradient
-        colors={["#0A0D18", "#111827", "#130D1E"]}
-        style={{ padding: 26 }}
-        start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
-      >
-        {minted && (
-          <View style={{ position: "absolute", top: 16, right: 16, backgroundColor: `${Colors.success}20`, borderRadius: 10, paddingHorizontal: 10, paddingVertical: 4, borderWidth: 1, borderColor: `${Colors.success}50` }}>
-            <Text style={{ fontSize: 10, fontWeight: "800", color: Colors.success, letterSpacing: 0.6 }}>✓ VERIFIED</Text>
-          </View>
-        )}
-
-        {/* Animated Badge Center */}
-        <View style={{ alignItems: "center", marginBottom: 22 }}>
-          <View style={{ width: 130, height: 130, justifyContent: "center", alignItems: "center" }}>
-            {/* Outer rotating ring */}
-            <Animated.View
-              style={{
-                position: "absolute", width: 126, height: 126, borderRadius: 63,
-                borderWidth: 2, borderColor: `${Colors.gold}50`,
-                borderTopColor: Colors.gold, borderRightColor: `${Colors.gold}80`,
-                transform: [{ rotate }],
-              }}
-            />
-            {/* Mid ring */}
-            <Animated.View
-              style={{
-                position: "absolute", width: 108, height: 108, borderRadius: 54,
-                borderWidth: 1.5, borderColor: `${Colors.gold}25`,
-                borderBottomColor: `${Colors.gold}60`, borderLeftColor: `${Colors.gold}40`,
-                transform: [{ rotate: rotateAnim.interpolate({ inputRange: [0, 1], outputRange: ["360deg", "0deg"] }) }],
-              }}
-            />
-            {/* Core badge */}
-            <Animated.View
-              style={{
-                width: 86, height: 86, borderRadius: 43,
-                backgroundColor: `${Colors.gold}18`,
-                borderWidth: 2, borderColor: `${Colors.gold}70`,
-                justifyContent: "center", alignItems: "center",
-                transform: [{ scale: pulseAnim }],
-                shadowColor: Colors.gold, shadowOffset: { width: 0, height: 0 },
-                shadowOpacity: 0.8, shadowRadius: 20, elevation: 20,
-              }}
-            >
-              <Text style={{ fontSize: 40 }}>{minted ? "🏅" : "⭐"}</Text>
-            </Animated.View>
-          </View>
-
-          <Animated.Text
-            style={{
-              fontSize: 22, fontWeight: "900", color: Colors.gold,
-              letterSpacing: 6, marginTop: 14, textTransform: "uppercase",
-              opacity: glowAnim.interpolate({ inputRange: [0.4, 1], outputRange: [0.7, 1] }),
-              textShadowColor: Colors.gold, textShadowRadius: 12, textShadowOffset: { width: 0, height: 0 },
-            }}
-          >
-            TONIAN
-          </Animated.Text>
-          <Text style={{ fontSize: 12, color: "rgba(200,190,150,0.6)", marginTop: 3, letterSpacing: 2, textTransform: "uppercase" }}>
-            {minted ? "Exclusive Member" : "Exclusive Badge · TON Blockchain"}
-          </Text>
-        </View>
-
-        {/* Price pill */}
-        {!minted && (
-          <View style={{ alignSelf: "center", flexDirection: "row", alignItems: "center", gap: 6, backgroundColor: `${Colors.gold}20`, borderRadius: 20, paddingHorizontal: 16, paddingVertical: 6, borderWidth: 1, borderColor: `${Colors.gold}40`, marginBottom: 20 }}>
-            <Text style={{ fontSize: 14, fontWeight: "900", color: Colors.gold }}>1 TON</Text>
-            <Text style={{ fontSize: 12, color: "rgba(200,190,150,0.6)" }}>· one-time · permanent</Text>
-          </View>
-        )}
-
-        {/* Rewards */}
-        <View style={{ gap: 10, marginBottom: 22 }}>
-          {REWARDS.map((r, i) => (
-            <View key={i} style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
-              <View style={{ width: 34, height: 34, borderRadius: 10, backgroundColor: `${Colors.gold}12`, borderWidth: 1, borderColor: `${Colors.gold}25`, justifyContent: "center", alignItems: "center" }}>
-                <Text style={{ fontSize: 16 }}>{r.emoji}</Text>
-              </View>
-              <Text style={{ fontSize: 13, color: "rgba(220,210,170,0.85)", flex: 1, lineHeight: 18 }}>{r.text}</Text>
-            </View>
-          ))}
-        </View>
-
-        {/* CTA */}
-        {minted ? (
-          <View style={{ backgroundColor: `${Colors.success}15`, borderRadius: 16, paddingVertical: 14, alignItems: "center", borderWidth: 1, borderColor: `${Colors.success}35` }}>
-            <Text style={{ fontSize: 15, fontWeight: "800", color: Colors.success }}>🎉 You're a Verified Tonian!</Text>
-            <Text style={{ fontSize: 11, color: "rgba(100,200,130,0.6)", marginTop: 3 }}>Badge permanently minted on TON blockchain</Text>
-          </View>
-        ) : (
-          <TouchableOpacity
-            onPress={onMint}
-            disabled={disabled}
-            activeOpacity={0.85}
-            style={{
-              borderRadius: 16, overflow: "hidden",
-              shadowColor: Colors.gold, shadowOffset: { width: 0, height: 4 },
-              shadowOpacity: 0.4, shadowRadius: 12, elevation: 12,
-              opacity: disabled ? 0.6 : 1,
-            }}
-          >
-            <LinearGradient
-              colors={[Colors.gold, "#B8860B", Colors.gold]}
-              start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
-              style={{ paddingVertical: 15, alignItems: "center", flexDirection: "row", justifyContent: "center", gap: 10 }}
-            >
-              {minting ? (
-                <ActivityIndicator size="small" color="#0D1117" />
-              ) : (
-                <Star size={18} color="#0D1117" fill="#0D1117" />
-              )}
-              <Text style={{ fontSize: 15, fontWeight: "900", color: "#0D1117", letterSpacing: 0.4 }}>
-                {minting ? "Minting Badge…" : "Mint Badge · 1 TON"}
-              </Text>
-            </LinearGradient>
-          </TouchableOpacity>
-        )}
-      </LinearGradient>
-    </View>
-  );
-}
-
 export default function ProfileScreen() {
   const router = useRouter();
   const { user, signOut, setUser, connectWallet: saveWalletUser } = useAppState();
   const { tasks, getStats, getCompletedTasks } = useTasks();
   const { stats: achievementStats, claimPoints } = useAchievements();
-  const { isConnected: isTonConnected, walletAddress: tonWalletAddress, connectWallet: connectTonWallet, sendTransaction, recordAchievementOnChain, isSendingTx } = useTonConnect();
+  const { isConnected: isTonConnected, walletAddress: tonWalletAddress, connectWallet: connectTonWallet, sendTransaction, recordAchievementOnChain } = useTonConnect();
   const { isDark, toggleTheme, colors } = useTheme();
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const [isRecordingOnChain, setIsRecordingOnChain] = useState(false);
@@ -280,17 +128,10 @@ export default function ProfileScreen() {
   const [editNameValue, setEditNameValue] = useState("");
   const [showPrivacyModal, setShowPrivacyModal] = useState(false);
   const [showHelpModal, setShowHelpModal] = useState(false);
-  const [isMintingTonian, setIsMintingTonian] = useState(false);
-  const [tonianMinted, setTonianMinted] = useState(false);
   const [expandedFaq, setExpandedFaq] = useState<number | null>(null);
   const [showWalletNameModal, setShowWalletNameModal] = useState(false);
   const [walletNameInput, setWalletNameInput] = useState("");
   const [pendingWalletAddr, setPendingWalletAddr] = useState<string | null>(null);
-  const [tonicBalance, setTonicBalance] = useState<number | null>(null);
-  const [syncCode, setSyncCode] = useState<string | null>(null);
-  const [syncInput, setSyncInput] = useState("");
-  const [syncLoading, setSyncLoading] = useState(false);
-  const [syncRestoreMsg, setSyncRestoreMsg] = useState("");
 
   useEffect(() => {
     if (isTonConnected && tonWalletAddress && !user?.walletAddress) {
@@ -323,50 +164,6 @@ export default function ProfileScreen() {
 
   useEffect(() => { void loadStats(); }, [loadStats, tasks]);
 
-  useEffect(() => {
-    if (!user?.id) return;
-    fetch(`${API_BASE_URL}/api/users/${user.id}/tokens`)
-      .then(r => r.json())
-      .then(d => { if (typeof d.tokens === "number") setTonicBalance(d.tokens); })
-      .catch(() => {});
-  }, [user?.id]);
-
-  const handleGenerateSyncCode = useCallback(async () => {
-    if (!user?.id) return;
-    setSyncLoading(true);
-    try {
-      const res = await fetch(`${API_BASE_URL}/api/sync-code/generate`, {
-        method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId: user.id }),
-      });
-      const data = await res.json();
-      if (data.code) setSyncCode(data.code);
-    } catch {}
-    setSyncLoading(false);
-  }, [user?.id]);
-
-  const handleRestoreSync = useCallback(async () => {
-    const code = syncInput.trim().toUpperCase();
-    if (!code || code.length < 4) return;
-    setSyncLoading(true);
-    setSyncRestoreMsg("");
-    try {
-      const res = await fetch(`${API_BASE_URL}/api/sync-code/restore`, {
-        method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ code }),
-      });
-      const data = await res.json();
-      if (data.user) {
-        setSyncRestoreMsg(`✓ Restored account: ${data.user.name}`);
-        setSyncInput("");
-      } else {
-        setSyncRestoreMsg("Code not found. Check and try again.");
-      }
-    } catch {
-      setSyncRestoreMsg("Restore failed. Please try again.");
-    }
-    setSyncLoading(false);
-  }, [syncInput]);
 
   const handleEditName = useCallback(() => {
     setEditNameValue(user?.name ?? "");
@@ -441,62 +238,6 @@ export default function ProfileScreen() {
     );
   }, [isTonConnected, stats, recordAchievementOnChain, user]);
 
-  const handleTonianBadge = useCallback(async () => {
-    if (!isTonConnected) {
-      Alert.alert("Wallet Required", "Connect your TON wallet first to mint the Tonian badge.", [
-        { text: "Connect Wallet", onPress: () => void connectTonWallet() },
-        { text: "Cancel", style: "cancel" },
-      ]);
-      return;
-    }
-    if (tonianMinted) {
-      Alert.alert("Already a Tonian!", "You have already minted your Tonian badge. Check your wallet on TONScan.", [{ text: "View on TONScan", onPress: () => Linking.openURL(`https://tonscan.org/address/${TON_REWARD_ADDRESS}`) }, { text: "OK" }]);
-      return;
-    }
-    Alert.alert(
-      "🏅 Verify to be Tonian",
-      `Mint your exclusive Tonic AI Tonian badge on the TON blockchain.\n\n• Cost: 1 TON\n• Permanent on-chain verification\n• Proves you're a Tonic AI productivity champion\n\nFunds support the Tonic AI ecosystem.`,
-      [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Mint for 1 TON",
-          onPress: async () => {
-            setIsMintingTonian(true);
-            try {
-              const result = await sendTransaction({
-                to: TON_REWARD_ADDRESS,
-                amount: "1000000000",
-                comment: `Tonic AI | Tonian Badge | User: ${user?.name || "Anonymous"} | Score: ${stats.productivityScore}`,
-              });
-              if (result) {
-                setTonianMinted(true);
-                setLastTxHash(result.boc);
-                if (user?.id) {
-                  await fetch(`${API_BASE_URL}/api/ton-proof`, {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ userId: user.id, walletAddress: user.walletAddress, proof: { boc: result.boc, comment: "Tonian Badge" }, score: stats.productivityScore }),
-                  }).catch(() => {});
-                }
-                Alert.alert(
-                  "🎉 You're a Tonian!",
-                  "Your Tonian badge transaction has been sent! You are now a verified member of the Tonic AI community.",
-                  [
-                    { text: "View on TONScan", onPress: () => Linking.openURL(`https://tonscan.org/address/${TON_REWARD_ADDRESS}`) },
-                    { text: "Awesome!" },
-                  ]
-                );
-              }
-            } catch {
-              Alert.alert("Transaction Failed", "Could not complete the minting transaction. Please check your wallet balance and try again.");
-            } finally {
-              setIsMintingTonian(false);
-            }
-          },
-        },
-      ]
-    );
-  }, [isTonConnected, tonianMinted, sendTransaction, user, stats, connectTonWallet]);
 
   const handleClaimPoints = useCallback((forceWallet = false) => {
     const pending = achievementStats.pendingPoints;
@@ -642,16 +383,14 @@ export default function ProfileScreen() {
               <StatItem icon={Sparkles} value={stats.productivityScore} label="Score" color={Colors.purple} />
             </View>
 
-            {/* TONIC balance row in profile card */}
-            {tonicBalance !== null && (
-              <View style={{ marginTop: 14, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 10, backgroundColor: `${Colors.gold}10`, borderRadius: 16, paddingVertical: 12, paddingHorizontal: 16, borderWidth: 1.5, borderColor: `${Colors.gold}30` }}>
-                <Zap size={16} color={Colors.gold} fill={Colors.gold} />
-                <Text style={{ fontSize: 22, fontWeight: "900", color: Colors.gold, letterSpacing: -0.5 }}>{tonicBalance.toLocaleString()}</Text>
-                <Text style={{ fontSize: 13, fontWeight: "700", color: Colors.gold }}>TONIC</Text>
-                <View style={{ width: 1, height: 18, backgroundColor: `${Colors.gold}30`, marginHorizontal: 4 }} />
-                <Text style={{ fontSize: 12, color: colors.textMuted }}>≈ {(tonicBalance / 100000).toFixed(4)} TON</Text>
-              </View>
-            )}
+            {/* TONIC balance indicator */}
+            <View style={{ marginTop: 14, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 10, backgroundColor: `${Colors.gold}10`, borderRadius: 16, paddingVertical: 12, paddingHorizontal: 16, borderWidth: 1.5, borderColor: `${Colors.gold}30` }}>
+              <Zap size={16} color={Colors.gold} fill={Colors.gold} />
+              <Text style={{ fontSize: 22, fontWeight: "900", color: Colors.gold, letterSpacing: -0.5 }}>{(achievementStats.claimedPoints * 10).toLocaleString()}</Text>
+              <Text style={{ fontSize: 13, fontWeight: "700", color: Colors.gold }}>TONIC</Text>
+              <View style={{ width: 1, height: 18, backgroundColor: `${Colors.gold}30`, marginHorizontal: 4 }} />
+              <Text style={{ fontSize: 12, color: colors.textMuted }}>≈ {((achievementStats.claimedPoints * 10) / 100000).toFixed(4)} TON</Text>
+            </View>
           </View>
 
           {/* ── Achievements button ── */}
@@ -674,29 +413,29 @@ export default function ProfileScreen() {
           </TouchableOpacity>
 
 
-          {/* ── Tonian Badge ── */}
+          {/* ── Features ── */}
           <View style={styles.section}>
-            <Text style={styles.sectionLabel}>TON Blockchain</Text>
-            <TonianBadgeSection
-              minted={tonianMinted}
-              minting={isMintingTonian}
-              disabled={isMintingTonian || isSendingTx}
-              onMint={() => void handleTonianBadge()}
-            />
-          </View>
-
-          {/* ── Last TX Hash ── */}
-          {lastTxHash && (
-            <View style={[styles.section, { marginTop: -4 }]}>
-              <View style={{ flexDirection: "row", alignItems: "center", gap: 10, backgroundColor: `${Colors.blue}10`, borderRadius: 14, padding: 14, borderWidth: 1, borderColor: `${Colors.blue}25` }}>
-                <CheckCircle size={17} color={Colors.blue} />
-                <View style={{ flex: 1 }}>
-                  <Text style={{ fontSize: 11, fontWeight: "700", color: Colors.blue, marginBottom: 2 }}>⛓️ Verified on TON Blockchain</Text>
-                  <Text style={{ fontSize: 11, color: colors.textMuted, fontFamily: "monospace" }} numberOfLines={1}>{lastTxHash.slice(0, 32)}…</Text>
-                </View>
-              </View>
+            <Text style={styles.sectionLabel}>Blockchain & Tokens</Text>
+            <View style={styles.menuCard}>
+              <MenuItem
+                icon={Star} title="Tonian Badge" color={Colors.gold}
+                subtitle="Exclusive on-chain identity · 1 TON"
+                onPress={() => router.push("/tonian-badge" as any)}
+              />
+              <View style={styles.divider} />
+              <MenuItem
+                icon={Zap} title="$TONIC Balance" color={Colors.gold}
+                subtitle={`${(achievementStats.claimedPoints * 10).toLocaleString()} TONIC earned`}
+                onPress={() => router.push("/tonic-balance" as any)}
+              />
+              <View style={styles.divider} />
+              <MenuItem
+                icon={Smartphone} title="Sync Devices" color={Colors.blue}
+                subtitle="Backup & restore your account"
+                onPress={() => router.push("/sync-device" as any)}
+              />
             </View>
-          )}
+          </View>
 
           {/* ── On-Chain Activity Feed ── */}
           {onChainRecords.length > 0 && (
@@ -786,109 +525,6 @@ export default function ProfileScreen() {
             </View>
           </View>
 
-          {/* ── $TONIC Token Balance ── */}
-          <View style={styles.section}>
-            <Text style={styles.sectionLabel}>$TONIC Tokens</Text>
-            <View style={[styles.menuCard, { padding: 16 }]}>
-              <View style={{ flexDirection: "row", alignItems: "center", gap: 12, marginBottom: 14 }}>
-                <View style={{ width: 42, height: 42, borderRadius: 13, backgroundColor: `${Colors.gold}20`, justifyContent: "center", alignItems: "center" }}>
-                  <Star size={20} color={Colors.gold} fill={Colors.gold} />
-                </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={{ fontSize: 11, color: colors.textMuted, fontWeight: "600", textTransform: "uppercase", letterSpacing: 0.8 }}>Balance</Text>
-                  <Text style={{ fontSize: 26, fontWeight: "900", color: Colors.gold }}>
-                    {tonicBalance !== null ? tonicBalance.toLocaleString() : "—"} <Text style={{ fontSize: 14, fontWeight: "600" }}>TONIC</Text>
-                  </Text>
-                </View>
-              </View>
-              <View style={{ gap: 6 }}>
-                {[
-                  { label: "Complete a task (low priority)", reward: "+10" },
-                  { label: "Complete a task (medium priority)", reward: "+15" },
-                  { label: "Complete a task (high priority)", reward: "+25" },
-                  { label: "Daily streak bonus", reward: "+25" },
-                  { label: "Daily challenge", reward: "+50" },
-                ].map((row, i) => (
-                  <View key={i} style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingVertical: 5, borderTopWidth: i > 0 ? 1 : 0, borderTopColor: colors.border }}>
-                    <Text style={{ fontSize: 12, color: colors.textSecondary, flex: 1 }}>{row.label}</Text>
-                    <Text style={{ fontSize: 12, fontWeight: "700", color: Colors.success }}>{row.reward}</Text>
-                  </View>
-                ))}
-              </View>
-              <View style={{ marginTop: 10, backgroundColor: colors.bgPrimary, borderRadius: 12, padding: 12, borderWidth: 1, borderColor: colors.border }}>
-                <Text style={{ fontSize: 11, color: colors.textMuted, fontWeight: "600", textTransform: "uppercase", letterSpacing: 0.7, marginBottom: 6 }}>Conversion Rate</Text>
-                <Text style={{ fontSize: 12, color: colors.textSecondary, lineHeight: 18 }}>
-                  100,000 TONIC = 1 TON{"\n"}
-                  Your balance ≈ <Text style={{ fontWeight: "700", color: Colors.gold }}>{((tonicBalance ?? 0) / 100000).toFixed(4)} TON</Text>
-                </Text>
-                <Text style={{ fontSize: 10, color: colors.textMuted, marginTop: 4 }}>Rate is intentionally conservative to preserve token value.</Text>
-              </View>
-              {user?.walletAddress ? (
-                <TouchableOpacity
-                  style={{ marginTop: 10, backgroundColor: Colors.gold, borderRadius: 12, paddingVertical: 11, alignItems: "center" }}
-                  activeOpacity={0.85}
-                  onPress={() => Alert.alert("Claim on TON", `You have ${(tonicBalance ?? 0).toLocaleString()} TONIC ≈ ${((tonicBalance ?? 0) / 100000).toFixed(4)} TON.\n\nClaiming will be available after the hackathon. Your balance is securely tracked.`)}
-                >
-                  <Text style={{ color: "#000", fontWeight: "800", fontSize: 13 }}>Claim on TON Blockchain</Text>
-                </TouchableOpacity>
-              ) : (
-                <TouchableOpacity
-                  style={{ marginTop: 10, backgroundColor: `${Colors.gold}20`, borderRadius: 12, paddingVertical: 11, alignItems: "center", borderWidth: 1, borderColor: `${Colors.gold}40` }}
-                  activeOpacity={0.85}
-                  onPress={() => void connectTonWallet()}
-                >
-                  <Text style={{ color: Colors.gold, fontWeight: "700", fontSize: 13 }}>Connect Wallet to Claim</Text>
-                </TouchableOpacity>
-              )}
-            </View>
-          </View>
-
-          {/* ── Cross-Device Sync ── */}
-          <View style={styles.section}>
-            <Text style={styles.sectionLabel}>Cross-Device Sync</Text>
-            <View style={[styles.menuCard, { padding: 16 }]}>
-              <Text style={{ fontSize: 13, color: colors.textSecondary, marginBottom: 14, lineHeight: 18 }}>
-                Generate a 6-character sync code to restore your account on another device.
-              </Text>
-              {syncCode ? (
-                <View style={{ alignItems: "center", backgroundColor: `${Colors.blue}10`, borderRadius: 14, padding: 16, marginBottom: 14, borderWidth: 1, borderColor: `${Colors.blue}25` }}>
-                  <Text style={{ fontSize: 11, color: colors.textMuted, marginBottom: 6, fontWeight: "600", textTransform: "uppercase", letterSpacing: 0.8 }}>Your Sync Code</Text>
-                  <Text style={{ fontSize: 36, fontWeight: "900", color: Colors.blue, letterSpacing: 6 }}>{syncCode}</Text>
-                  <Text style={{ fontSize: 11, color: colors.textMuted, marginTop: 6 }}>Enter this code on your other device</Text>
-                </View>
-              ) : null}
-              <TouchableOpacity
-                onPress={() => void handleGenerateSyncCode()}
-                disabled={syncLoading}
-                style={{ backgroundColor: Colors.blue, borderRadius: 12, paddingVertical: 11, alignItems: "center", marginBottom: 12 }}
-                activeOpacity={0.85}
-              >
-                {syncLoading ? <ActivityIndicator color="#fff" size="small" /> : <Text style={{ color: "#fff", fontWeight: "700", fontSize: 13 }}>Generate Sync Code</Text>}
-              </TouchableOpacity>
-              <View style={{ flexDirection: "row", gap: 8 }}>
-                <TextInput
-                  style={{ flex: 1, backgroundColor: colors.bgSecondary, borderRadius: 12, paddingHorizontal: 14, height: 44, color: colors.textPrimary, fontSize: 16, fontWeight: "700", letterSpacing: 3, borderWidth: 1, borderColor: colors.border, outlineWidth: 0 } as any}
-                  placeholder="ENTER CODE"
-                  placeholderTextColor={colors.textMuted}
-                  value={syncInput}
-                  onChangeText={v => { setSyncInput(v.toUpperCase().slice(0, 8)); setSyncRestoreMsg(""); }}
-                  autoCapitalize="characters"
-                  maxLength={8}
-                />
-                <TouchableOpacity
-                  onPress={() => void handleRestoreSync()}
-                  disabled={syncLoading || syncInput.trim().length < 4}
-                  style={{ backgroundColor: syncInput.trim().length >= 4 ? Colors.purple : colors.bgSecondary, borderRadius: 12, paddingHorizontal: 16, justifyContent: "center", height: 44 }}
-                  activeOpacity={0.85}
-                >
-                  <Text style={{ color: syncInput.trim().length >= 4 ? "#fff" : colors.textMuted, fontWeight: "700", fontSize: 13 }}>Restore</Text>
-                </TouchableOpacity>
-              </View>
-              {syncRestoreMsg ? (
-                <Text style={{ marginTop: 8, fontSize: 12, color: syncRestoreMsg.startsWith("✓") ? Colors.success : Colors.danger, fontWeight: "600" }}>{syncRestoreMsg}</Text>
-              ) : null}
-            </View>
-          </View>
 
           {/* ── Danger Zone ── */}
           <View style={styles.section}>
