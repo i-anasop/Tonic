@@ -1,11 +1,10 @@
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useEffect, useRef } from "react";
 import { Tabs, useRouter, usePathname } from "expo-router";
 import { LayoutDashboard, ListTodo, Sparkles, User, Bot } from "lucide-react-native";
 import { View, StyleSheet, TouchableOpacity, Animated } from "react-native";
 
 import { Colors } from "@/constants/colors";
 import { useTheme } from "@/providers/ThemeProvider";
-import { AppTour, checkTourSeen, markTourSeen } from "@/components/AppTour";
 
 function AgentFAB({ visible }: { visible: boolean }) {
   const router = useRouter();
@@ -57,25 +56,9 @@ function AgentFAB({ visible }: { visible: boolean }) {
 }
 
 export default function TabLayout() {
-  const [showTour, setShowTour] = useState(false);
-  const [tourChecked, setTourChecked] = useState(false);
   const pathname = usePathname();
   const isAgentScreen = pathname?.includes("agent") ?? false;
   const { colors } = useTheme();
-
-  useEffect(() => {
-    checkTourSeen().then((seen) => {
-      setTourChecked(true);
-      if (!seen) {
-        setTimeout(() => setShowTour(true), 3500);
-      }
-    });
-  }, []);
-
-  const handleTourDone = useCallback(() => {
-    setShowTour(false);
-    void markTourSeen();
-  }, []);
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.bgPrimary }}>
@@ -140,9 +123,7 @@ export default function TabLayout() {
         />
       </Tabs>
 
-      <AgentFAB visible={tourChecked && !showTour && !isAgentScreen} />
-
-      {showTour && <AppTour onDone={handleTourDone} />}
+      <AgentFAB visible={!isAgentScreen} />
     </View>
   );
 }
