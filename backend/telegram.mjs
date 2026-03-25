@@ -87,7 +87,7 @@ export function initTelegramBot({ db, openai, domain }) {
       `SELECT * FROM tasks
        WHERE user_id = $1
          AND status != 'completed'
-         AND due_date <= NOW()::date + INTERVAL '1 day'
+         AND due_date <= NOW()::date
        ORDER BY due_date ASC
        LIMIT 10`,
       [userId]

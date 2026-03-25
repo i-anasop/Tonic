@@ -50,7 +50,7 @@ export interface AgentMessage {
 }
 
 export interface AgentAction {
-  type: "create_task" | "complete_task" | "show_stats" | "schedule" | "reschedule_task";
+  type: "create_task" | "complete_task" | "show_stats" | "schedule" | "reschedule_task" | "update_priority" | "specialist_hired";
   data?: Record<string, unknown>;
   success?: boolean;
 }

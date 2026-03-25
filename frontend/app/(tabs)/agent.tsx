@@ -251,8 +251,6 @@ function MessageBubble({ message, isStreaming }: { message: AgentMessage; isStre
   );
 }
 
-let speechRecognition: any = null;
-
 // ── Agent Screen ─────────────────────────────────────────────────────────────
 export default function AgentScreen() {
   const { tasks, addTask, toggleTaskStatus, updateTask, getStats } = useTasks();
@@ -276,8 +274,14 @@ export default function AgentScreen() {
   const [streamingMsgId, setStreamingMsgId] = useState<string | null>(null);
   const scrollRef = useRef<ScrollView>(null);
   const abortRef = useRef<AbortController | null>(null);
+  const deepAbortRef = useRef<AbortController | null>(null);
+  const speechRef = useRef<any>(null);
 
-  useEffect(() => () => { abortRef.current?.abort(); }, []);
+  useEffect(() => () => {
+    abortRef.current?.abort();
+    deepAbortRef.current?.abort();
+    speechRef.current?.stop();
+  }, []);
 
   const scrollToBottom = useCallback(() => { setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 100); }, []);
   useEffect(() => { scrollToBottom(); }, [messages]);
@@ -286,20 +290,20 @@ export default function AgentScreen() {
     if (typeof window === "undefined") return;
     const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
     if (!SR) { setInput("Voice not supported in this browser. Try Chrome!"); return; }
-    if (isListening && speechRecognition) { speechRecognition.stop(); setIsListening(false); return; }
-    speechRecognition = new SR();
-    speechRecognition.continuous = false;
-    speechRecognition.interimResults = true;
-    speechRecognition.lang = "en-US";
-    speechRecognition.onstart = () => setIsListening(true);
-    speechRecognition.onend = () => setIsListening(false);
-    speechRecognition.onresult = (event: any) => {
+    if (isListening && speechRef.current) { speechRef.current.stop(); setIsListening(false); return; }
+    speechRef.current = new SR();
+    speechRef.current.continuous = false;
+    speechRef.current.interimResults = true;
+    speechRef.current.lang = "en-US";
+    speechRef.current.onstart = () => setIsListening(true);
+    speechRef.current.onend = () => setIsListening(false);
+    speechRef.current.onresult = (event: any) => {
       const transcript = Array.from(event.results).map((r: any) => r[0].transcript).join("");
       setInput(transcript);
       if (event.results[event.results.length - 1].isFinal) setIsListening(false);
     };
-    speechRecognition.onerror = () => setIsListening(false);
-    speechRecognition.start();
+    speechRef.current.onerror = () => setIsListening(false);
+    speechRef.current.start();
   }, [isListening]);
 
   const applyAction = useCallback((action: AgentAction) => {
@@ -417,6 +421,10 @@ export default function AgentScreen() {
       };
       setMessages((prev) => [...prev, waitMsg]);
 
+      deepAbortRef.current?.abort();
+      const ctrl = new AbortController();
+      deepAbortRef.current = ctrl;
+
       try {
         const stats = await getStats();
         const res = await fetch(`${API_BASE_URL}/api/agent/deep-analysis`, {
@@ -427,16 +435,21 @@ export default function AgentScreen() {
             stats,
             userId: user?.id,
           }),
+          signal: ctrl.signal,
         });
-        const data = await res.json() as { analysis?: string; error?: string };
-        const analysis = data.analysis || data.error || "Analysis unavailable.";
-        setMessages((prev) => prev.map((m) =>
-          m.id === loadingId ? { ...m, content: analysis, isNew: true } : m
-        ));
-      } catch {
-        setMessages((prev) => prev.map((m) =>
-          m.id === loadingId ? { ...m, content: "Deep analysis failed. Check your connection and try again." } : m
-        ));
+        if (!ctrl.signal.aborted) {
+          const data = await res.json() as { analysis?: string; error?: string };
+          const analysis = data.analysis || data.error || "Analysis unavailable.";
+          setMessages((prev) => prev.map((m) =>
+            m.id === loadingId ? { ...m, content: analysis, isNew: true } : m
+          ));
+        }
+      } catch (err: any) {
+        if (err?.name !== "AbortError") {
+          setMessages((prev) => prev.map((m) =>
+            m.id === loadingId ? { ...m, content: "Deep analysis failed. Check your connection and try again." } : m
+          ));
+        }
       } finally {
         setIsDeepAnalyzing(false);
       }

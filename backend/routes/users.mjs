@@ -7,7 +7,7 @@ const router = Router();
 router.get("/users/:userId", async (req, res) => {
   try {
     const { rows } = await db.query(
-      "SELECT id, name, wallet_address, is_guest, tonic_tokens FROM users WHERE id = $1",
+      "SELECT id, name, wallet_address, is_guest, tonic_tokens, verified_at FROM users WHERE id = $1",
       [req.params.userId],
     );
     if (!rows[0]) return res.status(404).json({ error: "User not found" });
@@ -19,6 +19,7 @@ router.get("/users/:userId", async (req, res) => {
         walletAddress: u.wallet_address,
         isGuest:       u.is_guest,
         tonicTokens:   u.tonic_tokens || 0,
+        verifiedAt:    u.verified_at || null,
       },
     });
   } catch (err) {

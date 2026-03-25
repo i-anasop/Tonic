@@ -161,12 +161,13 @@ export async function executeToolCall(toolName, toolArgs, tasks, pendingTasks, s
     }
 
     case "delegate_to_specialist": {
-      const { specialist, mission, tonicCost } = toolArgs;
+      const { specialist, mission } = toolArgs;
 
       const SPECIALIST_COSTS = { habit_coach: 25, schedule_optimizer: 30, goal_strategist: 40 };
       const SPECIALIST_NAMES = { habit_coach: "HabitOS", schedule_optimizer: "ChronoX", goal_strategist: "VisionCore" };
 
-      const cost = SPECIALIST_COSTS[specialist] ?? tonicCost ?? 25;
+      // Always use the server-defined cost — never trust the LLM-provided tonicCost
+      const cost = SPECIALIST_COSTS[specialist] ?? 25;
       const specialistName = SPECIALIST_NAMES[specialist] || specialist;
 
       // Check TONIC balance and deduct if user is authenticated
