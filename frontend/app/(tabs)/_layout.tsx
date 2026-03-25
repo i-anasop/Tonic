@@ -65,8 +65,10 @@ export default function TabLayout() {
 
   useEffect(() => {
     checkTourSeen().then((seen) => {
-      if (!seen) setShowTour(true);
       setTourChecked(true);
+      if (!seen) {
+        setTimeout(() => setShowTour(true), 3500);
+      }
     });
   }, []);
 
