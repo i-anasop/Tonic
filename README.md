@@ -21,6 +21,10 @@ Every achievement you claim is permanently recorded on TON.
 [![PostgreSQL](https://img.shields.io/badge/DB-PostgreSQL-4169E1?style=flat-square&logo=postgresql&logoColor=white)](https://postgresql.org)
 [![License: MIT](https://img.shields.io/badge/License-MIT-F59E0B?style=flat-square)](LICENSE)
 
+<br/>
+
+**[🌐 Live App](https://tonic-ai.replit.app)** &nbsp;·&nbsp; **[✈️ Telegram Mini App](https://t.me/TonicAI_bot)**
+
 </div>
 
 ---
@@ -82,7 +86,7 @@ Productivity → Task Completion → On-Chain Transaction → TONIC Reward → R
 <tr><td><b>🎯 Daily Challenges</b></td><td>Fresh 24h targets — +50 TONIC on completion with explicit claim button</td></tr>
 <tr><td><b>📊 AI Insights</b></td><td>GPT-4o reads your task history and gives personalised coaching reports</td></tr>
 <tr><td><b>📱 Cross-Platform</b></td><td>Web, iOS, and Android from a single React Native codebase</td></tr>
-<tr><td><b>🤝 Telegram Bot</b></td><td>Full task management and AI coaching from any Telegram chat</td></tr>
+<tr><td><b>✈️ Telegram Mini App</b></td><td>Full app running natively inside Telegram — no browser switch needed</td></tr>
 </table>
 
 ---
