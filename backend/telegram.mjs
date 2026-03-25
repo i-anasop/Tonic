@@ -14,55 +14,36 @@ export function initTelegramBot({ db, openai, domain }) {
   bot = new TelegramBot(token, { polling: true });
   console.log("[Telegram] Mini App bot started — app URL:", APP_URL);
 
-  const openAppButton = {
-    inline_keyboard: [[
-      { text: "🚀 Open Tonic AI", web_app: { url: APP_URL } }
-    ]]
-  };
-
-  // Set persistent menu button (bottom-left in chat) pointing to the Mini App
+  // Persistent bottom button — opens Mini App
   bot.setChatMenuButton({
     menu_button: {
       type: "web_app",
-      text: "Open App",
+      text: "Launch App",
       web_app: { url: APP_URL }
     }
-  }).catch(() => {
-    // Fallback: set as default for all chats
-    bot.setMyDefaultAdministratorRights().catch(() => {});
-  });
+  }).then(() => console.log("[Telegram] Menu button set"))
+    .catch((e) => console.warn("[Telegram] Menu button warning:", e.message));
 
-  // Set clean command list
+  // Only register /start
   bot.setMyCommands([
-    { command: "start", description: "Open Tonic AI" }
+    { command: "start", description: "Start Tonic AI" }
   ]).catch(() => {});
 
-  // /start — launch the Mini App
+  // /start handler
   bot.onText(/\/start/, async (msg) => {
     const chatId = msg.chat.id;
     const name = msg.from?.first_name || "there";
 
     await bot.sendMessage(
       chatId,
-      `Hey ${name}! 👋\n\nTap below to open *Tonic AI* — your GPT-4o productivity agent on the TON blockchain.\n\n✅ Create tasks with AI\n💰 Earn real *$TONIC* rewards on-chain\n🏆 Unlock achievements & rank up`,
+      `Hey ${name}! 👋\n\nTap below to open *Tonic AI* — manage tasks with GPT-4o and earn real *$TONIC* rewards on the TON blockchain.`,
       {
         parse_mode: "Markdown",
-        reply_markup: openAppButton
-      }
-    );
-  });
-
-  // Any other message — show the open button
-  bot.on("message", async (msg) => {
-    if (!msg.text || msg.text.startsWith("/")) return;
-    const chatId = msg.chat.id;
-
-    await bot.sendMessage(
-      chatId,
-      "Tap below to open the full Tonic AI app 👇",
-      {
-        parse_mode: "Markdown",
-        reply_markup: openAppButton
+        reply_markup: {
+          inline_keyboard: [[
+            { text: "🚀 Launch Tonic AI", web_app: { url: APP_URL } }
+          ]]
+        }
       }
     );
   });
