@@ -1,5 +1,7 @@
 import { Router } from "express";
 import { db } from "../db.mjs";
+import { sendTonicReward, isDeployerReady } from "../ton/wallet.mjs";
+import { TONIC_PER_TASK } from "../config.mjs";
 
 const router = Router();
 
@@ -47,7 +49,40 @@ router.post("/tasks", async (req, res) => {
       ],
     );
 
-    res.json({ task: rows[0] });
+    const savedTask = rows[0];
+    res.json({ task: savedTask });
+
+    // Fire on-chain TONIC reward when task is completed (non-blocking)
+    if (status === "completed" && savedTask) {
+      setImmediate(async () => {
+        try {
+          if (!isDeployerReady()) return;
+          const userRes = await db.query(
+            "SELECT wallet_address FROM users WHERE id = $1",
+            [userId]
+          );
+          const walletAddress = userRes.rows[0]?.wallet_address;
+          if (!walletAddress) return;
+          const result = await sendTonicReward(walletAddress, TONIC_PER_TASK, "task_complete");
+          if (result.success && result.txHash) {
+            await db.query(
+              `INSERT INTO on_chain_records (id, user_id, record_type, title, description, ton_tx_hash)
+               VALUES ($1, $2, 'tonic_reward', $3, $4, $5) ON CONFLICT DO NOTHING`,
+              [
+                `task_${savedTask.id}_${Date.now()}`,
+                userId,
+                `+${TONIC_PER_TASK} $TONIC — Task Complete`,
+                `"${title}" · tx: ${result.txHash.slice(0, 16)}...`,
+                result.txHash,
+              ]
+            );
+            console.log(`[TON] On-chain reward sent for task "${title}": ${result.txHash}`);
+          }
+        } catch (e) {
+          console.warn("[TON] On-chain task reward failed:", e.message);
+        }
+      });
+    }
   } catch (err) {
     console.error("[Tasks] Upsert error:", err.message);
     res.status(500).json({ error: "Failed to save task" });

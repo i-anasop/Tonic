@@ -51,7 +51,7 @@ export function initTelegramBot({ db, openai, domain }) {
     const appUrl = domain ? `https://${domain}` : "https://tonic-ai.app";
     await bot.sendMessage(
       chatId,
-      `*Welcome to Tonic AI!* 🚀\n\nI'm your AI productivity agent powered by GPT-5.2 and the TON blockchain.\n\n*Commands:*\n/tasks — All pending tasks\n/today — Tasks due today\n/add <task> — Add a task (AI-parsed)\n/done <number> — Complete a task (+$TONIC)\n/stats — Your productivity stats\n/ai <message> — Chat with me naturally\n\n💡 You can also just type naturally — I understand plain English!\n\n[Open Tonic AI App](${appUrl})`,
+      `*Welcome to Tonic AI!* 🚀\n\nI'm your AI productivity agent powered by *GPT-4o* and the *TON blockchain*.\n\n*Commands:*\n/tasks — All pending tasks\n/today — Tasks due today\n/add <task> — Add a task (AI-parsed)\n/done <number> — Complete a task (+$TONIC)\n/stats — Your productivity stats\n/ai <message> — Chat with me naturally\n\n💡 You can also just type naturally — I understand plain English!\n\n[Open Tonic AI App](${appUrl})`,
       { parse_mode: "Markdown", disable_web_page_preview: true }
     );
   });
@@ -121,7 +121,7 @@ export function initTelegramBot({ db, openai, domain }) {
 
     try {
       const completion = await openai.chat.completions.create({
-        model: "gpt-5.2",
+        model: "gpt-4o",
         messages: [
           {
             role: "system",
@@ -243,7 +243,7 @@ async function handleAIMessage(msg, text, db, openai) {
     const thinking = await bot.sendMessage(chatId, "🤔 Thinking...");
 
     const completion = await openai.chat.completions.create({
-      model: "gpt-5.2",
+      model: "gpt-4o",
       messages: [
         {
           role: "system",

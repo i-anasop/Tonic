@@ -518,7 +518,7 @@ export default function AgentScreen() {
             <Text style={styles.headerTitle}>Tonic Agent</Text>
             <View style={styles.statusRow}>
               <View style={styles.statusDot} />
-              <Text style={styles.statusText}>GPT-5.2 · 8 Tools · $TONIC Protocol</Text>
+              <Text style={styles.statusText}>GPT-4o · 8 Tools · $TONIC Protocol</Text>
             </View>
           </View>
         </View>

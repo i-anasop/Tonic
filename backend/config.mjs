@@ -2,7 +2,7 @@ export const TONIC_PER_TASK = 15;
 export const TONIC_STREAK_BONUS = 25;
 export const TONIC_DAILY_CHALLENGE = 50;
 
-export const AI_MODEL = "gpt-5.2";
+export const AI_MODEL = "gpt-4o";
 
 export const DAILY_CHALLENGES = [
   { id: "c1", title: "Complete 3 tasks today",                   target: 3, type: "tasks",          reward: 50 },

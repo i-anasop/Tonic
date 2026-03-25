@@ -1,136 +1,157 @@
-# Tonic AI — TON AI Hackathon Project
+# Tonic AI — TON AI Hackathon 2026
 
 ## Overview
-Tonic AI is a TON blockchain-integrated, AI-powered task management app built with Expo/React Native. Built for the TON AI Hackathon ($20,000 prize, deadline March 25, 2026) targeting the "User-Facing AI Agents" track.
+Tonic AI is a GPT-4o powered, TON blockchain-native task management app built for the TON AI Hackathon 2026. Features a conversational AI agent with 8 function-calling tools, a real on-chain $TONIC reward system (TON testnet), specialist agent delegation, 90+ achievements, 10-level rank system, SSE streaming, Telegram bot, and cross-device sync.
 
 ## Project Structure
 
 ```
 workspace/
 ├── backend/                  ← Express API server (Node.js / ESM)
-│   ├── index.mjs             ← Entry point: middleware, routes, bootstrap (~115 lines)
-│   ├── db.mjs                ← pg.Pool instance + initDB()
+│   ├── index.mjs             ← Entry: middleware, routes, bootstrap
+│   ├── db.mjs                ← pg.Pool + initDB()
 │   ├── openai.mjs            ← OpenAI client singleton
-│   ├── config.mjs            ← All constants (TONIC rates, challenges, mock leaders, CSS)
+│   ├── config.mjs            ← Constants (AI_MODEL=gpt-4o, TONIC rates, challenges)
 │   ├── static.mjs            ← Static file serving + portrait CSS injection
-│   ├── telegram.mjs          ← Telegram bot integration
+│   ├── telegram.mjs          ← Telegram bot (/start /tasks /today /done /stats /ai)
+│   ├── ton/
+│   │   ├── client.mjs        ← Toncenter API client (testnet)
+│   │   └── wallet.mjs        ← Deployer wallet (init, sendTonicReward, getDeployerInfo)
 │   ├── agent/
-│   │   ├── prompt.mjs        ← buildAgentSystemPrompt()
-│   │   ├── tools.mjs         ← buildAgentTools() (OpenAI function schemas)
+│   │   ├── prompt.mjs        ← buildAgentSystemPrompt() + buildSpecialistPrompt()
+│   │   ├── tools.mjs         ← buildAgentTools() — 8 OpenAI function schemas
 │   │   └── executor.mjs      ← executeToolCall() — shared by both agent endpoints
 │   └── routes/
-│       ├── agent.mjs         ← POST /api/agent, POST /api/agent/stream
-│       ├── tasks.mjs         ← GET/POST/DELETE /api/tasks*, POST /api/tasks/sync
+│       ├── agent.mjs         ← POST /api/agent, POST /api/agent/stream, POST /api/agent/deep-analysis
+│       ├── tasks.mjs         ← CRUD /api/tasks* + on-chain reward on completion
 │       ├── users.mjs         ← POST /api/users, /api/ton-proof, /api/sync-code/*
 │       ├── tokens.mjs        ← GET/POST /api/*tokens, /api/daily-challenge/*
 │       ├── records.mjs       ← GET/POST /api/records, POST /api/claim-points
-│       └── leaderboard.mjs   ← GET /api/leaderboard
+│       ├── leaderboard.mjs   ← GET /api/leaderboard
+│       └── ton-chain.mjs     ← GET /api/ton/deployer, /api/ton/balance/:addr, POST /api/ton/reward, GET /api/ton/history/:userId
+├── contracts/
+│   ├── tonic.tact            ← $TONIC Jetton smart contract (TEP-74/89 compliant, Tact)
+│   └── deploy.mjs            ← Deployment script (requires @tact-lang/compiler)
 └── frontend/                 ← Expo / React Native mobile + web app
-    ├── app/              ← Expo Router screens
-    │   ├── (tabs)/       ← Tab screens: Dashboard, Tasks, Insights, Profile, Agent
-    │   ├── onboarding/   ← Onboarding flow
-    │   ├── modal.tsx     ← Add/edit task modal
-    │   └── reset.tsx     ← App reset screen
-    ├── components/       ← Shared UI components (AchievementsModal, AppTour)
-    ├── constants/        ← Colors, API URL, achievements config
-    ├── hooks/            ← useTonConnect (TON wallet hook)
-    ├── providers/        ← React context providers
-    │   ├── AppStateProvider.tsx
-    │   ├── TasksProvider.tsx
-    │   ├── AchievementsProvider.tsx
-    │   ├── ThemeProvider.tsx
-    │   └── TonConnectProvider.tsx
-    ├── types/            ← TypeScript types (tasks, achievements)
-    ├── assets/           ← Images, icons
-    └── public/           ← Static assets (tonconnect-manifest.json)
+    ├── app/
+    │   ├── (tabs)/           ← Dashboard, Tasks, Insights, Profile, Agent
+    │   ├── onboarding/       ← Onboarding flow (returning user check)
+    │   ├── modal.tsx         ← Add/edit task modal
+    │   └── reset.tsx         ← App reset screen
+    ├── components/           ← AchievementsModal, AppTour
+    ├── constants/            ← Colors, API URL, achievements config
+    ├── hooks/                ← useTonConnect
+    ├── providers/            ← AppState, Tasks, Achievements, Theme, TonConnect
+    └── types/                ← tasks.ts (AgentAction includes specialist_hired, update_priority)
 ```
 
-## Backend (`backend/`)
-- **Framework**: Express 5 (Node.js, ESM)
-- **Database**: PostgreSQL (via `pg` pool, `DATABASE_URL` env var)
-- **AI**: OpenAI GPT-5.2 via Replit AI Integrations proxy
+## Backend
+
+- **Framework**: Express 5 (Node.js ESM)
+- **Database**: PostgreSQL (DATABASE_URL)
+- **AI**: GPT-4o via Replit AI Integrations proxy
+- **TON**: @ton/ton + @ton/crypto (testnet deployer wallet)
 - **Port**: 3000
-- **Domain**: `92c86d49-9cf4-41d6-8464-6cb2972e01f7-00-3btckq8mc5vwe.picard.replit.dev`
 
 ### API Endpoints
 | Method | Path | Description |
 |--------|------|-------------|
-| GET | `/api/users/:userId` | Fetch single user by ID (used for returning-wallet check) |
-| GET | `/health` | Health check |
-| GET | `/tonconnect-manifest.json` | TonConnect wallet manifest |
-| POST | `/api/insights` | AI-generated productivity insights (GPT-5.2) |
-| POST | `/api/users` | Create/upsert user (wallet or guest) |
-| GET | `/api/users/:userId/tasks` | Fetch user tasks |
-| POST | `/api/tasks` | Create/update task |
+| GET | `/health` | Health check (v2.0.0) |
+| GET | `/tonconnect-manifest.json` | TonConnect manifest |
+| POST | `/api/insights` | GPT-4o productivity insights |
+| POST | `/api/users` | Upsert user |
+| GET | `/api/users/:userId` | Fetch user (includes verifiedAt) |
+| GET | `/api/users/:userId/tasks` | Fetch tasks |
+| POST | `/api/tasks` | Upsert task (fires on-chain reward on completion) |
 | DELETE | `/api/tasks/:taskId` | Delete task |
-| POST | `/api/tasks/sync` | Bulk sync tasks |
-| POST | `/api/records` | Save on-chain achievement record |
+| POST | `/api/tasks/sync` | Bulk sync |
+| POST | `/api/records` | Save on-chain record |
 | GET | `/api/users/:userId/records` | Fetch on-chain records |
-| POST | `/api/claim-points` | Claim achievement points on TON blockchain |
-| POST | `/api/agent` | AI agent chat (function calling) |
+| POST | `/api/claim-points` | Claim achievement points |
+| POST | `/api/agent` | AI agent chat (8 tools, function calling) |
+| GET  | `/api/agent/stream` | SSE streaming agent |
+| POST | `/api/agent/deep-analysis` | Deep Strategy analysis (premium) |
+| GET | `/api/ton/deployer` | Deployer wallet status + address |
+| GET | `/api/ton/balance/:address` | Real TON balance from Toncenter API |
+| POST | `/api/ton/reward` | Send on-chain TONIC reward tx |
+| GET | `/api/ton/history/:userId` | On-chain tx history |
 
 ### Database Schema
-- `users` — id, name, wallet_address, is_guest, timestamps
-- `tasks` — id, user_id, title, description, category, priority, status, due_date, timestamps
+- `users` — id, name, wallet_address, is_guest, ton_proof, verified_at, tonic_tokens, sync_code, timestamps
+- `tasks` — id, user_id, title, desc, category, priority, status, due_date, ai_suggested, stake_amount, stake_tx_hash, timestamps
 - `on_chain_records` — id, user_id, record_type, title, description, ton_tx_hash, recorded_at
+- `agent_conversations` — id, user_id, messages (JSONB), timestamps
 
-## Frontend (`frontend/`)
-- **Framework**: Expo / React Native
-- **Package manager**: bun
-- **Navigation**: Expo Router (tab-based, 4 tabs + floating AI FAB)
-- **State**: React Context providers (TasksProvider, AppStateProvider, AchievementsProvider)
-- **Storage**: AsyncStorage (offline-first)
+## TON Blockchain Integration
 
-### Key Features
-1. **AI Agent** — GPT-5.2 chat with function calling (create tasks, analyze stats, plan day). Accessible via floating gold bot button (bottom-right FAB on all screens).
-2. **AI Insights** — Personalized productivity insights generated by GPT-5.2 based on actual task data.
-3. **TON Blockchain** — "Claim Points On-Chain" sends a gas-only TON transaction recording achievement points permanently. "Proof of Productivity" signs a score on-chain.
-4. **Achievements** — 40+ achievements across daily/weekly/monthly/all-time categories with a 10-level competitive ladder (Rookie → Mythic).
-5. **Dark Mode** — System-aware with manual toggle, persisted via AsyncStorage.
-6. **Onboarding Tour** — Animated step-by-step tour showing each real screen. Floating coach card navigates between tabs automatically.
-7. **Telegram Bot** — AI-powered bot (requires `TELEGRAM_BOT_TOKEN` secret).
+### Deployer Wallet
+- Address: `0QBrXSY1xnP25QBRLg6G_9lSgoV4aypr92BK3pFQkactXG6V`
+- Network: TON Testnet
+- Explorer: https://testnet.tonscan.org/address/0QBrXSY1xnP25QBRLg6G_9lSgoV4aypr92BK3pFQkactXG6V
+- Mnemonic: saved as `TON_DEPLOYER_MNEMONIC` env var
+- Faucet: https://t.me/testgiver_ton_bot
 
-### Point & Level System
-- Base achievement points: easy=10, medium=20, hard=30, expert=50 (normalized)
-- `totalPoints` = all unlocked; `claimedPoints` = persisted after claim; `pendingPoints` = total − claimed
-- Level is based on `claimedPoints`. Standard claim = 1×; TON wallet claim = 2× multiplier
-- Levels: Rookie(0) → Apprentice(200) → Grinder(600) → Strategist(1.5k) → Pro(3.5k) → Elite(7.5k) → Master(15k) → Champion(30k) → Legend(60k) → Mythic(120k)
+### On-Chain Flow
+1. User completes a task → backend fires `sendTonicReward()` (non-blocking)
+2. Deployer sends 0.001 tTON to user's wallet with comment `TONIC:15:task_complete`
+3. Tx hash stored in `on_chain_records.ton_tx_hash`
+4. Frontend profile shows tx with link to testnet.tonscan.org
 
-### Type System
-- `AppColors` — union type (`typeof Colors | typeof LightColors`) exported from `ThemeProvider.tsx`
-- All `makeStyles` functions accept `AppColors` (not `typeof Colors` directly)
-- `LightColors` has all fields matching `Colors` (no undefined access risk in light mode)
+### Jetton Contract
+- Source: `contracts/tonic.tact` (TEP-74/89 compliant Tact implementation)
+- Includes: TonicJettonMinter (master) + TonicWallet (per-user)
+- Deploy: `node contracts/deploy.mjs` (requires @tact-lang/compiler)
 
-### Known Fixes Applied
-- Tour skip/advance: `onDone()` called immediately (not in animation `.start()` callback) — reliable on web
-- `handleTourDone`: synchronous — sets `showTour = false` instantly, fires `markTourSeen()` async
-- `achievements.ts` pts_5000/pts_15000: `undefined` passed for metric so `secret=true` is correctly set
-- `TonConnectProvider`: removed deprecated `includeAppWallet` and invalid `colorsSet` string
-- `app/_layout.tsx`: replaced non-existent `animationEnabled` with valid `animation: "slide_from_bottom"`
-- All 4 standalone sub-components (`StatItem`, `MenuItem`, `FilterTabButton`, `CategoryFilterChip`) call `useTheme()` themselves
-- `TasksProvider.generateInsights`: now maps `metric`, `trend`, `action` from API response so insight cards display correctly
-- `generateFallbackInsights`: all fallback insight objects now include `metric`, `trend`, `action` fields
-- `agent.tsx`: removed unused `StreamingText` component (dead code)
-- `+not-found.tsx`: removed leftover `// template` comment
-- **DB schema migration**: `initDB()` now runs `ALTER TABLE ... ADD COLUMN IF NOT EXISTS` after `CREATE TABLE IF NOT EXISTS` to safely add new columns (`ai_suggested`, `stake_amount`, `stake_tx_hash`, etc.) to existing databases — fixes task creation failing with "column does not exist"
-- **Dynamic API URL**: `frontend/constants/api.ts` now uses `window.location.origin` at runtime instead of a hardcoded dev domain, making the app work correctly in both dev and production deployments
-- **TonConnect manifest domain**: Now resolves using `REPLIT_DOMAINS` (production), falling back to `REPLIT_DEV_DOMAIN`, then `req.get("host")` — works correctly in all environments
+## Agent System (8 Tools)
+1. `create_task` — Create a task from natural language
+2. `complete_task` — Mark a task complete (triggers on-chain reward)
+3. `show_stats` — Display productivity stats
+4. `plan_my_day` — Build a daily schedule
+5. `analyze_habits` — Deep behavioral pattern analysis
+6. `reschedule_task` — Move a task's due date
+7. `update_priority` — Change task priority
+8. `delegate_to_specialist` — Hire HabitOS/ChronoX/VisionCore (costs $TONIC)
+
+## Specialist Agents ($TONIC Protocol)
+- **HabitOS** (25 $TONIC) — Behavioral neuroscience, habit stacks
+- **ChronoX** (30 $TONIC) — Chronobiology, time-blocking
+- **VisionCore** (40 $TONIC) — OKR coaching, goal alignment
+
+## Frontend Key Features
+1. **AI Agent** — GPT-4o, 8 tools, SSE streaming, specialist delegation
+2. **Deep Strategy** — Premium analysis (free for Tonian badge holders, 0.05 TON otherwise)
+3. **Real TON Balance** — Profile fetches live wallet balance from Toncenter API
+4. **On-Chain Activity Feed** — Profile shows real testnet tx links
+5. **$TONIC rewards** — Every task completion → real TON testnet tx
+6. **Achievements** — 90+ achievements, 10-level rank system (Rookie → Mythic)
+7. **Telegram Bot** — /start /tasks /today /done /stats /ai
+8. **Cross-device sync** — Sync code backup/restore
 
 ## Running the App
 - **Backend**: `node backend/index.mjs` (workflow: "Start application", port 3000)
-- **Frontend (web build)**: `cd frontend && bun run expo export --platform web`
-- **Frontend (dev)**: `cd frontend && bun run start`
+- **Frontend build**: `cd frontend && bun run expo export --platform web`
+- **Frontend dev**: `cd frontend && bun run start`
 
 ## Environment Variables
 | Variable | Source | Purpose |
 |----------|--------|---------|
-| `DATABASE_URL` | Auto-provisioned | PostgreSQL connection |
+| `DATABASE_URL` | Auto-provisioned | PostgreSQL |
 | `AI_INTEGRATIONS_OPENAI_BASE_URL` | Auto-provisioned | Replit AI proxy |
 | `AI_INTEGRATIONS_OPENAI_API_KEY` | Auto-provisioned | Replit AI proxy key |
-| `TELEGRAM_BOT_TOKEN` | Set manually in Secrets | Telegram bot (optional) |
+| `TELEGRAM_BOT_TOKEN` | Secrets | Telegram bot (optional) |
 | `REPLIT_DEV_DOMAIN` | Auto-provisioned | TonConnect manifest URL |
+| `TON_DEPLOYER_MNEMONIC` | Env vars (shared) | TON testnet deployer wallet |
+| `TONCENTER_API_KEY` | Optional secret | Higher rate limits on Toncenter |
+| `TONIC_JETTON_CONTRACT` | Env var | Deployed Jetton contract address |
+| `TON_NETWORK` | Env var | "testnet" |
 
-## Constants
-- `frontend/constants/api.ts` — API base URL and TON config
-- `frontend/constants/colors.ts` — Design system (gold-on-dark theme)
-- `frontend/constants/achievements.ts` — All 40+ achievement definitions
+## Bugs Fixed (Final Session)
+- AgentAction type now includes `specialist_hired` and `update_priority`
+- LLM cannot override specialist costs (always server-enforced)
+- speechRecognition converted from module var to useRef
+- deepAbortRef added to cancel in-flight deep analysis on unmount
+- GET /api/users/:userId now returns `verifiedAt` (was breaking Tonian check)
+- Telegram /today query fixed (was including tomorrow's tasks)
+- All gpt-5.2 references replaced with gpt-4o
+- ton_tx_hash field name fixed in profile on-chain activity feed
+- tonscan.org updated to testnet.tonscan.org throughout

@@ -5,6 +5,7 @@ import { initDB } from "./db.mjs";
 import { openai } from "./openai.mjs";
 import { registerStaticServing } from "./static.mjs";
 import { initTelegramBot } from "./telegram.mjs";
+import { initDeployerWallet } from "./ton/wallet.mjs";
 
 import agentRouter       from "./routes/agent.mjs";
 import tasksRouter       from "./routes/tasks.mjs";
@@ -12,6 +13,7 @@ import usersRouter       from "./routes/users.mjs";
 import tokensRouter      from "./routes/tokens.mjs";
 import recordsRouter     from "./routes/records.mjs";
 import leaderboardRouter from "./routes/leaderboard.mjs";
+import tonChainRouter    from "./routes/ton-chain.mjs";
 
 const app = express();
 
@@ -63,7 +65,7 @@ app.post("/api/insights", async (req, res) => {
     };
 
     const completion = await openai.chat.completions.create({
-      model: "gpt-5.2",
+      model: "gpt-4o",
       messages: [
         {
           role: "system",
@@ -97,6 +99,7 @@ app.use("/api",       usersRouter);
 app.use("/api",       tokensRouter);
 app.use("/api",       recordsRouter);
 app.use("/api",       leaderboardRouter);
+app.use("/api",       tonChainRouter);
 
 // ── Static / SPA serving ──────────────────────────────────────────────────────
 registerStaticServing(app);
@@ -106,6 +109,8 @@ initDB()
   .then(async () => {
     const PORT = process.env.PORT || 3000;
     app.listen(PORT, () => console.log(`[Server] Tonic AI running on port ${PORT}`));
+    // Initialize TON deployer wallet (non-blocking — logs address + balance)
+    initDeployerWallet().catch((e) => console.warn("[TON] Wallet init warning:", e.message));
     await initTelegramBot({ db: (await import("./db.mjs")).db, openai, domain: process.env.REPLIT_DEV_DOMAIN });
   })
   .catch((err) => {

@@ -132,6 +132,7 @@ export default function ProfileScreen() {
   const [showWalletNameModal, setShowWalletNameModal] = useState(false);
   const [walletNameInput, setWalletNameInput] = useState("");
   const [pendingWalletAddr, setPendingWalletAddr] = useState<string | null>(null);
+  const [realTonBalance, setRealTonBalance] = useState<string | null>(null);
 
   useEffect(() => {
     if (isTonConnected && tonWalletAddress && !user?.walletAddress) {
@@ -156,6 +157,16 @@ export default function ProfileScreen() {
       .then((data) => { if (Array.isArray(data.records)) setOnChainRecords(data.records); })
       .catch(() => {});
   }, [user?.id, lastTxHash]);
+
+  // Fetch real on-chain TON balance for connected wallet
+  useEffect(() => {
+    const address = user?.walletAddress;
+    if (!address) { setRealTonBalance(null); return; }
+    fetch(`${API_BASE_URL}/api/ton/balance/${encodeURIComponent(address)}`)
+      .then((r) => r.json())
+      .then((data) => { if (data.balanceTon) setRealTonBalance(data.balanceTon); })
+      .catch(() => {});
+  }, [user?.walletAddress]);
 
   const loadStats = useCallback(async () => {
     const newStats = await getStats();
@@ -389,7 +400,11 @@ export default function ProfileScreen() {
               <Text style={{ fontSize: 22, fontWeight: "900", color: Colors.gold, letterSpacing: -0.5 }}>{(achievementStats.claimedPoints * 10).toLocaleString()}</Text>
               <Text style={{ fontSize: 13, fontWeight: "700", color: Colors.gold }}>TONIC</Text>
               <View style={{ width: 1, height: 18, backgroundColor: `${Colors.gold}30`, marginHorizontal: 4 }} />
-              <Text style={{ fontSize: 12, color: colors.textMuted }}>≈ {((achievementStats.claimedPoints * 10) / 100000).toFixed(4)} TON</Text>
+              {realTonBalance ? (
+                <Text style={{ fontSize: 12, color: Colors.success, fontWeight: "600" }}>⛓ {realTonBalance} TON</Text>
+              ) : (
+                <Text style={{ fontSize: 12, color: colors.textMuted }}>⛓ Testnet</Text>
+              )}
             </View>
           </View>
 
@@ -415,7 +430,13 @@ export default function ProfileScreen() {
 
           {/* ── Features ── */}
           <View style={styles.section}>
-            <Text style={styles.sectionLabel}>Blockchain & Tokens</Text>
+            <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
+              <Text style={styles.sectionLabel}>Blockchain & Tokens</Text>
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 5, backgroundColor: `${Colors.success}15`, paddingHorizontal: 9, paddingVertical: 4, borderRadius: 10, borderWidth: 1, borderColor: `${Colors.success}30` }}>
+                <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: Colors.success }} />
+                <Text style={{ fontSize: 10, fontWeight: "700", color: Colors.success }}>TON Testnet</Text>
+              </View>
+            </View>
             <View style={styles.menuCard}>
               <MenuItem
                 icon={Star} title="Tonian Badge" color={Colors.gold}
@@ -427,6 +448,15 @@ export default function ProfileScreen() {
                 icon={Zap} title="$TONIC Balance" color={Colors.gold}
                 subtitle={`${(achievementStats.claimedPoints * 10).toLocaleString()} TONIC earned`}
                 onPress={() => router.push("/tonic-balance" as any)}
+              />
+              <View style={styles.divider} />
+              <MenuItem
+                icon={Activity} title="On-Chain Rewards" color={Colors.blue}
+                subtitle="Task completions mint real TON tx"
+                onPress={() => {
+                  if (typeof window !== "undefined") window.open("https://testnet.tonscan.org", "_blank");
+                }}
+                rightElement={<View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}><View style={{ width: 7, height: 7, borderRadius: 4, backgroundColor: Colors.success }} /><Text style={{ fontSize: 10, color: Colors.success, fontWeight: "700" }}>Live</Text></View>}
               />
               <View style={styles.divider} />
               <MenuItem
@@ -447,13 +477,14 @@ export default function ProfileScreen() {
               <View style={styles.menuCard}>
                 {onChainRecords.slice(0, 5).map((record: any, i: number) => {
                   const date = new Date(record.recorded_at || record.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric" });
-                  const shortHash = record.tx_hash ? `${record.tx_hash.slice(0, 8)}…${record.tx_hash.slice(-5)}` : "pending";
-                  const tonscanUrl = record.tx_hash ? `https://tonscan.org/tx/${record.tx_hash}` : null;
+                  const txHash = record.ton_tx_hash || record.tx_hash;
+                  const shortHash = txHash ? `${txHash.slice(0, 8)}…${txHash.slice(-5)}` : "pending";
+                  const tonscanUrl = txHash ? `https://testnet.tonscan.org/tx/${txHash}` : null;
                   return (
                     <View key={record.id || i}>
                       {i > 0 && <View style={styles.divider} />}
                       <View style={styles.activityRow}>
-                        <View style={[styles.activityDot, { backgroundColor: record.tx_hash ? Colors.blue : colors.textMuted }]} />
+                        <View style={[styles.activityDot, { backgroundColor: txHash ? Colors.blue : colors.textMuted }]} />
                         <View style={{ flex: 1 }}>
                           <Text style={styles.activityTitle} numberOfLines={1}>{record.title || "Proof of Productivity"}</Text>
                           <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginTop: 2 }}>
@@ -538,8 +569,9 @@ export default function ProfileScreen() {
 
           {/* App info */}
           <View style={styles.appInfo}>
-            <Text style={styles.appVer}>Tonic AI v1.0.0</Text>
-            <Text style={styles.appBuild}>Built for TON & Telegram · Hackathon 2026</Text>
+            <Text style={styles.appVer}>Tonic AI v2.0.0</Text>
+            <Text style={styles.appBuild}>GPT-4o · TON Testnet · 8 Agent Tools · $TONIC Protocol</Text>
+            <Text style={[styles.appBuild, { marginTop: 2 }]}>TON AI Hackathon 2026</Text>
           </View>
         </ScrollView>
       </SafeAreaView>

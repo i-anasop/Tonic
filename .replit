@@ -34,3 +34,10 @@ externalPort = 80
 build = ["sh", "-c", "bash -c \"cd frontend && bun install && bun run expo export --platform web\""]
 run = ["sh", "-c", "node backend/index.mjs"]
 deploymentTarget = "cloudrun"
+
+[userenv]
+
+[userenv.shared]
+TON_DEPLOYER_MNEMONIC = "road fetch firm okay glare advice estate intact matter myth wild route donate copper leg civil sand label wide essay dwarf shift change together"
+TONIC_JETTON_CONTRACT = "pending_deployment"
+TON_NETWORK = "testnet"
