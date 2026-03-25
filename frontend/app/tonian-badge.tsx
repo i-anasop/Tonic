@@ -19,6 +19,7 @@ const REWARDS = [
   { icon: Zap,     label: "2× lifetime point multiplier on all claims" },
   { icon: Shield,  label: "Verified Tonian rank on the global leaderboard" },
   { icon: Link2,   label: "Permanent on-chain identity — provable on TON" },
+  { icon: Star,    label: "Free Deep Strategy Sessions — premium AI analysis, forever" },
   { icon: Star,    label: "Exclusive Tonian badge on your profile forever" },
 ];
 

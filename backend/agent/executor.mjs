@@ -3,9 +3,12 @@ import { db } from "../db.mjs";
 const DAY_NAMES = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
 /**
- * Executes a parsed tool call and returns { action, toolResult }.
+ * Executes a parsed tool call and returns { action, toolResult, specialistContext }.
  * This single function is shared by both the regular and the SSE streaming
  * agent endpoints, eliminating the previous duplication.
+ *
+ * specialistContext is set when delegate_to_specialist is called — the route
+ * handler uses it to inject the specialist persona into the confirmation call.
  *
  * @param {string}   toolName     - The function name from the tool call
  * @param {object}   toolArgs     - Parsed JSON arguments
@@ -13,7 +16,7 @@ const DAY_NAMES = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
  * @param {object[]} pendingTasks - Pre-filtered pending tasks
  * @param {object}   stats        - User productivity stats
  * @param {string}   [userId]     - Authenticated user ID (optional)
- * @returns {Promise<{ action: object|null, toolResult: object }>}
+ * @returns {Promise<{ action: object|null, toolResult: object, specialistContext?: object }>}
  */
 export async function executeToolCall(toolName, toolArgs, tasks, pendingTasks, stats, userId) {
   switch (toolName) {
@@ -154,6 +157,79 @@ export async function executeToolCall(toolName, toolArgs, tasks, pendingTasks, s
       return {
         action,
         toolResult: { success: true, taskTitle: toolArgs.taskTitle, newPriority: toolArgs.newPriority, reason: toolArgs.reason },
+      };
+    }
+
+    case "delegate_to_specialist": {
+      const { specialist, mission, tonicCost } = toolArgs;
+
+      const SPECIALIST_COSTS = { habit_coach: 25, schedule_optimizer: 30, goal_strategist: 40 };
+      const SPECIALIST_NAMES = { habit_coach: "HabitOS", schedule_optimizer: "ChronoX", goal_strategist: "VisionCore" };
+
+      const cost = SPECIALIST_COSTS[specialist] ?? tonicCost ?? 25;
+      const specialistName = SPECIALIST_NAMES[specialist] || specialist;
+
+      // Check TONIC balance and deduct if user is authenticated
+      let tonicRemaining = stats.tonicTokens || 0;
+      let deducted = false;
+
+      if (userId) {
+        try {
+          const balRes = await db.query(
+            "SELECT tonic_tokens FROM users WHERE id = $1",
+            [userId],
+          );
+          const balance = parseInt(balRes.rows[0]?.tonic_tokens ?? 0, 10);
+
+          if (balance < cost) {
+            return {
+              action: null,
+              toolResult: {
+                success: false,
+                error: "insufficient_tonic",
+                balance,
+                required: cost,
+                specialist,
+                message: `Not enough $TONIC. You have ${balance} but need ${cost}. Complete more tasks to earn $TONIC.`,
+              },
+            };
+          }
+
+          await db.query(
+            "UPDATE users SET tonic_tokens = tonic_tokens - $1 WHERE id = $2",
+            [cost, userId],
+          );
+          tonicRemaining = balance - cost;
+          deducted = true;
+        } catch (err) {
+          console.error("[Executor] delegate_to_specialist DB error:", err.message);
+        }
+      }
+
+      const action = {
+        type: "specialist_hired",
+        data: {
+          specialist,
+          specialistName,
+          mission,
+          tonicCost: cost,
+          tonicRemaining,
+        },
+      };
+
+      return {
+        action,
+        toolResult: {
+          success: true,
+          specialist,
+          specialistName,
+          mission,
+          tonicDeducted: deducted ? cost : 0,
+          tonicRemaining,
+          tasks:        pendingTasks.slice(0, 10).map(t => ({ title: t.title, priority: t.priority, category: t.category })),
+          stats,
+        },
+        specialistContext: { specialist, mission, tasks, stats, pendingTasks },
       };
     }
 

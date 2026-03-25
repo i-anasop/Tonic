@@ -102,5 +102,31 @@ export function buildAgentTools() {
         },
       },
     },
+    {
+      type: "function",
+      function: {
+        name: "delegate_to_specialist",
+        description: "Spend $TONIC tokens to hire a specialist AI sub-agent via the $TONIC inter-agent coordination protocol. The specialist runs a focused deep-work session the main agent cannot do alone. Available specialists: 'habit_coach' (25 $TONIC) — behavioral pattern analysis, 'schedule_optimizer' (30 $TONIC) — optimal time-blocking strategy, 'goal_strategist' (40 $TONIC) — long-term goal alignment and prioritization. Use when the user wants deep specialist insight beyond standard coaching, or explicitly asks to 'hire', 'delegate', 'deep dive', or 'specialist'.",
+        parameters: {
+          type: "object",
+          properties: {
+            specialist: {
+              type: "string",
+              enum: ["habit_coach", "schedule_optimizer", "goal_strategist"],
+              description: "Which specialist sub-agent to hire",
+            },
+            mission: {
+              type: "string",
+              description: "Specific mission brief for the specialist — what problem to solve",
+            },
+            tonicCost: {
+              type: "number",
+              description: "TONIC cost: 25 for habit_coach, 30 for schedule_optimizer, 40 for goal_strategist",
+            },
+          },
+          required: ["specialist", "mission", "tonicCost"],
+        },
+      },
+    },
   ];
 }

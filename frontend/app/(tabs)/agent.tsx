@@ -10,17 +10,22 @@ import {
   Platform,
   ActivityIndicator,
   Animated,
+  Alert,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { Bot, Send, Mic, MicOff, Plus, BarChart2, Calendar, Zap, CheckCircle, CalendarClock } from "lucide-react-native";
+import { useRouter } from "expo-router";
+import { Bot, Send, Mic, MicOff, Plus, BarChart2, Calendar, Zap, CheckCircle, CalendarClock, Crown, Cpu } from "lucide-react-native";
 import { v4 as uuidv4 } from "uuid";
 
 import { Colors } from "@/constants/colors";
 import { useTheme, type AppColors } from "@/providers/ThemeProvider";
-import { API_BASE_URL } from "@/constants/api";
+import { API_BASE_URL, TON_REWARD_ADDRESS } from "@/constants/api";
 import { useTasks } from "@/providers/TasksProvider";
 import { useAppState } from "@/providers/AppStateProvider";
+import { useTonConnect } from "@/hooks/useTonConnect";
 import type { AgentMessage, AgentAction } from "@/types/tasks";
+
+const DEEP_ANALYSIS_TON_COST = "50000000";
 
 const QUICK_ACTIONS = [
   { label: "Today's Plan", icon: Calendar, prompt: "Plan my day and show what I should focus on right now." },
@@ -103,6 +108,27 @@ function ActionBubble({ action }: { action: AgentAction }) {
         </View>
         <Text style={styles.actionBubbleTitle}>{d.taskTitle}</Text>
         <Text style={styles.actionMeta}>→ {newDate}</Text>
+      </View>
+    );
+  }
+
+  if (action.type === "specialist_hired" && action.data) {
+    const d = action.data as any;
+    const nameMap: Record<string, string> = { habit_coach: "HabitOS", schedule_optimizer: "ChronoX", goal_strategist: "VisionCore" };
+    const specialistName = d.specialistName || nameMap[d.specialist] || d.specialist;
+    return (
+      <View style={[styles.actionBubble, { borderColor: `${Colors.gold}55` }]}>
+        <View style={styles.actionBubbleHeader}>
+          <Cpu size={13} color={Colors.gold} />
+          <Text style={[styles.actionBubbleLabel, { color: Colors.gold }]}>Specialist Hired · $TONIC Protocol</Text>
+        </View>
+        <Text style={styles.actionBubbleTitle}>{specialistName}</Text>
+        <View style={styles.actionBubbleMeta}>
+          <View style={[styles.priBadge, { backgroundColor: `${Colors.gold}20` }]}>
+            <Text style={[styles.priBadgeText, { color: Colors.gold }]}>-{d.tonicCost} $TONIC</Text>
+          </View>
+          <Text style={styles.actionMeta}>balance: {d.tonicRemaining}</Text>
+        </View>
       </View>
     );
   }
@@ -232,17 +258,20 @@ export default function AgentScreen() {
   const { tasks, addTask, toggleTaskStatus, updateTask, getStats } = useTasks();
   const { user } = useAppState();
   const { colors } = useTheme();
+  const { isConnected: isTonConnected, connectWallet: connectTonWallet, sendTransaction, isSendingTx } = useTonConnect();
+  const router = useRouter();
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const [messages, setMessages] = useState<AgentMessage[]>([
     {
       id: "welcome",
       role: "assistant",
-      content: "Hey! I'm Tonic, your AI productivity agent. I can create tasks, complete them, reschedule, plan your day, and give real-time insights — all through natural conversation.\n\nWhat do you need?",
+      content: "Hey! I'm Tonic, your AI productivity agent. I can create tasks, complete them, reschedule, plan your day, and give real-time insights — all through natural conversation.\n\nI also coordinate specialist sub-agents via the **$TONIC Protocol** — just ask me to delegate! What do you need?",
       timestamp: new Date(),
     },
   ]);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [isDeepAnalyzing, setIsDeepAnalyzing] = useState(false);
   const [isListening, setIsListening] = useState(false);
   const [streamingMsgId, setStreamingMsgId] = useState<string | null>(null);
   const scrollRef = useRef<ScrollView>(null);
@@ -375,6 +404,97 @@ export default function AgentScreen() {
     }
   }, [isLoading, messages, tasks, user, getStats, applyAction]);
 
+  const handleDeepStrategy = useCallback(async () => {
+    if (isLoading || isDeepAnalyzing) return;
+
+    const runDeepAnalysis = async () => {
+      setIsDeepAnalyzing(true);
+      const loadingId = uuidv4();
+      const waitMsg: AgentMessage = {
+        id: loadingId, role: "assistant",
+        content: "🔮 Running deep strategic analysis...",
+        timestamp: new Date(),
+      };
+      setMessages((prev) => [...prev, waitMsg]);
+
+      try {
+        const stats = await getStats();
+        const res = await fetch(`${API_BASE_URL}/api/agent/deep-analysis`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            tasks: tasks.map((t) => ({ id: t.id, title: t.title, category: t.category, priority: t.priority, status: t.status, dueDate: t.dueDate })),
+            stats,
+            userId: user?.id,
+          }),
+        });
+        const data = await res.json() as { analysis?: string; error?: string };
+        const analysis = data.analysis || data.error || "Analysis unavailable.";
+        setMessages((prev) => prev.map((m) =>
+          m.id === loadingId ? { ...m, content: analysis, isNew: true } : m
+        ));
+      } catch {
+        setMessages((prev) => prev.map((m) =>
+          m.id === loadingId ? { ...m, content: "Deep analysis failed. Check your connection and try again." } : m
+        ));
+      } finally {
+        setIsDeepAnalyzing(false);
+      }
+    };
+
+    // Check if user is a Tonian (verified badge holder)
+    let isTonian = false;
+    if (user?.id) {
+      try {
+        const res = await fetch(`${API_BASE_URL}/api/users/${user.id}`, { signal: AbortSignal.timeout(4000) });
+        if (res.ok) {
+          const data = await res.json() as { user?: { verifiedAt?: string | null } };
+          isTonian = !!data.user?.verifiedAt;
+        }
+      } catch { /* offline — treat as non-Tonian */ }
+    }
+
+    if (isTonian) {
+      void runDeepAnalysis();
+      return;
+    }
+
+    // Show paywall for non-Tonian users
+    Alert.alert(
+      "🔮 Deep Strategy Session",
+      "Get a full strategic productivity report — 5× deeper than standard analysis.\n\n• FREE for Tonian Badge holders (lifetime)\n• 0.05 TON for this session\n\nThe Tonian Badge (1 TON) gives permanent free access + 2× point multiplier.",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Get Tonian Badge →",
+          onPress: () => { router.push("/tonian-badge" as any); },
+        },
+        {
+          text: "Pay 0.05 TON",
+          onPress: async () => {
+            if (!isTonConnected) {
+              Alert.alert("Wallet Required", "Connect your TON wallet to pay for this session.", [
+                { text: "Connect Wallet", onPress: () => void connectTonWallet() },
+                { text: "Cancel", style: "cancel" },
+              ]);
+              return;
+            }
+            try {
+              const result = await sendTransaction({
+                to: TON_REWARD_ADDRESS,
+                amount: DEEP_ANALYSIS_TON_COST,
+                comment: `Tonic AI | Deep Strategy Session | ${user?.name || "User"}`,
+              });
+              if (result) void runDeepAnalysis();
+            } catch {
+              Alert.alert("Transaction Failed", "Could not complete payment. Check your wallet balance and try again.");
+            }
+          },
+        },
+      ]
+    );
+  }, [isLoading, isDeepAnalyzing, tasks, getStats, user, isTonConnected, connectTonWallet, sendTransaction, router]);
+
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
       {/* Header */}
@@ -385,7 +505,7 @@ export default function AgentScreen() {
             <Text style={styles.headerTitle}>Tonic Agent</Text>
             <View style={styles.statusRow}>
               <View style={styles.statusDot} />
-              <Text style={styles.statusText}>GPT-5.2 · 5 Tools Active</Text>
+              <Text style={styles.statusText}>GPT-5.2 · 8 Tools · $TONIC Protocol</Text>
             </View>
           </View>
         </View>
@@ -397,17 +517,29 @@ export default function AgentScreen() {
         {messages.map((msg) => <MessageBubble key={msg.id} message={msg} isStreaming={streamingMsgId === msg.id} />)}
       </ScrollView>
 
-      {/* Quick actions 2×2 grid */}
+      {/* Quick actions grid */}
       <View style={styles.quickGrid}>
         {QUICK_ACTIONS.map((action) => {
           const Icon = action.icon;
           return (
-            <TouchableOpacity key={action.label} style={styles.quickChip} onPress={() => sendMessage(action.prompt)} disabled={isLoading} activeOpacity={0.75}>
+            <TouchableOpacity key={action.label} style={styles.quickChip} onPress={() => sendMessage(action.prompt)} disabled={isLoading || isDeepAnalyzing} activeOpacity={0.75}>
               <Icon size={14} color={Colors.gold} />
               <Text style={styles.quickText}>{action.label}</Text>
             </TouchableOpacity>
           );
         })}
+        {/* Premium Deep Strategy button */}
+        <TouchableOpacity
+          style={[styles.quickChip, styles.deepChip]}
+          onPress={() => void handleDeepStrategy()}
+          disabled={isLoading || isDeepAnalyzing || isSendingTx}
+          activeOpacity={0.75}
+        >
+          <Crown size={14} color="#0D1117" />
+          <Text style={[styles.quickText, { color: "#0D1117", fontWeight: "700" }]}>
+            {isDeepAnalyzing ? "Analyzing…" : "Deep Strategy"}
+          </Text>
+        </TouchableOpacity>
       </View>
 
       {/* Input bar */}
@@ -478,6 +610,7 @@ const makeStyles = (colors: AppColors) => StyleSheet.create({
 
   quickGrid: { flexDirection: "row", flexWrap: "wrap", gap: 8, paddingHorizontal: 14, paddingVertical: 10, borderTopWidth: 1, borderTopColor: colors.border, backgroundColor: colors.bgSecondary },
   quickChip: { flexDirection: "row", alignItems: "center", gap: 6, paddingHorizontal: 13, paddingVertical: 8, borderRadius: 20, backgroundColor: colors.bgTertiary, borderWidth: 1, borderColor: `${Colors.gold}28`, flex: 1, minWidth: "45%" },
+  deepChip: { backgroundColor: Colors.gold, borderColor: Colors.gold, shadowColor: Colors.gold, shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.35, shadowRadius: 6, elevation: 4 },
   quickText: { fontSize: 12, fontWeight: "600", color: colors.textSecondary, flex: 1 },
 
   inputRow: { flexDirection: "row", alignItems: "flex-end", gap: 8, paddingHorizontal: 14, paddingVertical: 10, paddingBottom: Platform.OS === "ios" ? 12 : 14, borderTopWidth: 1, borderTopColor: colors.border, backgroundColor: colors.bgSecondary },
