@@ -112,7 +112,7 @@ function MenuItem({
 
 export default function ProfileScreen() {
   const router = useRouter();
-  const { user, signOut, setUser, connectWallet: saveWalletUser } = useAppState();
+  const { user, signOut, setUser, connectWallet: saveWalletUser, resetApp } = useAppState();
   const { tasks, getStats, getCompletedTasks } = useTasks();
   const { stats: achievementStats, claimPoints } = useAchievements();
   const { isConnected: isTonConnected, walletAddress: tonWalletAddress, connectWallet: connectTonWallet, sendTransaction, recordAchievementOnChain } = useTonConnect();
@@ -194,7 +194,7 @@ export default function ProfileScreen() {
   const handleClearData = () => {
     Alert.alert("Clear All Data", "This will permanently delete all your tasks and progress. This action cannot be undone.", [
       { text: "Cancel", style: "cancel" },
-      { text: "Clear Data", style: "destructive", onPress: () => { signOut(); router.replace("/onboarding"); } },
+      { text: "Clear Data", style: "destructive", onPress: async () => { await resetApp(); router.replace("/onboarding"); } },
     ]);
   };
 

@@ -28,8 +28,10 @@ import {
   CheckCircle,
   Trophy,
 } from "lucide-react-native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useRouter } from "expo-router";
 import { Colors } from "@/constants/colors";
+import { API_BASE_URL } from "@/constants/api";
 import { useAppState } from "@/providers/AppStateProvider";
 import { useTonConnect } from "@/hooks/useTonConnect";
 
@@ -450,10 +452,47 @@ export default function OnboardingScreen() {
   }, []);
 
   useEffect(() => {
-    if (isConnected && walletAddress && !showWalletNameInput) {
-      setPendingWalletAddress(walletAddress);
+    if (!isConnected || !walletAddress || showWalletNameInput) return;
+
+    setPendingWalletAddress(walletAddress);
+
+    const derivedId = `wallet_${walletAddress.slice(-12)}`;
+
+    const tryRestore = async () => {
+      // 1. Check AsyncStorage first (fastest — covers the "didn't sign out" case)
+      try {
+        const stored = await AsyncStorage.getItem("@tonic_user");
+        if (stored) {
+          const existing = JSON.parse(stored) as { walletAddress?: string; name?: string };
+          if (existing.walletAddress === walletAddress && existing.name && existing.name !== "TON User") {
+            saveWallet(walletAddress, existing.name);
+            router.replace("/(tabs)");
+            return;
+          }
+        }
+      } catch { /* continue */ }
+
+      // 2. Check backend (covers returning users who signed out or switched devices)
+      try {
+        const res = await fetch(`${API_BASE_URL}/api/users/${derivedId}`, {
+          signal: AbortSignal.timeout(5000),
+        });
+        if (res.ok) {
+          const data = await res.json() as { user?: { name?: string } };
+          const storedName = data.user?.name;
+          if (storedName && storedName !== "TON User") {
+            saveWallet(walletAddress, storedName);
+            router.replace("/(tabs)");
+            return;
+          }
+        }
+      } catch { /* continue */ }
+
+      // 3. Brand-new wallet — ask for a display name
       setShowWalletNameInput(true);
-    }
+    };
+
+    void tryRestore();
   }, [isConnected, walletAddress]);
 
   const handleWalletNameSubmit = () => {

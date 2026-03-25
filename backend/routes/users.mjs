@@ -3,6 +3,30 @@ import { db } from "../db.mjs";
 
 const router = Router();
 
+// ── Fetch a single user by ID ─────────────────────────────────────────────────
+router.get("/users/:userId", async (req, res) => {
+  try {
+    const { rows } = await db.query(
+      "SELECT id, name, wallet_address, is_guest, tonic_tokens FROM users WHERE id = $1",
+      [req.params.userId],
+    );
+    if (!rows[0]) return res.status(404).json({ error: "User not found" });
+    const u = rows[0];
+    res.json({
+      user: {
+        id:            u.id,
+        name:          u.name,
+        walletAddress: u.wallet_address,
+        isGuest:       u.is_guest,
+        tonicTokens:   u.tonic_tokens || 0,
+      },
+    });
+  } catch (err) {
+    console.error("[Users] Fetch by ID error:", err.message);
+    res.status(500).json({ error: "Failed to fetch user" });
+  }
+});
+
 // ── Upsert user profile ───────────────────────────────────────────────────────
 router.post("/users", async (req, res) => {
   try {

@@ -20,7 +20,7 @@ export const TonConnectProvider: React.FC<TonConnectProviderProps> = ({
       actionsConfiguration={{
         twaReturnUrl: "https://t.me/tonic_ton_bot",
         returnStrategy: "back",
-        skipRedirectToWallet: "never",
+        skipRedirectToWallet: "ios",
       }}
       uiPreferences={{
         borderRadius: "m",

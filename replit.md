@@ -55,6 +55,7 @@ workspace/
 ### API Endpoints
 | Method | Path | Description |
 |--------|------|-------------|
+| GET | `/api/users/:userId` | Fetch single user by ID (used for returning-wallet check) |
 | GET | `/health` | Health check |
 | GET | `/tonconnect-manifest.json` | TonConnect wallet manifest |
 | POST | `/api/insights` | AI-generated productivity insights (GPT-5.2) |
