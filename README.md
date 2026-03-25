@@ -27,9 +27,13 @@ Every achievement you claim is permanently recorded on TON.
 
 ## 🎬 Demo
 
-<video src="https://raw.githubusercontent.com/i-anasop/Tonic/main/.github/assets/demo.mp4" width="100%" controls title="Tonic AI — Full App Demo"></video>
-
-> *GPT-4o agent creating tasks, triggering on-chain TONIC rewards, claiming achievements, and minting the Tonian Badge on TON testnet.*
+<div align="center">
+  <img src="https://raw.githubusercontent.com/i-anasop/Tonic/main/.github/assets/demo.gif" width="380" alt="Tonic AI — App Demo" />
+  <br/>
+  <sub><i>GPT-4o agent creating tasks · on-chain TONIC rewards · achievement claims · Tonian Badge mint on TON testnet</i></sub>
+  <br/><br/>
+  <a href="https://raw.githubusercontent.com/i-anasop/Tonic/main/.github/assets/demo.mp4">▶ Watch full video (MP4)</a>
+</div>
 
 ---
 
