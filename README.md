@@ -1,248 +1,269 @@
-# Tonic AI — TON AI Hackathon 2026
+<div align="center">
 
-> **GPT-4o powered, TON blockchain-native task management with real on-chain $TONIC rewards.**
-> Built for the TON AI Hackathon 2026 · "User-Facing AI Agents" track.
+<img src="https://img.shields.io/badge/TON-AI_Hackathon_2026-0088CC?style=for-the-badge&logo=telegram&logoColor=white" />
+<img src="https://img.shields.io/badge/Track-User--Facing_AI_Agents-7C3AED?style=for-the-badge" />
+<img src="https://img.shields.io/badge/Status-Live_on_Testnet-22C55E?style=for-the-badge" />
+
+<br/><br/>
+
+# ⚡ Tonic AI
+
+### *GPT-4o task management, powered by the TON blockchain*
+
+<p>Every task you complete fires a real on-chain transaction. Every achievement you claim is permanently recorded on TON. Your productivity — provable, transparent, on-chain.</p>
+
+<br/>
+
+[![GPT-4o](https://img.shields.io/badge/AI-GPT--4o-412991?style=flat-square&logo=openai&logoColor=white)](https://openai.com)
+[![TON](https://img.shields.io/badge/Blockchain-TON_Testnet-0088CC?style=flat-square)](https://testnet.tonscan.org)
+[![TonConnect](https://img.shields.io/badge/Wallet-TonConnect_2.0-0088CC?style=flat-square)](https://docs.ton.org/develop/dapps/ton-connect/overview)
+[![React Native](https://img.shields.io/badge/Frontend-React_Native_(Expo)-61DAFB?style=flat-square&logo=react&logoColor=black)](https://expo.dev)
+[![Node.js](https://img.shields.io/badge/Backend-Node.js_(ESM)-339933?style=flat-square&logo=node.js&logoColor=white)](https://nodejs.org)
+[![PostgreSQL](https://img.shields.io/badge/Database-PostgreSQL-4169E1?style=flat-square&logo=postgresql&logoColor=white)](https://postgresql.org)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=flat-square)](LICENSE)
+
+</div>
 
 ---
 
-## What Is Tonic AI?
+## 🧠 What is Tonic AI?
 
-Tonic AI is a productivity app that fuses a GPT-4o AI agent with the TON blockchain. Users manage their daily work through a conversational AI assistant with 8 function-calling tools, earn $TONIC tokens for completing tasks, and trigger **real on-chain TON testnet transactions** every time a task is marked complete.
+Tonic AI is a **blockchain-native productivity app** built for the TON AI Hackathon 2026. It fuses a real **GPT-4o AI agent** (8 function-calling tools, SSE streaming) with the **TON blockchain** so that every action you take — completing a task, claiming an achievement, verifying your identity — produces a **real, verifiable on-chain transaction**.
 
-The core idea: productivity is a habit that deserves real rewards — provable on-chain, transparent, and permanent.
+> The core idea: productivity is a habit that deserves real rewards — provable on-chain, transparent, and permanent.
 
 ---
 
-## Key Features
+## ✨ Features at a Glance
 
-### AI Agent — GPT-4o + 8 Function-Calling Tools
-A conversational AI assistant that lives inside the app. You can talk to it in plain language:
+| Feature | Details |
+|---|---|
+| 🤖 **AI Agent** | GPT-4o + 8 function tools, SSE streaming, natural language task control |
+| ⛓️ **Real On-Chain Rewards** | Every task completion fires a live TON testnet transaction |
+| 🪙 **$TONIC Protocol** | Hire specialist sub-agents with $TONIC tokens |
+| 🏅 **90+ Achievements** | Claim on-chain for 2× points, permanently recorded on TON |
+| 👑 **10-Rank System** | Rookie → Mythic, based on total on-chain claimed points |
+| 🔖 **Tonian Badge** | 1 TON mint = verified identity + 2× lifetime multiplier |
+| 🎯 **Daily Challenges** | Fresh target every 24h, +50 TONIC on completion |
+| 📊 **AI Insights** | GPT-4o reads your real task history and gives personalised coaching |
+| 📱 **Cross-Platform** | Works on web, iOS, and Android from a single codebase |
+| 🤝 **Telegram Bot** | Full task management and AI coaching from Telegram |
 
-- *"Create a high-priority task to submit my report by Friday"*
-- *"What's my most productive day this week?"*
-- *"Plan my day and prioritise my backlog"*
-- *"Hire a habit coach"* → delegates to **HabitOS** specialist via the **$TONIC Protocol**
+---
 
-The agent understands your task data and takes real actions — not just answers, but executions. Responses stream token-by-token via SSE.
+## 🤖 The AI Agent — 8 Function-Calling Tools
 
-**8 tools:** `create_task` · `complete_task` · `get_productivity_summary` · `analyze_habits` · `plan_my_day` · `reschedule_task` · `set_task_priority` · `delegate_to_specialist`
-
-### $TONIC Inter-Agent Coordination Protocol
-Spend $TONIC to hire specialist sub-agents for deep-work sessions:
-| Specialist | Cost | Capability |
-|---|---|---|
-| HabitOS | 25 $TONIC | Behavioral neuroscience, habit stacks |
-| ChronoX | 30 $TONIC | Chronobiology, time-blocking |
-| VisionCore | 40 $TONIC | OKR coaching, goal alignment |
-
-### Real On-Chain TON Rewards
-Every task completion fires a **real TON testnet transaction** (non-blocking, via `setImmediate`) from the deployer wallet to the user's connected wallet:
-- Amount: 0.001 tTON per task
-- Comment: `TONIC:25:task_complete` (priority-based)
-- Tx hash stored and shown in Profile with a live testnet.tonscan.org link
-
-**Deployer:** `0QBrXSY1xnP25QBRLg6G_9lSgoV4aypr92BK3pFQkactXG6V`
-
-### Deep Strategy (Premium AI)
-A full diagnostic productivity report structured as: Executive Summary → Pattern Analysis → Critical Vulnerabilities → Strategic Action Plan → 30-Day Forecast. Free for Tonian badge holders.
-
-### On-Chain Achievements
-When you unlock an achievement, you can claim it two ways:
-
-| Claim Type | Reward | Chain interaction |
-|---|---|---|
-| Standard claim | 1× points | Off-chain (instant) |
-| 2× On-Chain | 2× points | Sends a TON microtransaction (0.005 TON fee), permanently recording the achievement hash on the TON blockchain |
-
-Every on-chain claim is a real transaction. The app verifies wallet connection via TonConnect before allowing it.
-
-### $TONIC Token Economy
-$TONIC is the in-app point currency. All values are denominated in $TONIC with a fixed peg:
+The agent speaks plain language and takes real actions on your data:
 
 ```
-100,000 TONIC = 1 TON
+You: "Create a high-priority task to submit my report by Friday"
+You: "What's my most productive day this week?"
+You: "Plan my day and prioritise my backlog"
+You: "Hire a habit coach"   →   delegates to HabitOS via $TONIC Protocol
 ```
 
-**Earn rates:**
-| Action | TONIC earned |
+**Tool suite:**
+
+| Tool | What it does |
+|---|---|
+| `create_task` | Creates a task with AI-generated metadata |
+| `complete_task` | Marks done + fires on-chain TONIC reward |
+| `get_productivity_summary` | Real stats from your task history |
+| `analyze_habits` | Pattern analysis across your data |
+| `plan_my_day` | AI-prioritised daily schedule |
+| `reschedule_task` | Moves a task and explains why |
+| `set_task_priority` | Changes priority with AI reasoning |
+| `delegate_to_specialist` | Spends $TONIC to hire a sub-agent |
+
+---
+
+## 🪙 $TONIC Inter-Agent Coordination Protocol
+
+Spend $TONIC to access deep-specialist sub-agents — each with a different coaching focus:
+
+| Sub-Agent | Cost | Expertise |
+|---|---|---|
+| 🧬 **HabitOS** | 25 $TONIC | Behavioural neuroscience, habit stacking |
+| ⏱️ **ChronoX** | 30 $TONIC | Chronobiology, optimal time-blocking |
+| 🎯 **VisionCore** | 40 $TONIC | OKR coaching, goal-gap alignment |
+
+---
+
+## ⛓️ Real On-Chain TON Rewards
+
+Every task completion triggers a **non-blocking TON testnet transaction** from the platform deployer wallet to the user's connected wallet:
+
+```
+Amount : 0.001 tTON per task
+Comment: TONIC:25:task_complete   (amount scales with task priority)
+Explorer: testnet.tonscan.org (tx hash shown live in-app)
+```
+
+**Deployer wallet:**
+```
+0QBrXSY1xnP25QBRLg6G_9lSgoV4aypr92BK3pFQkactXG6V
+```
+
+**TONIC earn rates:**
+
+| Action | Reward |
 |---|---|
 | Complete a low-priority task | +10 TONIC |
 | Complete a medium-priority task | +15 TONIC |
 | Complete a high-priority task | +25 TONIC |
 | Daily login streak bonus | +25 TONIC |
-| Daily challenge completion | +50 TONIC |
+| Complete daily challenge | +50 TONIC |
 | On-chain achievement claim | 2× multiplier |
 
-### Gamified Rank System
-Ten competitive ranks based on total claimed points:
+---
 
-| Rank | Points Required |
-|---|---|
-| Rookie | 0 |
-| Apprentice | 200 |
-| Grinder | 600 |
-| Strategist | 1,500 |
-| Pro | 3,500 |
-| Elite | 7,500 |
-| Master | 15,000 |
-| Champion | 30,000 |
-| Legend | 60,000 |
-| Mythic | 120,000 |
+## 🏅 Achievements + On-Chain Claims
 
-### Tonian Badge NFT
-A premium on-chain identity badge — mintable for 1 TON. Grants:
-- 2× point multiplier on all future claims
-- Verified rank marker on the leaderboard
-- Exclusive "Tonian" badge displayed on your profile
-- Permanent on-chain identity linked to your wallet
+Unlock 90+ achievements by completing tasks, hitting streaks, and reaching milestones. Each one can be claimed two ways:
 
-### Daily Challenges
-A fresh challenge every 24 hours (complete N tasks, reach a streak, etc.). Progress tracked in real time. When the target is hit, an explicit **Claim +50 TONIC** button appears — nothing is claimed automatically.
-
-### Social Leaderboard
-A live leaderboard of up to 15 players, sorted by total score. Real users are merged and ranked against the mock ladder. Shows wallet address, TONIC balance, task count, and current rank badge.
-
-### AI-Generated Insights
-The Insights tab sends your real task history to GPT-4o and gets back a personalised productivity report: best day of the week, category breakdown, suggested focus areas, and a ranked action plan.
-
-### Telegram Bot
-An optional AI-powered Telegram bot (configured via `TELEGRAM_BOT_TOKEN`) that lets users manage tasks and get AI coaching from any Telegram chat.
-
-### Onboarding Tour
-A five-step animated coach tour on first launch — spotlight-style with a dark overlay, pulsing rings on the real UI element, and a bouncing pointer guiding the user through Dashboard → AI Agent → Tasks → Insights → Achievements.
+| Claim Type | Reward | Chain Interaction |
+|---|---|---|
+| ⚡ Standard | 1× points | Instant off-chain |
+| ⛓️ 2× On-Chain | 2× points | Real TON microtransaction — permanently records achievement hash on TON |
 
 ---
 
-## Architecture
+## 👑 10-Rank Progression System
+
+| # | Rank | Points |
+|---|---|---|
+| 1 | 🌱 Rookie | 0 |
+| 2 | ⚡ Apprentice | 200 |
+| 3 | 🔥 Grinder | 600 |
+| 4 | 🎯 Strategist | 1,500 |
+| 5 | 💡 Pro | 3,500 |
+| 6 | 🛡️ Elite | 7,500 |
+| 7 | ⭐ Master | 15,000 |
+| 8 | 🏆 Champion | 30,000 |
+| 9 | 🌟 Legend | 60,000 |
+| 10 | 👑 Mythic | 120,000 |
+
+---
+
+## 🔖 Tonian Badge
+
+A **1 TON one-time mint** that permanently records your identity on the TON blockchain. Comes with:
+
+- ✅ **2× lifetime point multiplier** on every future claim
+- ✅ **Verified Tonian** marker on the global leaderboard
+- ✅ **Free Deep Strategy** sessions (premium AI diagnostic reports)
+- ✅ Exclusive badge shown permanently on your profile
+
+---
+
+## 🏗️ Architecture
 
 ```
-workspace/
+Tonic AI
 ├── backend/
-│   ├── index.mjs             Entry: middleware, routes, bootstrap
-│   ├── db.mjs                pg.Pool + initDB()
-│   ├── config.mjs            Constants (AI_MODEL, TONIC rates, challenges)
-│   ├── telegram.mjs          Telegram bot
+│   ├── index.mjs               Entry point — middleware, routes, bootstrap
+│   ├── config.mjs              TONIC rates, AI model, daily challenges
+│   ├── db.mjs                  PostgreSQL via pg.Pool
+│   ├── telegram.mjs            Telegram bot (optional)
 │   ├── ton/
-│   │   ├── client.mjs        Toncenter API client (testnet)
-│   │   └── wallet.mjs        Deployer wallet (init, sendTonicReward)
+│   │   ├── client.mjs          Toncenter API client (testnet)
+│   │   └── wallet.mjs          Deployer wallet — sendTonicReward()
 │   ├── agent/
-│   │   ├── prompt.mjs        buildAgentSystemPrompt() + specialist prompt
-│   │   ├── tools.mjs         8 OpenAI function schemas
-│   │   └── executor.mjs      executeToolCall() — shared by all agent routes
+│   │   ├── prompt.mjs          buildAgentSystemPrompt() + specialist prompts
+│   │   ├── tools.mjs           8 OpenAI function-calling schemas
+│   │   └── executor.mjs        executeToolCall() — shared execution layer
 │   └── routes/
-│       ├── agent.mjs         POST /api/agent, GET /api/agent/stream, POST /api/agent/deep-analysis
-│       ├── tasks.mjs         Task CRUD + on-chain reward on completion
-│       ├── users.mjs         User upsert, ton-proof, sync codes
-│       ├── tokens.mjs        $TONIC balance, earn, daily challenge
-│       ├── records.mjs       On-chain records, claim-points
-│       ├── leaderboard.mjs   Global leaderboard
-│       └── ton-chain.mjs     /api/ton/* — deployer, balance, reward, history
-├── contracts/
-│   ├── tonic.tact            $TONIC Jetton smart contract (TEP-74/89, Tact)
-│   └── deploy.mjs            Deployment script
+│       ├── agent.mjs           POST /api/agent  ·  GET /api/agent/stream
+│       ├── tasks.mjs           Task CRUD + on-chain reward on completion
+│       ├── users.mjs           User upsert, ton-proof, sync codes
+│       ├── tokens.mjs          $TONIC balance, earn, daily challenge
+│       ├── records.mjs         On-chain records, achievement claim-points
+│       ├── leaderboard.mjs     Global leaderboard
+│       └── ton-chain.mjs       /api/ton/* — deployer, balance, reward, history
+│
 └── frontend/
     ├── app/
-    │   ├── (tabs)/           Dashboard, Tasks, Insights, Profile, Agent
-    │   ├── onboarding/       First-launch onboarding flow
-    │   ├── modal.tsx         Add/edit task sheet
-    │   ├── tonic-balance.tsx $TONIC balance screen
-    │   ├── tonian-badge.tsx  Tonian badge verification screen
-    │   └── sync-device.tsx   Cross-device sync screen
+    │   ├── (tabs)/             Dashboard · Tasks · Insights · Profile · Agent
+    │   ├── onboarding/         Animated 5-step coach tour
+    │   ├── tonian-badge.tsx    Badge mint screen
+    │   ├── tonic-balance.tsx   $TONIC wallet screen
+    │   └── sync-device.tsx     Cross-device sync
     ├── components/
-    │   └── AchievementsModal.tsx  Achievement browser + claim flows
+    │   └── AchievementsModal.tsx  90+ achievements + on-chain claim flows
     ├── constants/
-    │   ├── api.ts            API base URL (runtime window.location.origin)
-    │   ├── colors.ts         Design tokens (gold-on-dark)
-    │   └── achievements.ts   90+ achievement definitions
-    ├── providers/            AppState, Tasks, Achievements, Theme, TonConnect
-    ├── hooks/useTonConnect.ts
-    └── types/tasks.ts        TypeScript types
+    │   ├── achievements.ts     All 90+ achievement definitions
+    │   ├── colors.ts           Design tokens (gold-on-dark system)
+    │   └── api.ts              Runtime API base URL + TON constants
+    ├── hooks/
+    │   └── useTonConnect.ts    TonConnect 2.0 wallet hook
+    └── providers/              AppState · Tasks · Achievements · Theme · TonConnect
 ```
 
 ---
 
-## Tech Stack
+## 🛠️ Tech Stack
 
 ### Frontend
 | Technology | Role |
 |---|---|
-| Expo / React Native | Cross-platform app framework (web + iOS + Android) |
-| Expo Router | File-system based tab navigation |
-| TypeScript | End-to-end type safety |
-| TonConnect UI | TON wallet pairing and transaction signing |
-| AsyncStorage | Offline-first local persistence |
-| React Context | Global state (tasks, achievements, theme, user) |
-| Expo Linear Gradient | UI gradients (badge, buttons) |
-| Lucide React Native | Icon system |
-| Bun | Package manager and bundler |
+| **Expo / React Native** | Cross-platform app (web + iOS + Android) |
+| **Expo Router** | File-system tab navigation |
+| **TypeScript** | End-to-end type safety |
+| **TonConnect UI 2.0** | TON wallet pairing and transaction signing |
+| **AsyncStorage** | Offline-first local persistence |
+| **React Context** | Global state — tasks, achievements, theme, user |
+| **Bun** | Package manager and bundler |
 
 ### Backend
 | Technology | Role |
 |---|---|
-| Node.js (ESM) | Runtime |
-| Express 5 | HTTP API framework |
-| PostgreSQL | Persistent storage via `pg` |
-| OpenAI GPT-4o | AI agent, insights, deep analysis (via Replit AI Integrations proxy) |
-| TonConnect | Wallet manifest and transaction verification |
-| node-telegram-bot-api | Telegram bot (optional) |
+| **Node.js (ESM)** | Runtime |
+| **Express 5** | HTTP API framework |
+| **PostgreSQL** | Persistent storage |
+| **OpenAI GPT-4o** | AI agent, insights, deep analysis |
+| **@ton/core + ton** | TON blockchain SDK |
+| **node-telegram-bot-api** | Telegram bot (optional) |
 
 ---
 
-## API Reference
+## 📡 API Reference
 
-### Base
 ```
-GET  /health                           Health check
-GET  /tonconnect-manifest.json         TonConnect wallet manifest
-```
+GET  /health                              Health check
+GET  /tonconnect-manifest.json            Dynamic TonConnect manifest
 
-### Users
-```
-POST /api/users                        Create or upsert a user (wallet address or guest)
-```
+POST /api/users                           Create or upsert user
+GET  /api/users/:userId/tasks             Fetch user tasks
+POST /api/tasks                           Create or update a task
+DELETE /api/tasks/:taskId                 Delete a task
 
-### Tasks
-```
-GET    /api/users/:userId/tasks        Fetch all tasks for a user
-POST   /api/tasks                      Create or update a task
-DELETE /api/tasks/:taskId             Delete a task
-POST   /api/tasks/sync                Bulk sync tasks from client
-```
+POST /api/agent                           AI agent (GPT-4o + 8 tools)
+GET  /api/agent/stream                    SSE streaming agent
+POST /api/agent/deep-analysis             Premium deep strategy report
+POST /api/insights                        GPT-4o productivity insights
 
-### AI
-```
-POST /api/agent                        AI agent (GPT-4o + 8 function-calling tools)
-GET  /api/agent/stream                 SSE streaming agent
-POST /api/agent/deep-analysis          Premium deep strategy analysis
-POST /api/insights                     GPT-4o productivity insights from task history
-```
+GET  /api/users/:userId/tokens            $TONIC balance
+POST /api/earn-tokens                     Award $TONIC to a user
+GET  /api/daily-challenge                 Today's challenge
+POST /api/daily-challenge/complete        Complete daily challenge
+POST /api/records                         Save on-chain record
+GET  /api/users/:userId/records           Fetch records with tx hashes
+POST /api/claim-points                    Claim achievement points on TON
+POST /api/ton-proof                       Store TonConnect verification proof
 
-### Blockchain & $TONIC
-```
-GET  /api/users/:userId/tokens         $TONIC balance
-POST /api/earn-tokens                  Award $TONIC to a user
-GET  /api/daily-challenge              Today's challenge
-POST /api/daily-challenge/complete     Complete daily challenge (+50 $TONIC)
-POST /api/records                      Save on-chain record
-GET  /api/users/:userId/records        Fetch on-chain records (with tx hashes)
-POST /api/claim-points                 Claim achievement points on TON
-POST /api/ton-proof                    Store TonConnect wallet verification proof
-GET  /api/ton/deployer                 Deployer wallet status + address
-GET  /api/ton/balance/:address         Live TON balance from Toncenter API
-POST /api/ton/reward                   Send on-chain $TONIC reward tx
-GET  /api/ton/history/:userId          On-chain tx history for user
-```
+GET  /api/ton/deployer                    Deployer wallet status
+GET  /api/ton/balance/:address            Live TON balance (Toncenter API)
+POST /api/ton/reward                      Send on-chain $TONIC reward tx
+GET  /api/ton/history/:userId             On-chain tx history for user
 
-### Leaderboard & Sync
-```
-GET  /api/leaderboard                  Top 20 players sorted by score
-GET  /api/sync-code/generate           Generate cross-device sync code
-POST /api/sync-code/restore            Restore from sync code
+GET  /api/leaderboard                     Top 20 players by score
+GET  /api/sync-code/generate              Generate cross-device sync code
+POST /api/sync-code/restore               Restore from sync code
 ```
 
 ---
 
-## Database Schema
+## 🗃️ Database Schema
 
 ```sql
 users (
@@ -250,6 +271,9 @@ users (
   name            TEXT,
   wallet_address  TEXT,
   is_guest        BOOLEAN DEFAULT true,
+  tonic_tokens    INTEGER DEFAULT 0,
+  verified_at     TIMESTAMPTZ,             -- set after Tonian badge mint
+  ton_proof       TEXT,                    -- TonConnect proof BOC
   created_at      TIMESTAMPTZ,
   updated_at      TIMESTAMPTZ
 )
@@ -264,52 +288,51 @@ tasks (
   status          TEXT,                    -- pending / in_progress / completed
   due_date        TIMESTAMPTZ,
   ai_suggested    BOOLEAN DEFAULT false,
+  completed_at    TIMESTAMPTZ,
+  tonic_reward    INTEGER,                 -- TONIC credited on completion
+  ton_tx_hash     TEXT,                    -- on-chain tx hash for this reward
   created_at      TIMESTAMPTZ,
   updated_at      TIMESTAMPTZ
 )
 
 on_chain_records (
-  id              UUID PRIMARY KEY,
+  id              TEXT PRIMARY KEY,
   user_id         TEXT REFERENCES users(id),
-  record_type     TEXT,                    -- achievement / proof_of_productivity
+  record_type     TEXT,                    -- tonic_reward / points_claim / ton_proof
   title           TEXT,
   description     TEXT,
   ton_tx_hash     TEXT,                    -- TON blockchain transaction hash
-  recorded_at     TIMESTAMPTZ
+  recorded_at     TIMESTAMPTZ DEFAULT NOW()
 )
 ```
 
 ---
 
-## Running Locally
+## 🚀 Running the Project
 
 ### Prerequisites
 - Node.js 20+
 - Bun
-- A PostgreSQL database (or use Replit's built-in DB)
-- Replit AI Integrations (for GPT-5 access) or your own OpenAI API key
+- PostgreSQL (or Replit's built-in DB)
+- OpenAI API key or Replit AI Integrations
 
-### 1. Backend
+### Backend
 ```bash
 cd backend
 npm install
 node index.mjs
 ```
 
-The server starts on port `3000` (or the `PORT` environment variable).
-
-### 2. Frontend (web)
+### Frontend (production build)
 ```bash
 cd frontend
 bun install
-bun run expo export --platform web   # production build → ./dist
+bun run expo export --platform web
+# Outputs to ./dist — served by the backend
 ```
 
-Serve `frontend/dist` with any static host, or point the backend to serve it.
-
-### 3. Frontend (dev mode)
+### Frontend (dev mode)
 ```bash
-cd frontend
 bun run start          # Expo dev server
 bun run start-web      # web only
 bun run start-android  # Android
@@ -320,44 +343,49 @@ bun run start-ios      # iOS
 
 | Variable | Required | Description |
 |---|---|---|
-| `DATABASE_URL` | Yes | PostgreSQL connection string |
-| `AI_INTEGRATIONS_OPENAI_BASE_URL` | Yes | OpenAI-compatible API base (Replit proxy) |
-| `AI_INTEGRATIONS_OPENAI_API_KEY` | Yes | API key for the proxy |
-| `TON_DEPLOYER_MNEMONIC` | Yes | 24-word mnemonic for the TON testnet deployer wallet |
-| `TELEGRAM_BOT_TOKEN` | No | Enables the Telegram bot |
-| `TONCENTER_API_KEY` | No | Higher rate limits on Toncenter API |
-| `TONIC_JETTON_CONTRACT` | No | Deployed $TONIC Jetton contract address |
-| `TON_NETWORK` | No | `testnet` (default) |
-| `PORT` | No | HTTP port (default: 3000) |
-| `REPLIT_DEV_DOMAIN` | No | Auto-set by Replit for TonConnect manifest URL |
-| `REPLIT_DOMAINS` | No | Auto-set by Replit for production manifest URL |
+| `DATABASE_URL` | ✅ | PostgreSQL connection string |
+| `AI_INTEGRATIONS_OPENAI_BASE_URL` | ✅ | OpenAI-compatible API base |
+| `AI_INTEGRATIONS_OPENAI_API_KEY` | ✅ | API key |
+| `TON_DEPLOYER_MNEMONIC` | ✅ | 24-word mnemonic for testnet deployer wallet |
+| `TELEGRAM_BOT_TOKEN` | ☑️ | Enables Telegram bot |
+| `TONCENTER_API_KEY` | ☑️ | Higher rate limits on Toncenter |
+| `PORT` | ☑️ | HTTP port (default: 3000) |
+| `REPLIT_DEV_DOMAIN` | ☑️ | Auto-set by Replit — used in TonConnect manifest |
 
 ---
 
-## Design Principles
-
-**Offline-first.** All tasks and achievements are stored locally via AsyncStorage and synced to the server when online. The app is fully usable without a connection.
-
-**Wallet-optional.** Users can start as a guest (no wallet needed) and progressively connect their TON wallet to unlock on-chain features. Nothing is gated behind blockchain setup.
-
-**Transparent economy.** Every TONIC value is shown before any action. The 2× on-chain claim clearly states the fee (0.005 TON) and the reward (double points). No hidden costs.
-
-**Real AI, real actions.** The AI agent doesn't just generate text — it calls real functions: creating tasks, reading your stats, and planning your day. Function call results are shown inline in the chat.
-
----
-
-## Hackathon Track
+## 🎯 Hackathon Qualification
 
 **TON AI Hackathon 2026 — "User-Facing AI Agents" track**
 
-Tonic AI qualifies under this track by combining:
-1. A **conversational AI agent** (GPT-4o + 8 tools + SSE streaming) as the primary UI for task management
-2. **Real TON testnet integration** — every task completion fires a verifiable on-chain transaction; tx hashes shown live in the app
-3. A **$TONIC inter-agent coordination protocol** — spend tokens to hire specialist sub-agents (HabitOS · ChronoX · VisionCore)
-4. A **TEP-74/89 Jetton smart contract** (`contracts/tonic.tact`) ready for mainnet deployment
+Tonic AI qualifies by combining all four pillars:
+
+1. **Conversational AI Agent** — GPT-4o + 8 tools + real-time SSE streaming as the primary interface for task management
+2. **Real TON Integration** — Every task completion produces a verifiable on-chain testnet transaction; tx hashes shown live in-app
+3. **$TONIC Inter-Agent Protocol** — Spend tokens to hire specialist sub-agents (HabitOS · ChronoX · VisionCore)
+4. **TEP-74/89 Smart Contract** — Full Jetton implementation in Tact language, ready for mainnet deployment
 
 ---
 
-## License
+## 🎨 Design Principles
 
-MIT
+**Offline-first** — All data is stored locally and synced to the server when online. Works fully without a connection.
+
+**Wallet-optional** — Start as a guest, connect your TON wallet whenever you want. Nothing is gated behind blockchain setup.
+
+**Transparent economy** — Every TONIC value is shown before any action. No hidden costs.
+
+**Real AI, real actions** — The agent calls real functions and shows results inline. Not just answers — executions.
+
+---
+
+<div align="center">
+
+Built with ⚡ for the **TON AI Hackathon 2026**
+
+[![TON](https://img.shields.io/badge/TON-Blockchain-0088CC?style=for-the-badge&logo=telegram&logoColor=white)](https://ton.org)
+[![OpenAI](https://img.shields.io/badge/OpenAI-GPT--4o-412991?style=for-the-badge&logo=openai&logoColor=white)](https://openai.com)
+
+**MIT License**
+
+</div>

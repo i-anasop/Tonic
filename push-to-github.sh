@@ -3,46 +3,59 @@ set -e
 
 REPO_URL="https://x-access-token:${GITHUB_PERSONAL_ACCESS_TOKEN}@github.com/i-anasop/Tonic.git"
 
-echo "🔧 Configuring git identity..."
+echo "Configuring git identity..."
 git config user.email "tonic-ai@replit.dev"
 git config user.name "Tonic AI"
 
 # Remove stale lock files if present
 rm -f .git/index.lock .git/config.lock
 
-echo "📋 Checking for uncommitted changes..."
-if ! git diff --quiet || ! git diff --cached --quiet || [ -n "$(git ls-files --others --exclude-standard)" ]; then
-  echo "   Staging all changes..."
-  git add -A
-  git commit -m "fix: critical bug fixes + backend sync — v2.1.0
+# Remove files from Git tracking that should be hidden on GitHub
+# (the files stay on disk — only removed from the git index)
+echo "Cleaning tracked files that belong in .gitignore..."
+git rm --cached -r contracts/   2>/dev/null || true
+git rm --cached -r landing/     2>/dev/null || true
+git rm --cached -r .local/      2>/dev/null || true
+git rm --cached -r .agents/     2>/dev/null || true
+git rm --cached -r .cache/      2>/dev/null || true
+git rm --cached -r .config/     2>/dev/null || true
+git rm --cached prompt.txt      2>/dev/null || true
+git rm --cached push-to-github.sh 2>/dev/null || true
+git rm --cached replit.md       2>/dev/null || true
+git rm --cached .replit         2>/dev/null || true
+git rm --cached pnpm-lock.yaml  2>/dev/null || true
+git rm --cached pnpm-workspace.yaml 2>/dev/null || true
+git rm --cached package.json    2>/dev/null || true
+git rm --cached tsconfig.json   2>/dev/null || true
+git rm --cached .npmrc          2>/dev/null || true
+echo "   Done."
 
-- Fix stale closure bug in sendTransaction (walletRef instead of state.isConnected)
-- Fix wrong zero/burn address in recordAchievementOnChain (uses TON_REWARD_ADDRESS now)
-- Fix empty onStatusChange handler — updates wallet state for faster mobile detection
-- Fix mainnet TONScan link after badge mint (testnet.tonscan.org)
-- Fix minted state not persisting after navigation (backend check on mount)
-- Fix AchievementsModal missing backend sync after on-chain claim
-- Landing page at /landing with particle animations and full feature showcase
-- GPT-4o, real TON testnet transactions, deployer wallet 2 tTON funded
-- 8 AI agent tools, 90+ achievements, 10 rank levels (Rookie to Mythic)
-- TEP-74/89 Jetton smart contract, SSE streaming, Telegram bot"
-  echo "   Committed."
-else
-  echo "   Nothing to commit — all changes already committed."
-fi
+echo "Staging all changes..."
+git add -A
+git status --short | head -20
 
-echo "🔗 Setting up GitHub remote..."
+echo "Committing..."
+git diff --cached --quiet && echo "   Nothing new to commit." || git commit -m "chore: clean repo — only frontend/ backend/ README.md visible — v2.2.0
+
+- Add .gitignore: hides contracts, landing, replit internals, scripts
+- Remove previously-tracked hidden files from git index
+- Redesign README with badges, shields, tables, emoji, architecture tree
+- Fix stale closure bug in sendTransaction (walletRef)
+- Fix wrong burn address in recordAchievementOnChain (TON_REWARD_ADDRESS)
+- Fix onStatusChange handler updates wallet state immediately on mobile
+- Fix mainnet TONScan link after badge mint -> testnet.tonscan.org
+- Fix Tonian Badge minted state resets on navigation (backend check on mount)
+- Fix AchievementsModal missing backend sync after on-chain claim"
+
+echo "Setting up GitHub remote..."
 if git remote get-url github &>/dev/null; then
   git remote set-url github "$REPO_URL"
-  echo "   Remote updated."
 else
   git remote add github "$REPO_URL"
-  echo "   Remote added."
 fi
 
-echo "📦 Pushing to GitHub (this may take 30-60 seconds)..."
+echo "Pushing to GitHub..."
 git push github main
 
 echo ""
-echo "✅ Done! Your repo is live at:"
-echo "   https://github.com/i-anasop/Tonic"
+echo "Done! Live at: https://github.com/i-anasop/Tonic"

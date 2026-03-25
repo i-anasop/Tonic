@@ -1,0 +1,34 @@
+# ── Replit internals ──────────────────────────────────────────────────────────
+.replit
+replit.md
+.local/
+.agents/
+.cache/
+.config/
+
+# ── Deployment / scripts ──────────────────────────────────────────────────────
+push-to-github.sh
+prompt.txt
+
+# ── Smart contracts (separate repo / deployment) ──────────────────────────────
+contracts/
+
+# ── Marketing landing page (separate deployment) ──────────────────────────────
+landing/
+
+# ── Build artifacts ───────────────────────────────────────────────────────────
+frontend/dist/
+frontend/.expo/
+node_modules/
+*.log
+
+# ── Workspace / package manager ───────────────────────────────────────────────
+pnpm-lock.yaml
+pnpm-workspace.yaml
+package.json
+tsconfig.json
+.npmrc
+
+# ── OS ────────────────────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
