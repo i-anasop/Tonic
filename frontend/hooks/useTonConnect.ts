@@ -3,6 +3,7 @@ import {
   useTonConnectUI,
   useTonWallet,
 } from "@tonconnect/ui-react";
+import { TON_REWARD_ADDRESS } from "@/constants/api";
 
 interface TonConnectState {
   isConnected: boolean;
@@ -32,11 +33,16 @@ interface UseTonConnectReturn extends TonConnectState {
   }) => Promise<TonTxResult | null>;
 }
 
-const ACHIEVEMENT_CONTRACT = "EQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAM9c";
-
 export const useTonConnect = (): UseTonConnectReturn => {
   const [tonConnectUI] = useTonConnectUI();
   const wallet = useTonWallet();
+
+  // Keep a ref to the wallet so callbacks never use a stale closure
+  const walletRef = useRef(wallet);
+  useEffect(() => {
+    walletRef.current = wallet;
+  }, [wallet]);
+
   const [state, setState] = useState<TonConnectState>({
     isConnected: false,
     walletAddress: null,
@@ -46,14 +52,26 @@ export const useTonConnect = (): UseTonConnectReturn => {
   });
   const unsubscribeRef = useRef<(() => void) | null>(null);
 
+  // Subscribe to TonConnect status changes for faster detection on mobile
   useEffect(() => {
     if (tonConnectUI) {
       setState((prev) => ({ ...prev, isInitialized: true }));
 
       try {
         const unsubscribe = tonConnectUI.onStatusChange((walletInfo) => {
-          if (walletInfo) {
-            // wallet connected
+          if (walletInfo && walletInfo.account?.address) {
+            setState((prev) => ({
+              ...prev,
+              isConnected: true,
+              walletAddress: walletInfo.account.address,
+              error: null,
+            }));
+          } else {
+            setState((prev) => ({
+              ...prev,
+              isConnected: false,
+              walletAddress: null,
+            }));
           }
         });
         unsubscribeRef.current = unsubscribe;
@@ -70,6 +88,7 @@ export const useTonConnect = (): UseTonConnectReturn => {
     }
   }, [tonConnectUI]);
 
+  // Also sync state from the reactive wallet object (belt-and-suspenders)
   useEffect(() => {
     if (wallet && wallet.account && wallet.account.address) {
       const address = wallet.account.address;
@@ -133,7 +152,12 @@ export const useTonConnect = (): UseTonConnectReturn => {
       comment?: string;
     }): Promise<TonTxResult> => {
       if (!tonConnectUI) throw new Error("TonConnect UI not initialized");
-      if (!state.isConnected) throw new Error("Wallet not connected");
+
+      // Use walletRef to avoid stale closure — always reads current wallet state
+      const currentWallet = walletRef.current;
+      if (!currentWallet?.account?.address) {
+        throw new Error("Wallet not connected");
+      }
 
       setState((prev) => ({ ...prev, isSendingTx: true }));
       try {
@@ -167,7 +191,7 @@ export const useTonConnect = (): UseTonConnectReturn => {
         setState((prev) => ({ ...prev, isSendingTx: false }));
       }
     },
-    [tonConnectUI, state.isConnected]
+    [tonConnectUI]
   );
 
   const recordAchievementOnChain = useCallback(
@@ -176,13 +200,14 @@ export const useTonConnect = (): UseTonConnectReturn => {
       tasksCompleted: number;
       streak: number;
     }): Promise<TonTxResult | null> => {
-      if (!state.isConnected) return null;
+      const currentWallet = walletRef.current;
+      if (!currentWallet?.account?.address) return null;
 
       const comment = `Tonic AI | ${params.title} | Tasks: ${params.tasksCompleted} | Streak: ${params.streak}d`;
 
       try {
         const result = await sendTransaction({
-          to: ACHIEVEMENT_CONTRACT,
+          to: TON_REWARD_ADDRESS,
           amount: "10000000",
           comment,
         });
@@ -192,7 +217,7 @@ export const useTonConnect = (): UseTonConnectReturn => {
         return null;
       }
     },
-    [state.isConnected, sendTransaction]
+    [sendTransaction]
   );
 
   return {

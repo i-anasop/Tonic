@@ -15,6 +15,8 @@ import { useTasks } from "@/providers/TasksProvider";
 import { useTonConnect } from "@/hooks/useTonConnect";
 import { API_BASE_URL, TON_REWARD_ADDRESS } from "@/constants/api";
 
+const TESTNET_EXPLORER = "https://testnet.tonscan.org";
+
 const REWARDS = [
   { icon: Zap,     label: "2× lifetime point multiplier on all claims" },
   { icon: Shield,  label: "Verified Tonian rank on the global leaderboard" },
@@ -133,6 +135,19 @@ export default function TonianBadgeScreen() {
   const [minting, setMinting] = useState(false);
   const [txHash, setTxHash] = useState<string | null>(null);
   const [stats, setStats] = useState({ productivityScore: 0, tasksCompleted: 0 });
+
+  // Check backend on mount to restore minted state after navigation
+  useEffect(() => {
+    if (!user?.id) return;
+    fetch(`${API_BASE_URL}/api/users/${user.id}`)
+      .then((r) => r.json())
+      .then((data) => {
+        if (data?.verifiedAt || data?.ton_proof) {
+          setMinted(true);
+        }
+      })
+      .catch(() => {});
+  }, [user?.id]);
 
   const rotateAnim = useRef(new Animated.Value(0)).current;
   const counterAnim = useRef(new Animated.Value(0)).current;
@@ -322,11 +337,11 @@ export default function TonianBadgeScreen() {
               </View>
               <TouchableOpacity
                 style={styles.tonscanBtn}
-                onPress={() => Linking.openURL(`https://tonscan.org/address/${TON_REWARD_ADDRESS}`)}
+                onPress={() => Linking.openURL(`${TESTNET_EXPLORER}/address/${TON_REWARD_ADDRESS}`)}
                 activeOpacity={0.8}
               >
                 <ExternalLink size={14} color={Colors.blue} />
-                <Text style={styles.tonscanText}>View on TONScan</Text>
+                <Text style={styles.tonscanText}>View on TONScan (Testnet)</Text>
               </TouchableOpacity>
             </>
           ) : (

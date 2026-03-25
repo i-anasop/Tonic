@@ -15,7 +15,8 @@ import { Colors } from "@/constants/colors";
 import { useTheme, type AppColors } from "@/providers/ThemeProvider";
 import { useAchievements } from "@/providers/AchievementsProvider";
 import { useTonConnect } from "@/hooks/useTonConnect";
-import { TON_REWARD_ADDRESS } from "@/constants/api";
+import { TON_REWARD_ADDRESS, API_BASE_URL } from "@/constants/api";
+import { useAppState } from "@/providers/AppStateProvider";
 
 interface AchievementsModalProps {
   isVisible: boolean;
@@ -44,6 +45,7 @@ const LEVEL_EMOJIS = ["", "🌱", "⚡", "🌟", "👑", "🏆", "🔥"];
 export const AchievementsModal: React.FC<AchievementsModalProps> = ({ isVisible, onClose }) => {
   const { achievements, stats, claimedAchievementIds, claimAchievement } = useAchievements();
   const { colors } = useTheme();
+  const { user } = useAppState();
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const { height: H } = useWindowDimensions();
   const [activeTab, setActiveTab] = useState<FilterTab>("all");
@@ -63,18 +65,50 @@ export const AchievementsModal: React.FC<AchievementsModalProps> = ({ isVisible,
     }
     setClaimingOnchainId(achievementId);
     try {
-      await sendTransaction({
+      const result = await sendTransaction({
         to: TON_REWARD_ADDRESS,
         amount: "5000000",
         comment: `Tonic AI | Achievement Claim 2x | pts: ${earnedPts * 2}`,
       });
+
+      // Persist the claim locally (doubles points)
       await claimAchievement(achievementId, true);
+
+      // Sync to backend: credit TONIC balance + store on-chain record
+      if (user?.id) {
+        const txHash = result?.boc ?? null;
+        const doubled = earnedPts * 2;
+
+        await Promise.allSettled([
+          fetch(`${API_BASE_URL}/api/earn-tokens`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              userId: user.id,
+              amount: doubled,
+              reason: `Achievement claim 2× on-chain | id: ${achievementId}`,
+            }),
+          }),
+          fetch(`${API_BASE_URL}/api/claim-points`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              userId: user.id,
+              walletAddress: user.walletAddress,
+              points: doubled,
+              level: stats.currentLevel.level,
+              levelName: stats.currentLevel.name,
+              tonTxHash: txHash,
+            }),
+          }),
+        ]);
+      }
     } catch {
       Alert.alert("Transaction Failed", "The on-chain transaction was cancelled or failed. Try again.");
     } finally {
       setClaimingOnchainId(null);
     }
-  }, [walletConnected, sendTransaction, claimAchievement]);
+  }, [walletConnected, sendTransaction, claimAchievement, user, stats]);
 
   const slideAnim = useRef(new Animated.Value(H)).current;
   const backdropAnim = useRef(new Animated.Value(0)).current;
