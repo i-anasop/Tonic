@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, useMemo } from "react";
+import { useState, useCallback, useEffect, useMemo, useRef } from "react";
 import {
   ScrollView,
   StyleSheet,
@@ -13,7 +13,9 @@ import {
   Modal,
   Linking,
   Platform,
+  Animated,
 } from "react-native";
+import { LinearGradient } from "expo-linear-gradient";
 import { SafeAreaView } from "react-native-safe-area-context";
 import {
   Trophy,
@@ -107,6 +109,156 @@ function MenuItem({
       </View>
       {rightElement || <ChevronRight size={17} color={colors.textMuted} />}
     </TouchableOpacity>
+  );
+}
+
+function TonianBadgeSection({ minted, minting, disabled, onMint }: { minted: boolean; minting: boolean; disabled: boolean; onMint: () => void }) {
+  const rotateAnim = useRef(new Animated.Value(0)).current;
+  const pulseAnim = useRef(new Animated.Value(1)).current;
+  const glowAnim = useRef(new Animated.Value(0.5)).current;
+
+  useEffect(() => {
+    Animated.loop(Animated.timing(rotateAnim, { toValue: 1, duration: 7000, useNativeDriver: true })).start();
+    Animated.loop(Animated.sequence([
+      Animated.timing(pulseAnim, { toValue: 1.07, duration: 1600, useNativeDriver: true }),
+      Animated.timing(pulseAnim, { toValue: 1, duration: 1600, useNativeDriver: true }),
+    ])).start();
+    Animated.loop(Animated.sequence([
+      Animated.timing(glowAnim, { toValue: 1, duration: 1200, useNativeDriver: true }),
+      Animated.timing(glowAnim, { toValue: 0.4, duration: 1200, useNativeDriver: true }),
+    ])).start();
+  }, []);
+
+  const rotate = rotateAnim.interpolate({ inputRange: [0, 1], outputRange: ["0deg", "360deg"] });
+
+  const REWARDS = [
+    { emoji: "⚡", text: "2× lifetime point multiplier on all claims" },
+    { emoji: "🏅", text: "Verified Tonian rank on the global leaderboard" },
+    { emoji: "🔗", text: "Permanent on-chain identity — provable on TON" },
+    { emoji: "✨", text: "Exclusive Tonian badge on your profile forever" },
+  ];
+
+  return (
+    <View style={{ marginBottom: 20, borderRadius: 26, overflow: "hidden", borderWidth: 1.5, borderColor: `${Colors.gold}45` }}>
+      <LinearGradient
+        colors={["#0A0D18", "#111827", "#130D1E"]}
+        style={{ padding: 26 }}
+        start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
+      >
+        {minted && (
+          <View style={{ position: "absolute", top: 16, right: 16, backgroundColor: `${Colors.success}20`, borderRadius: 10, paddingHorizontal: 10, paddingVertical: 4, borderWidth: 1, borderColor: `${Colors.success}50` }}>
+            <Text style={{ fontSize: 10, fontWeight: "800", color: Colors.success, letterSpacing: 0.6 }}>✓ VERIFIED</Text>
+          </View>
+        )}
+
+        {/* Animated Badge Center */}
+        <View style={{ alignItems: "center", marginBottom: 22 }}>
+          <View style={{ width: 130, height: 130, justifyContent: "center", alignItems: "center" }}>
+            {/* Outer rotating ring */}
+            <Animated.View
+              style={{
+                position: "absolute", width: 126, height: 126, borderRadius: 63,
+                borderWidth: 2, borderColor: `${Colors.gold}50`,
+                borderTopColor: Colors.gold, borderRightColor: `${Colors.gold}80`,
+                transform: [{ rotate }],
+              }}
+            />
+            {/* Mid ring */}
+            <Animated.View
+              style={{
+                position: "absolute", width: 108, height: 108, borderRadius: 54,
+                borderWidth: 1.5, borderColor: `${Colors.gold}25`,
+                borderBottomColor: `${Colors.gold}60`, borderLeftColor: `${Colors.gold}40`,
+                transform: [{ rotate: rotateAnim.interpolate({ inputRange: [0, 1], outputRange: ["360deg", "0deg"] }) }],
+              }}
+            />
+            {/* Core badge */}
+            <Animated.View
+              style={{
+                width: 86, height: 86, borderRadius: 43,
+                backgroundColor: `${Colors.gold}18`,
+                borderWidth: 2, borderColor: `${Colors.gold}70`,
+                justifyContent: "center", alignItems: "center",
+                transform: [{ scale: pulseAnim }],
+                shadowColor: Colors.gold, shadowOffset: { width: 0, height: 0 },
+                shadowOpacity: 0.8, shadowRadius: 20, elevation: 20,
+              }}
+            >
+              <Text style={{ fontSize: 40 }}>{minted ? "🏅" : "⭐"}</Text>
+            </Animated.View>
+          </View>
+
+          <Animated.Text
+            style={{
+              fontSize: 22, fontWeight: "900", color: Colors.gold,
+              letterSpacing: 6, marginTop: 14, textTransform: "uppercase",
+              opacity: glowAnim.interpolate({ inputRange: [0.4, 1], outputRange: [0.7, 1] }),
+              textShadowColor: Colors.gold, textShadowRadius: 12, textShadowOffset: { width: 0, height: 0 },
+            }}
+          >
+            TONIAN
+          </Animated.Text>
+          <Text style={{ fontSize: 12, color: "rgba(200,190,150,0.6)", marginTop: 3, letterSpacing: 2, textTransform: "uppercase" }}>
+            {minted ? "Exclusive Member" : "Exclusive Badge · TON Blockchain"}
+          </Text>
+        </View>
+
+        {/* Price pill */}
+        {!minted && (
+          <View style={{ alignSelf: "center", flexDirection: "row", alignItems: "center", gap: 6, backgroundColor: `${Colors.gold}20`, borderRadius: 20, paddingHorizontal: 16, paddingVertical: 6, borderWidth: 1, borderColor: `${Colors.gold}40`, marginBottom: 20 }}>
+            <Text style={{ fontSize: 14, fontWeight: "900", color: Colors.gold }}>1 TON</Text>
+            <Text style={{ fontSize: 12, color: "rgba(200,190,150,0.6)" }}>· one-time · permanent</Text>
+          </View>
+        )}
+
+        {/* Rewards */}
+        <View style={{ gap: 10, marginBottom: 22 }}>
+          {REWARDS.map((r, i) => (
+            <View key={i} style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
+              <View style={{ width: 34, height: 34, borderRadius: 10, backgroundColor: `${Colors.gold}12`, borderWidth: 1, borderColor: `${Colors.gold}25`, justifyContent: "center", alignItems: "center" }}>
+                <Text style={{ fontSize: 16 }}>{r.emoji}</Text>
+              </View>
+              <Text style={{ fontSize: 13, color: "rgba(220,210,170,0.85)", flex: 1, lineHeight: 18 }}>{r.text}</Text>
+            </View>
+          ))}
+        </View>
+
+        {/* CTA */}
+        {minted ? (
+          <View style={{ backgroundColor: `${Colors.success}15`, borderRadius: 16, paddingVertical: 14, alignItems: "center", borderWidth: 1, borderColor: `${Colors.success}35` }}>
+            <Text style={{ fontSize: 15, fontWeight: "800", color: Colors.success }}>🎉 You're a Verified Tonian!</Text>
+            <Text style={{ fontSize: 11, color: "rgba(100,200,130,0.6)", marginTop: 3 }}>Badge permanently minted on TON blockchain</Text>
+          </View>
+        ) : (
+          <TouchableOpacity
+            onPress={onMint}
+            disabled={disabled}
+            activeOpacity={0.85}
+            style={{
+              borderRadius: 16, overflow: "hidden",
+              shadowColor: Colors.gold, shadowOffset: { width: 0, height: 4 },
+              shadowOpacity: 0.4, shadowRadius: 12, elevation: 12,
+              opacity: disabled ? 0.6 : 1,
+            }}
+          >
+            <LinearGradient
+              colors={[Colors.gold, "#B8860B", Colors.gold]}
+              start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
+              style={{ paddingVertical: 15, alignItems: "center", flexDirection: "row", justifyContent: "center", gap: 10 }}
+            >
+              {minting ? (
+                <ActivityIndicator size="small" color="#0D1117" />
+              ) : (
+                <Star size={18} color="#0D1117" fill="#0D1117" />
+              )}
+              <Text style={{ fontSize: 15, fontWeight: "900", color: "#0D1117", letterSpacing: 0.4 }}>
+                {minting ? "Minting Badge…" : "Mint Badge · 1 TON"}
+              </Text>
+            </LinearGradient>
+          </TouchableOpacity>
+        )}
+      </LinearGradient>
+    </View>
   );
 }
 
@@ -522,23 +674,15 @@ export default function ProfileScreen() {
           </TouchableOpacity>
 
 
-          {/* ── TON Blockchain ── */}
+          {/* ── Tonian Badge ── */}
           <View style={styles.section}>
             <Text style={styles.sectionLabel}>TON Blockchain</Text>
-            <View style={styles.menuCard}>
-              <TouchableOpacity style={styles.menuItem} onPress={() => void handleTonianBadge()} activeOpacity={0.75} disabled={isMintingTonian || isSendingTx}>
-                <View style={[styles.menuIconWrap, { backgroundColor: `${Colors.gold}15` }]}>
-                  {isMintingTonian ? <ActivityIndicator size={16} color={Colors.gold} /> : <Star size={18} color={Colors.gold} fill={tonianMinted ? Colors.gold : "transparent"} />}
-                </View>
-                <View style={styles.menuBody}>
-                  <Text style={styles.menuTitle}>Verify to be Tonian</Text>
-                  <Text style={styles.menuSub}>{tonianMinted ? "Badge minted — you're a verified Tonian!" : "Mint exclusive Tonic AI badge (1 TON)"}</Text>
-                </View>
-                <View style={[styles.tonBadge, { backgroundColor: tonianMinted ? `${Colors.gold}20` : `${Colors.gold}10`, borderColor: tonianMinted ? `${Colors.gold}60` : `${Colors.gold}30` }]}>
-                  <Text style={[styles.tonBadgeText, { color: Colors.gold }]}>{tonianMinted ? "✓ MINTED" : "MINT"}</Text>
-                </View>
-              </TouchableOpacity>
-            </View>
+            <TonianBadgeSection
+              minted={tonianMinted}
+              minting={isMintingTonian}
+              disabled={isMintingTonian || isSendingTx}
+              onMint={() => void handleTonianBadge()}
+            />
           </View>
 
           {/* ── Last TX Hash ── */}

@@ -266,7 +266,7 @@ function TonicTokenWidget({ userId }: { userId?: string }) {
 function DailyChallengeCard({ userId, tasks }: { userId?: string; tasks: Task[] }) {
   const { colors } = useTheme();
   const [challenge, setChallenge] = React.useState<any>(null);
-  const claimedRef = useRef(false);
+  const [claiming, setClaiming] = React.useState(false);
 
   useEffect(() => {
     const url = userId
@@ -291,30 +291,31 @@ function DailyChallengeCard({ userId, tasks }: { userId?: string; tasks: Task[] 
     }
   }, [tasks, challenge, todayStr]);
 
-  useEffect(() => {
-    if (!challenge || challenge.done || !userId || claimedRef.current) return;
-    if (progress >= challenge.target) {
-      claimedRef.current = true;
-      fetch(`${API_BASE_URL}/api/daily-challenge/complete`, {
+  const handleClaim = React.useCallback(async () => {
+    if (!challenge || challenge.done || !userId || claiming) return;
+    setClaiming(true);
+    try {
+      await fetch(`${API_BASE_URL}/api/daily-challenge/complete`, {
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ userId }),
-      })
-        .then(() => setChallenge((c: any) => ({ ...c, done: true })))
-        .catch(() => { claimedRef.current = false; });
-    }
-  }, [progress, challenge, userId]);
+      });
+      setChallenge((c: any) => ({ ...c, done: true }));
+    } catch {}
+    setClaiming(false);
+  }, [challenge, userId, claiming]);
 
   if (!challenge) return null;
 
   const done = challenge.done;
+  const canClaim = !done && progress >= challenge.target;
   const pct = Math.min(progress / challenge.target, 1);
-  const accent = done ? Colors.success : Colors.purple;
+  const accent = done ? Colors.success : canClaim ? Colors.gold : Colors.purple;
 
   return (
-    <View style={{ backgroundColor: `${accent}0D`, borderRadius: 18, padding: 16, marginBottom: 14, borderWidth: 1, borderColor: `${accent}30` }}>
+    <View style={{ backgroundColor: `${accent}0D`, borderRadius: 18, padding: 16, marginBottom: 14, borderWidth: 1, borderColor: `${accent}35` }}>
       <View style={{ flexDirection: "row", alignItems: "center", gap: 10, marginBottom: 12 }}>
         <View style={{ width: 34, height: 34, borderRadius: 10, backgroundColor: `${accent}20`, justifyContent: "center", alignItems: "center" }}>
-          {done ? <CheckSquare size={16} color={accent} /> : <Target size={16} color={accent} />}
+          {done ? <CheckSquare size={16} color={accent} /> : canClaim ? <Star size={16} color={accent} fill={accent} /> : <Target size={16} color={accent} />}
         </View>
         <View style={{ flex: 1 }}>
           <Text style={{ fontSize: 10, color: accent, fontWeight: "700", textTransform: "uppercase", letterSpacing: 0.8 }}>Daily Challenge</Text>
@@ -325,12 +326,29 @@ function DailyChallengeCard({ userId, tasks }: { userId?: string; tasks: Task[] 
           <Text style={{ fontSize: 11, fontWeight: "800", color: Colors.gold }}>+{challenge.reward}</Text>
         </View>
       </View>
-      <View style={{ backgroundColor: colors.bgPrimary, borderRadius: 10, height: 8, overflow: "hidden", marginBottom: 8 }}>
+      <View style={{ backgroundColor: colors.bgPrimary, borderRadius: 10, height: 8, overflow: "hidden", marginBottom: 10 }}>
         <View style={{ width: `${pct * 100}%`, height: 8, backgroundColor: accent, borderRadius: 10 }} />
       </View>
-      <Text style={{ fontSize: 11, color: colors.textMuted, textAlign: "right" }}>
-        {done ? "Complete! +50 TONIC earned" : `${Math.min(progress, challenge.target)} / ${challenge.target} — complete tasks to unlock`}
-      </Text>
+      {done ? (
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+          <CheckSquare size={14} color={Colors.success} />
+          <Text style={{ fontSize: 12, color: Colors.success, fontWeight: "700" }}>Claimed! +50 TONIC added to your balance</Text>
+        </View>
+      ) : canClaim ? (
+        <TouchableOpacity
+          onPress={handleClaim}
+          disabled={claiming}
+          activeOpacity={0.85}
+          style={{ backgroundColor: Colors.gold, borderRadius: 12, paddingVertical: 11, alignItems: "center", flexDirection: "row", justifyContent: "center", gap: 7, shadowColor: Colors.gold, shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.35, shadowRadius: 8 }}
+        >
+          <Zap size={15} color="#0D1117" />
+          <Text style={{ fontSize: 13, fontWeight: "800", color: "#0D1117" }}>{claiming ? "Claiming…" : `Claim +${challenge.reward} TONIC`}</Text>
+        </TouchableOpacity>
+      ) : (
+        <Text style={{ fontSize: 11, color: colors.textMuted }}>
+          {progress} / {challenge.target} completed — finish the tasks above to unlock
+        </Text>
+      )}
     </View>
   );
 }
@@ -682,6 +700,26 @@ export default function DashboardScreen() {
           <StatPill icon={Zap} value={stats.productivityScore} label="Score" color={Colors.blue} animValue={stat3} />
         </View>
 
+        {/* Today's Tasks — shown right below the stats */}
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>Today's Tasks</Text>
+            <TouchableOpacity style={styles.seeAll} onPress={() => router.push("/(tabs)/tasks" as any)}>
+              <Text style={styles.seeAllText}>All</Text>
+              <ChevronRight size={14} color={colors.textMuted} />
+            </TouchableOpacity>
+          </View>
+          {todayTasks.length === 0 ? (
+            <EmptyDashboard onAdd={() => router.push("/modal")} colors={colors} styles={styles} />
+          ) : (
+            <View style={styles.taskList}>
+              {todayTasks.slice(0, 5).map((task: Task) => (
+                <TaskItem key={task.id} task={task} onToggle={(id) => toggleTaskStatus(id, user?.id)} />
+              ))}
+            </View>
+          )}
+        </View>
+
         {/* Quick Actions */}
         <QuickActions onNavigate={(r) => router.push(r as any)} />
 
@@ -710,26 +748,6 @@ export default function DashboardScreen() {
             <View style={styles.weeklyBadge}><TrendingUp size={12} color={Colors.gold} /></View>
           </View>
           <WeeklyChart data={stats.weeklyCompletion} />
-        </View>
-
-        {/* Today's Tasks */}
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Today's Tasks</Text>
-            <TouchableOpacity style={styles.seeAll} onPress={() => router.push("/(tabs)/tasks" as any)}>
-              <Text style={styles.seeAllText}>All</Text>
-              <ChevronRight size={14} color={colors.textMuted} />
-            </TouchableOpacity>
-          </View>
-          {todayTasks.length === 0 ? (
-            <EmptyDashboard onAdd={() => router.push("/modal")} colors={colors} styles={styles} />
-          ) : (
-            <View style={styles.taskList}>
-              {todayTasks.slice(0, 5).map((task: Task) => (
-                <TaskItem key={task.id} task={task} onToggle={(id) => toggleTaskStatus(id, user?.id)} />
-              ))}
-            </View>
-          )}
         </View>
 
         {/* Warning Insight */}

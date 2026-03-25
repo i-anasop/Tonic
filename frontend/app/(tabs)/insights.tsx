@@ -613,26 +613,6 @@ export default function InsightsScreen() {
           </>
         ) : (
           <>
-            {/* Achievement Points Claim */}
-            {achStats.pendingPoints > 0 && (
-              <View style={{ backgroundColor: `${Colors.gold}0E`, borderRadius: 20, padding: 16, marginBottom: 14, borderWidth: 1.5, borderColor: `${Colors.gold}35`, flexDirection: "row", alignItems: "center", gap: 14 }}>
-                <View style={{ width: 44, height: 44, borderRadius: 14, backgroundColor: `${Colors.gold}20`, justifyContent: "center", alignItems: "center" }}>
-                  <Star size={20} color={Colors.gold} fill={Colors.gold} />
-                </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={{ fontSize: 14, fontWeight: "800", color: Colors.gold }}>🎁 {achStats.pendingPoints} pts ready</Text>
-                  <Text style={{ fontSize: 11, color: colors.textMuted, marginTop: 2 }}>1× claim now · 2× with TON wallet</Text>
-                </View>
-                <TouchableOpacity
-                  style={{ backgroundColor: Colors.gold, borderRadius: 14, paddingHorizontal: 16, paddingVertical: 10 }}
-                  onPress={() => void claimPoints(false)}
-                  activeOpacity={0.85}
-                >
-                  <Text style={{ fontSize: 13, fontWeight: "800", color: "#0D1117" }}>Claim</Text>
-                </TouchableOpacity>
-              </View>
-            )}
-
             {/* Rank Roadmap */}
             <RankRoadmap userLevel={achStats.currentLevel.level} />
 

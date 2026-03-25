@@ -885,11 +885,21 @@ app.post("/api/claim-points", async (req, res) => {
 });
 
 const MOCK_LEADERS = [
-  { id: "mock_1", name: "DeFi_Pro",    wallet_address: "UQBpro...x1", tonic_tokens: 28400, completed_tasks: 284, total_tasks: 296, completion_rate: 96, score: 31240 },
-  { id: "mock_2", name: "CryptoNinja", wallet_address: "UQBninja...x2", tonic_tokens: 21600, completed_tasks: 216, total_tasks: 224, completion_rate: 96, score: 23760 },
-  { id: "mock_3", name: "BlockStar",   wallet_address: "UQBstar...x3", tonic_tokens: 16500, completed_tasks: 165, total_tasks: 178, completion_rate: 93, score: 18150 },
-  { id: "mock_4", name: "TONQueen",    wallet_address: null,            tonic_tokens: 11200, completed_tasks: 112, total_tasks: 126, completion_rate: 89, score: 12320 },
-  { id: "mock_5", name: "GrindKing",   wallet_address: null,            tonic_tokens:  7300, completed_tasks:  73, total_tasks:  82, completion_rate: 89, score:  8030 },
+  { id: "mock_1",  name: "DeFi_Pro",       wallet_address: "UQBpro...x1",   tonic_tokens: 28400, completed_tasks: 284, total_tasks: 296, completion_rate: 96, score: 31240 },
+  { id: "mock_2",  name: "CryptoNinja",    wallet_address: "UQBninja...x2", tonic_tokens: 21600, completed_tasks: 216, total_tasks: 224, completion_rate: 96, score: 23760 },
+  { id: "mock_3",  name: "BlockStar",      wallet_address: "UQBstar...x3",  tonic_tokens: 16500, completed_tasks: 165, total_tasks: 178, completion_rate: 93, score: 18150 },
+  { id: "mock_4",  name: "TONQueen",       wallet_address: null,             tonic_tokens: 11200, completed_tasks: 112, total_tasks: 126, completion_rate: 89, score: 12320 },
+  { id: "mock_5",  name: "GrindKing",      wallet_address: null,             tonic_tokens:  7300, completed_tasks:  73, total_tasks:  82, completion_rate: 89, score:  8030 },
+  { id: "mock_6",  name: "TON_Wizard",     wallet_address: "UQBwiz...x6",   tonic_tokens:  5800, completed_tasks:  58, total_tasks:  65, completion_rate: 89, score:  6380 },
+  { id: "mock_7",  name: "BlockBuilder",   wallet_address: null,             tonic_tokens:  4200, completed_tasks:  42, total_tasks:  50, completion_rate: 84, score:  4620 },
+  { id: "mock_8",  name: "ChainHunter",    wallet_address: "UQBhunt...x8",  tonic_tokens:  3100, completed_tasks:  31, total_tasks:  37, completion_rate: 84, score:  3410 },
+  { id: "mock_9",  name: "MythicGrinder",  wallet_address: null,             tonic_tokens:  2400, completed_tasks:  24, total_tasks:  29, completion_rate: 83, score:  2640 },
+  { id: "mock_10", name: "SolanaKid",      wallet_address: null,             tonic_tokens:  1900, completed_tasks:  19, total_tasks:  24, completion_rate: 79, score:  2090 },
+  { id: "mock_11", name: "TaskMaster99",   wallet_address: "UQBtm...x11",   tonic_tokens:  1500, completed_tasks:  15, total_tasks:  19, completion_rate: 79, score:  1650 },
+  { id: "mock_12", name: "LegendBit",      wallet_address: null,             tonic_tokens:  1100, completed_tasks:  11, total_tasks:  15, completion_rate: 73, score:  1210 },
+  { id: "mock_13", name: "web3_rose",      wallet_address: "UQBrose...x13", tonic_tokens:   800, completed_tasks:   8, total_tasks:  12, completion_rate: 67, score:   880 },
+  { id: "mock_14", name: "DiamondHands",   wallet_address: null,             tonic_tokens:   500, completed_tasks:   5, total_tasks:   8, completion_rate: 63, score:   550 },
+  { id: "mock_15", name: "RookieCrypto",   wallet_address: null,             tonic_tokens:   200, completed_tasks:   2, total_tasks:   4, completion_rate: 50, score:   220 },
 ];
 
 app.get("/api/leaderboard", async (req, res) => {

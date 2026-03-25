@@ -7,12 +7,15 @@ import {
   TouchableOpacity,
   Animated,
   useWindowDimensions,
+  Alert,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { X, Trophy, Lock, Zap, Star, Link } from "lucide-react-native";
 import { Colors } from "@/constants/colors";
 import { useTheme, type AppColors } from "@/providers/ThemeProvider";
 import { useAchievements } from "@/providers/AchievementsProvider";
+import { useTonConnect } from "@/hooks/useTonConnect";
+import { TON_REWARD_ADDRESS } from "@/constants/api";
 
 interface AchievementsModalProps {
   isVisible: boolean;
@@ -45,6 +48,33 @@ export const AchievementsModal: React.FC<AchievementsModalProps> = ({ isVisible,
   const { height: H } = useWindowDimensions();
   const [activeTab, setActiveTab] = useState<FilterTab>("all");
   const [mounted, setMounted] = useState(false);
+  const [claimingOnchainId, setClaimingOnchainId] = useState<string | null>(null);
+
+  const { isConnected: walletConnected, sendTransaction } = useTonConnect();
+
+  const handleOnchainClaim = useCallback(async (achievementId: string, earnedPts: number) => {
+    if (!walletConnected) {
+      Alert.alert(
+        "Wallet Required",
+        "Connect your TON wallet to claim 2× on-chain. Go to Profile → Connect Wallet.",
+        [{ text: "OK" }]
+      );
+      return;
+    }
+    setClaimingOnchainId(achievementId);
+    try {
+      await sendTransaction({
+        to: TON_REWARD_ADDRESS,
+        amount: "5000000",
+        comment: `Tonic AI | Achievement Claim 2x | pts: ${earnedPts * 2}`,
+      });
+      await claimAchievement(achievementId, true);
+    } catch {
+      Alert.alert("Transaction Failed", "The on-chain transaction was cancelled or failed. Try again.");
+    } finally {
+      setClaimingOnchainId(null);
+    }
+  }, [walletConnected, sendTransaction, claimAchievement]);
 
   const slideAnim = useRef(new Animated.Value(H)).current;
   const backdropAnim = useRef(new Animated.Value(0)).current;
@@ -134,13 +164,18 @@ export const AchievementsModal: React.FC<AchievementsModalProps> = ({ isVisible,
                   </TouchableOpacity>
 
                   <TouchableOpacity
-                    style={styles.claimBtnOnchain}
-                    onPress={() => void claimAchievement(item.id, true)}
+                    style={[styles.claimBtnOnchain, claimingOnchainId === item.id && { opacity: 0.6 }]}
+                    onPress={() => void handleOnchainClaim(item.id, earned)}
                     activeOpacity={0.8}
+                    disabled={claimingOnchainId === item.id}
                   >
                     <Link size={11} color={Colors.blue} />
-                    <Text style={styles.claimBtnOnchainText}>2x On-Chain</Text>
-                    <Text style={styles.claimBtnFee}>· txn fee</Text>
+                    <Text style={styles.claimBtnOnchainText}>
+                      {claimingOnchainId === item.id ? "Sending…" : `2x On-Chain (+${earned * 2})`}
+                    </Text>
+                    {claimingOnchainId !== item.id && (
+                      <Text style={styles.claimBtnFee}>· 0.005 TON fee</Text>
+                    )}
                   </TouchableOpacity>
                 </View>
               )}
@@ -263,7 +298,9 @@ export const AchievementsModal: React.FC<AchievementsModalProps> = ({ isVisible,
             <View style={styles.onchainHint}>
               <Link size={13} color={Colors.blue} />
               <Text style={styles.onchainHintText}>
-                Claim 2x On-Chain to permanently record achievements on TON. A small transaction fee applies.
+                {walletConnected
+                  ? "Wallet connected — tap \"2x On-Chain\" to send a 0.005 TON fee and earn double points recorded on TON."
+                  : "Connect your TON wallet (Profile tab) to unlock 2× on-chain claims. A 0.005 TON fee applies per claim."}
               </Text>
             </View>
 
