@@ -7,10 +7,25 @@ Tonic AI is a TON blockchain-integrated, AI-powered task management app built wi
 
 ```
 workspace/
-├── backend/              ← Express API server (Node.js / ESM)
-│   ├── index.mjs         ← Main server entry point
-│   └── telegram.mjs      ← Telegram bot integration
-└── frontend/             ← Expo / React Native mobile + web app
+├── backend/                  ← Express API server (Node.js / ESM)
+│   ├── index.mjs             ← Entry point: middleware, routes, bootstrap (~115 lines)
+│   ├── db.mjs                ← pg.Pool instance + initDB()
+│   ├── openai.mjs            ← OpenAI client singleton
+│   ├── config.mjs            ← All constants (TONIC rates, challenges, mock leaders, CSS)
+│   ├── static.mjs            ← Static file serving + portrait CSS injection
+│   ├── telegram.mjs          ← Telegram bot integration
+│   ├── agent/
+│   │   ├── prompt.mjs        ← buildAgentSystemPrompt()
+│   │   ├── tools.mjs         ← buildAgentTools() (OpenAI function schemas)
+│   │   └── executor.mjs      ← executeToolCall() — shared by both agent endpoints
+│   └── routes/
+│       ├── agent.mjs         ← POST /api/agent, POST /api/agent/stream
+│       ├── tasks.mjs         ← GET/POST/DELETE /api/tasks*, POST /api/tasks/sync
+│       ├── users.mjs         ← POST /api/users, /api/ton-proof, /api/sync-code/*
+│       ├── tokens.mjs        ← GET/POST /api/*tokens, /api/daily-challenge/*
+│       ├── records.mjs       ← GET/POST /api/records, POST /api/claim-points
+│       └── leaderboard.mjs   ← GET /api/leaderboard
+└── frontend/                 ← Expo / React Native mobile + web app
     ├── app/              ← Expo Router screens
     │   ├── (tabs)/       ← Tab screens: Dashboard, Tasks, Insights, Profile, Agent
     │   ├── onboarding/   ← Onboarding flow
