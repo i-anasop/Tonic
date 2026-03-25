@@ -1,0 +1,8 @@
+uploads = []
+generated = []
+
+[[outputs]]
+id = "68bbNhaXxhUsbMhu63WQt"
+uri = "file://prompt.txt"
+type = "text"
+title = "Tonic AI — Website Builder Prompt"
