@@ -482,7 +482,7 @@ Tonic AI satisfies all four core criteria:
 
 <div align="center">
 
-Built for the **TON AI Hackathon 2026** by *Anas*
+Built with Love for the **TON AI Hackathon 2026** by *Anas*
 
 [![TON](https://img.shields.io/badge/TON_Blockchain-0088CC?style=for-the-badge&logo=telegram&logoColor=white)](https://ton.org)
 [![OpenAI](https://img.shields.io/badge/GPT--4o-412991?style=for-the-badge&logo=openai&logoColor=white)](https://openai.com)
