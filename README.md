@@ -23,7 +23,7 @@ Every achievement you claim is permanently recorded on TON.
 
 <br/>
 
-**[🌐 Live App](https://tonic-ai.replit.app)** &nbsp;·&nbsp; **[✈️ Telegram Mini App](https://t.me/TonicAI_bot)**
+**[🌐 Live App](https://i-anasop.github.io/Tonic/)** &nbsp;·&nbsp; **[✈️ Telegram Mini App](https://t.me/TonicAI_bot)**
 
 </div>
 
@@ -64,7 +64,7 @@ Every achievement you claim is permanently recorded on TON.
 
 Tonic AI is a **blockchain-native productivity platform** built for the **TON AI Hackathon 2026**.
 
-It combines a real **GPT-4o conversational agent** (8 live function-calling tools, SSE token streaming) with the **TON blockchain** so that every meaningful action — completing a task, claiming an achievement, verifying your identity — produces a **real, verifiable, permanent on-chain transaction**.
+It combines a real **GPT-4o conversational agent** (8 live function-calling tools, SSE token streaming) with the **TON blockchain** so that every meaningful action — completing a task, claiming [...]
 
 ```
 Productivity → Task Completion → On-Chain Transaction → TONIC Reward → Rank Up
