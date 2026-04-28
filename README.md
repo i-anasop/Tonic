@@ -23,7 +23,7 @@ Every achievement you claim is permanently recorded on TON.
 
 <br/>
 
-**[🌐 Live App](https://i-anasop.github.io/Tonic/)** &nbsp;·&nbsp; **[✈️ Telegram Mini App](https://t.me/TonicAI_bot)**
+**[ Live App](https://i-anasop.github.io/Tonic/)** &nbsp;·&nbsp; **[ Telegram Mini App](https://t.me/TonicAI_bot)**
 
 </div>
 
@@ -41,7 +41,7 @@ Every achievement you claim is permanently recorded on TON.
 
 ---
 
-## 🧭 Table of Contents
+## Table of Contents
 
 - [What is Tonic AI?](#-what-is-tonic-ai)
 - [Core Features](#-core-features)
@@ -60,7 +60,7 @@ Every achievement you claim is permanently recorded on TON.
 
 ---
 
-## 🌐 What is Tonic AI?
+## What is Tonic AI?
 
 Tonic AI is a **blockchain-native productivity platform** built for the **TON AI Hackathon 2026**.
 
@@ -74,24 +74,24 @@ Productivity → Task Completion → On-Chain Transaction → TONIC Reward → R
 
 ---
 
-## 🚀 Core Features
+## Core Features
 
 <table>
-<tr><td><b>🤖 GPT-4o AI Agent</b></td><td>8 function-calling tools, SSE streaming, natural language task control</td></tr>
-<tr><td><b>⛓️ Real On-Chain Rewards</b></td><td>Every task completion sends a live TON testnet transaction to your wallet</td></tr>
-<tr><td><b>🪙 $TONIC Protocol</b></td><td>Hire specialist sub-agents with $TONIC tokens — inter-agent coordination layer</td></tr>
-<tr><td><b>🏅 90+ Achievements</b></td><td>Claim on-chain for 2× points — each a permanent TON transaction</td></tr>
-<tr><td><b>👑 10 Competitive Ranks</b></td><td>Rookie → Mythic, based on total on-chain claimed points</td></tr>
-<tr><td><b>🔖 Tonian Badge</b></td><td>1 TON mint = permanent identity + 2× lifetime points multiplier</td></tr>
-<tr><td><b>🎯 Daily Challenges</b></td><td>Fresh 24h targets — +50 TONIC on completion with explicit claim button</td></tr>
-<tr><td><b>📊 AI Insights</b></td><td>GPT-4o reads your task history and gives personalised coaching reports</td></tr>
-<tr><td><b>📱 Cross-Platform</b></td><td>Web, iOS, and Android from a single React Native codebase</td></tr>
-<tr><td><b>✈️ Telegram Mini App</b></td><td>Full app running natively inside Telegram — no browser switch needed</td></tr>
+<tr><td><b>GPT-4o AI Agent</b></td><td>8 function-calling tools, SSE streaming, natural language task control</td></tr>
+<tr><td><b>Real On-Chain Rewards</b></td><td>Every task completion sends a live TON testnet transaction to your wallet</td></tr>
+<tr><td><b>$TONIC Protocol</b></td><td>Hire specialist sub-agents with $TONIC tokens — inter-agent coordination layer</td></tr>
+<tr><td><b>90+ Achievements</b></td><td>Claim on-chain for 2× points — each a permanent TON transaction</td></tr>
+<tr><td><b>10 Competitive Ranks</b></td><td>Rookie → Mythic, based on total on-chain claimed points</td></tr>
+<tr><td><b>Tonian Badge</b></td><td>1 TON mint = permanent identity + 2× lifetime points multiplier</td></tr>
+<tr><td><b>Daily Challenges</b></td><td>Fresh 24h targets — +50 TONIC on completion with explicit claim button</td></tr>
+<tr><td><b>AI Insights</b></td><td>GPT-4o reads your task history and gives personalised coaching reports</td></tr>
+<tr><td><b>Cross-Platform</b></td><td>Web, iOS, and Android from a single React Native codebase</td></tr>
+<tr><td><b>Telegram Mini App</b></td><td>Full app running natively inside Telegram — no browser switch needed</td></tr>
 </table>
 
 ---
 
-## 🤖 AI Agent — 8 Function-Calling Tools
+## AI Agent — 8 Function-Calling Tools
 
 The agent takes real actions on your data — not just answers, but executions:
 
@@ -123,9 +123,9 @@ The `delegate_to_specialist` tool powers an **inter-agent economy**. Spend $TONI
 
 | Sub-Agent | Cost | Expertise |
 |---|---|---|
-| 🧬 **HabitOS** | 25 $TONIC | Behavioural neuroscience, habit stacking, behaviour design |
-| ⏱️ **ChronoX** | 30 $TONIC | Chronobiology, energy mapping, optimal time-blocking |
-| 🎯 **VisionCore** | 40 $TONIC | OKR coaching, goal-gap analysis, 90-day roadmaps |
+| **HabitOS** | 25 $TONIC | Behavioural neuroscience, habit stacking, behaviour design |
+| **ChronoX** | 30 $TONIC | Chronobiology, energy mapping, optimal time-blocking |
+| **VisionCore** | 40 $TONIC | OKR coaching, goal-gap analysis, 90-day roadmaps |
 
 Each specialist uses a dedicated system prompt, your full task history, and returns a structured deep-work report.
 
@@ -208,7 +208,7 @@ A **1 TON one-time mint** that permanently records your identity on the TON bloc
 
 ---
 
-## 🏗️ Architecture
+## Architecture
 
 ```
 tonic-ai/
@@ -266,7 +266,7 @@ tonic-ai/
 
 ---
 
-## 🛠️ Tech Stack
+## Tech Stack
 
 ### Frontend
 
@@ -351,7 +351,7 @@ GET  /api/leaderboard                     Top 20 players sorted by score
 
 ---
 
-## 🗃️ Database Schema
+## Database Schema
 
 ```sql
 -- Users
@@ -401,7 +401,7 @@ CREATE TABLE on_chain_records (
 
 ---
 
-## 🚀 Running Locally
+## Running Locally
 
 ### Prerequisites
 
@@ -453,7 +453,7 @@ bun run start-ios      # iOS (requires macOS + Xcode)
 
 ---
 
-## 🎯 Hackathon Qualification
+## Hackathon Qualification
 
 **TON AI Hackathon 2026 — "User-Facing AI Agents" track**
 
@@ -468,7 +468,7 @@ Tonic AI satisfies all four core criteria:
 
 ---
 
-## 💡 Design Principles
+## Design Principles
 
 **Offline-first** — All tasks and achievements are stored locally via AsyncStorage and synced to the server when online. The app works fully without a connection.
 
