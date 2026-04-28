@@ -2,7 +2,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Stack, useRootNavigationState, useRouter } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import { useEffect, useState } from "react";
-import { View } from "react-native";
+import { View, Platform, StyleSheet } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { useAppState } from "@/providers/AppStateProvider";
 
@@ -85,11 +85,36 @@ function RootLayoutWrapper() {
 function ThemedRoot() {
   const { colors } = useTheme();
   return (
-    <GestureHandlerRootView style={{ flex: 1, backgroundColor: colors.bgPrimary }}>
-      <RootLayoutWrapper />
-    </GestureHandlerRootView>
+    <View style={[styles.appWrapper, Platform.OS === 'web' && { backgroundColor: '#0D1117' }]}>
+      <View style={[
+        styles.appContainer, 
+        Platform.OS === 'web' && styles.webContainer,
+        { backgroundColor: colors.bgPrimary }
+      ]}>
+        <GestureHandlerRootView style={{ flex: 1, backgroundColor: colors.bgPrimary }}>
+          <RootLayoutWrapper />
+        </GestureHandlerRootView>
+      </View>
+    </View>
   );
 }
+
+const styles = StyleSheet.create({
+  appWrapper: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  appContainer: {
+    flex: 1,
+    width: '100%',
+  },
+  webContainer: {
+    maxWidth: 480,
+    borderWidth: 1,
+    borderColor: '#30363D',
+  }
+});
 
 export default function RootLayout() {
   useEffect(() => {
